@@ -3,10 +3,12 @@
 Sprint 1: khung dự án + endpoint ``GET /health`` (chưa có bảng nghiệp vụ).
 Sprint 2: module **Farm** (quản lý vùng trồng - bảng ``farms``)
 và module **Batch** (quản lý lô nông sản - bảng ``batches``).
+Sprint 4: module **Auth** (đăng nhập + phân quyền - bảng ``users``).
 
-Quan hệ giữa 2 bảng::
+Quan hệ giữa các bảng::
 
     Farm 1 ---- N Batch   (một vùng trồng có nhiều lô nông sản)
+    User                  (bảng độc lập, dùng cho đăng nhập/phân quyền)
 
 File này là điểm duy nhất (single source of truth) khai báo bảng dữ liệu.
 Mọi model đều kế thừa ``Base`` và bảng sẽ được ``init_db()`` trong
@@ -44,7 +46,8 @@ class Farm(Base):
 
     # Quan hệ 1-N: một vùng trồng có nhiều lô nông sản.
     # `cascade="all, delete-orphan"`: khi Farm bị xoá thì các Batch của nó cũng
-    # bị xoá theo -> không để lại dữ liệu mồ côi (dùng cho DELETE /farms sau này).
+    # bị xoá theo -> không để lại dữ liệu mồ côi. Hành vi này được dùng bởi
+    # `DELETE /farms/{farm_id}` (xem `app/routers/farms.py`).
     batches: Mapped[list["Batch"]] = relationship(
         back_populates="farm",
         cascade="all, delete-orphan",
@@ -91,4 +94,56 @@ class Batch(Base):
         )
 
 
-__all__ = ["Base", "Batch", "Farm"]
+# ------------------------------------------------------------- Vai trò ---
+# Khai báo thành hằng số để không phải gõ chuỗi "admin"/"farmer" rải rác
+# trong code (tránh lỗi gõ sai, chỉ cần đổi giá trị ở một chỗ nếu sau này
+# muốn thêm vai trò mới như "inspector" hay "retailer").
+ROLE_ADMIN: str = "admin"
+ROLE_FARMER: str = "farmer"
+ROLES: tuple[str, ...] = (ROLE_ADMIN, ROLE_FARMER)
+
+
+class User(Base):
+    """Tài khoản đăng nhập của hệ thống - bảng ``users``.
+
+    Sprint 4 dùng bảng này cho chức năng **đăng nhập + phân quyền cơ bản**.
+    Hệ thống **không dùng JWT**, không token/session phía server: client gửi
+    kèm `username`/`password` (HTTP Basic) ở mỗi request, backend tra bảng này
+    để biết người gọi là ai (xem ``app/security.py``).
+
+    Attributes:
+        id: Khoá chính, tự tăng.
+        username: Tên đăng nhập, **duy nhất** (có index để tra cứu nhanh).
+        password: Mật khẩu **đã băm** (SHA-256 hex = 64 ký tự) - không bao giờ
+            lưu mật khẩu dạng thô, và API cũng không bao giờ trả cột này ra.
+        role: Vai trò của tài khoản: ``"admin"`` (quản trị - toàn quyền) hoặc
+            ``"farmer"`` (nông dân - quản lý nông sản).
+    """
+
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    username: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+        unique=True,
+        index=True,
+    )
+    # 64 ký tự là độ dài chuỗi hex của SHA-256 (xem `hash_password`).
+    password: Mapped[str] = mapped_column(String(64), nullable=False)
+    role: Mapped[str] = mapped_column(String(20), nullable=False, default=ROLE_FARMER)
+
+    def __repr__(self) -> str:  # pragma: no cover - chỉ dùng khi debug/log
+        # Không in `password` để tránh lộ mật khẩu đã băm ra log.
+        return f"<User id={self.id} username={self.username!r} role={self.role}>"
+
+
+__all__ = [
+    "Base",
+    "Batch",
+    "Farm",
+    "ROLE_ADMIN",
+    "ROLE_FARMER",
+    "ROLES",
+    "User",
+]
