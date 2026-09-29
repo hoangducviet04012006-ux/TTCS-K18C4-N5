@@ -27,6 +27,16 @@
   box-sizing: border-box;
 }
 
+/* BẮT BUỘC: thuộc tính `hidden` của HTML chỉ được trình duyệt style bằng
+   `[hidden] { display: none }` (user-agent stylesheet), mà rule của mình
+   (`.container { display: grid }`, `.login { display: flex }`) lại có độ ưu
+   tiên cao hơn -> nếu thiếu rule dưới đây thì màn hình login VÀ dashboard sẽ
+   cùng hiện dù phần tử có `hidden`. app.js dựa vào đây để ẩn/hiện theo phiên
+   đăng nhập. */
+[hidden] {
+  display: none !important;
+}
+
 body {
   margin: 0;
   font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -125,6 +135,16 @@ a {
 .stat-card__api {
   color: var(--color-primary-dark);
   word-break: break-all;
+}
+
+/* Chú thích nhỏ dưới số liệu thống kê (cho biết số liệu lấy từ API nào). */
+.stat-card__hint {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.stat-card__hint code {
+  color: var(--color-primary-dark);
 }
 
 /* ----------------------------------------------------------- 5. Card --- */
@@ -232,6 +252,17 @@ a {
   gap: 10px;
 }
 
+/* Dải thông báo "đang ở chế độ Sửa" (app.js hiện khi bấm nút Sửa ở bảng). */
+.form__mode {
+  margin: 0;
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  color: var(--color-primary-dark);
+  background: var(--color-primary-light);
+  border-left: 4px solid var(--color-primary);
+  border-radius: var(--radius-sm);
+}
+
 /* --------------------------------------------------------- 7. Button --- */
 .btn {
   font: inherit;
@@ -264,6 +295,33 @@ a {
 
 .btn--light:hover:not(:disabled) {
   background: #fff;
+}
+
+/* Nút phụ (VD: "Huỷ sửa") - nền trong suốt, viền xanh. */
+.btn--ghost {
+  background: transparent;
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.btn--ghost:hover:not(:disabled) {
+  background: var(--color-primary-light);
+}
+
+/* Nút nhỏ dùng cho cột "Thao tác" của bảng (Sửa / Xoá). */
+.btn--sm {
+  padding: 4px 10px;
+  font-size: 0.78rem;
+}
+
+/* Nút Xoá - chỉ hiện với tài khoản admin (xem canDelete() trong app.js). */
+.btn--danger {
+  background: var(--color-danger);
+  color: #fff;
+}
+
+.btn--danger:hover:not(:disabled) {
+  background: #7f1d1d;
 }
 
 /* ---------------------------------------------------------- 8. Badge --- */
@@ -337,6 +395,23 @@ a {
 
 .is-right {
   text-align: right;
+}
+
+.is-center {
+  text-align: center;
+}
+
+/* Cột "Thao tác" (Sửa / Xoá) trong bảng dữ liệu. */
+.table__actions {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+/* Dòng đang được sửa -> tô nền để người dùng biết form phía trên đang sửa nó. */
+.table tbody tr.is-editing {
+  background: var(--color-primary-light);
 }
 
 .id-cell {
@@ -414,7 +489,49 @@ a {
   border-radius: var(--radius);
 }
 
-/* ------------------------------------------------------ 12. Responsive --- */
+/* ------------------------------------------------------- 12. Đăng nhập --- */
+/* Màn hình login hiện trước khi xác thực (xem applySessionToUi trong app.js). */
+.login {
+  display: flex;
+  justify-content: center;
+}
+
+.login__card {
+  width: min(440px, 100%);
+}
+
+.login__hint {
+  margin-top: var(--space);
+  padding-top: 12px;
+  border-top: 1px dashed var(--color-border);
+  font-size: 0.82rem;
+  line-height: 1.8;
+  color: var(--color-text-muted);
+}
+
+.login__hint code {
+  background: var(--color-primary-light);
+  color: var(--color-primary-dark);
+  padding: 1px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+/* Nhãn nhỏ đánh dấu chức năng chỉ dành cho admin. */
+.tag {
+  display: inline-block;
+  vertical-align: middle;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-primary-dark);
+  background: var(--color-primary-light);
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+/* ------------------------------------------------------ 13. Responsive --- */
 @media (max-width: 640px) {
   .app-header__inner {
     flex-direction: column;
