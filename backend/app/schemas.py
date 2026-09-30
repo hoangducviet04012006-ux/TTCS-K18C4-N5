@@ -5,7 +5,7 @@ Tách riêng schemas (Pydantic) khỏi models (SQLAlchemy) giúp:
 - Validate dữ liệu đầu vào tự động và sinh tài liệu Swagger chuẩn.
 """
 
-from datetime import date
+from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -82,6 +82,37 @@ class LoginResponse(BaseModel):
         ...,
         description="Vai trò của tài khoản: `admin` (toàn quyền) hoặc `farmer` (nông dân).",
         examples=["admin", "farmer"],
+    )
+
+
+class AccountLockedResponse(BaseModel):
+    """Body lỗi **403 Forbidden** khi tài khoản bị tạm khoá (Sprint 6).
+
+    ``POST /auth/login`` trả về cấu trúc này khi nhập sai mật khẩu
+    ``MAX_FAILED_LOGIN_ATTEMPTS`` (5) lần liên tiếp - xem ``app/security.py``.
+    Message nêu rõ **thời gian chờ còn lại**; response còn có header
+    ``Retry-After`` (số giây) cho client tự động đếm ngược.
+
+    Ví dụ::
+
+        {"detail": "Tài khoản 'farmer' đã bị tạm khoá do nhập sai mật khẩu 5 lần
+                    liên tiếp. Vui lòng thử lại sau 4 phút 30 giây."}
+    """
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "detail": (
+                    "Tài khoản 'farmer' đã bị tạm khoá do nhập sai mật khẩu "
+                    "5 lần liên tiếp. Vui lòng thử lại sau 4 phút 30 giây."
+                )
+            }
+        },
+    )
+
+    detail: str = Field(
+        ...,
+        description="Lý do khoá tài khoản + thời gian chờ còn lại (tiếng Việt).",
     )
 
 
@@ -347,4 +378,72 @@ class DeleteResponse(BaseModel):
             "vùng đó). `null` khi xoá một lô nông sản."
         ),
         examples=[2],
+    )
+
+
+# ------------------------------------------------------------ Audit log ---
+# Sprint 7: lịch sử thao tác ("ai đã làm gì"). Chỉ admin xem được
+# (`GET /audit-logs`) - xem `app/routers/audit.py`.
+_AUDIT_LOG_EXAMPLE: dict = {
+    "id": 3,
+    "user_id": 1,
+    "username": "admin",
+    "action": "update",
+    "entity": "farm",
+    "entity_id": 2,
+    "created_at": "2026-01-20T03:15:42.123456",
+}
+
+
+class AuditLogResponse(BaseModel):
+    """Một dòng lịch sử thao tác trong response của ``GET /audit-logs``.
+
+    Mỗi dòng cho biết **ai** (``user_id`` / ``username``) đã **làm gì**
+    (``action``) trên **dữ liệu nào** (``entity`` + ``entity_id``) và **lúc nào**
+    (``created_at``, UTC -> ``null`` `timezone`).
+
+    Ví dụ::
+
+        {"id": 3, "user_id": 1, "username": "admin", "action": "update",
+         "entity": "farm", "entity_id": 2, "created_at": "2026-01-20T03:15:42.123456"}
+    """
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_schema_extra={"example": _AUDIT_LOG_EXAMPLE},
+    )
+
+    id: int = Field(..., description="Mã dòng log.", examples=[3])
+    user_id: int = Field(
+        ...,
+        description="ID tài khoản đã thực hiện thao tác (khoá ngoại tới bảng `users`).",
+        examples=[1],
+    )
+    username: str = Field(
+        ...,
+        description=(
+            "Tên đăng nhập của người thực hiện - tiện hiển thị, suy ra từ "
+            "`user_id` (không phải cột riêng trong bảng `audit_logs`)."
+        ),
+        examples=["admin", "farmer"],
+    )
+    action: str = Field(
+        ...,
+        description="Hành động đã xảy ra: `create` (tạo), `update` (sửa), `delete` (xoá).",
+        examples=["create", "update", "delete"],
+    )
+    entity: str = Field(
+        ...,
+        description="Loại dữ liệu bị tác động: `farm` (vùng trồng) hoặc `batch` (lô nông sản).",
+        examples=["farm", "batch"],
+    )
+    entity_id: int = Field(
+        ...,
+        description="ID bản ghi bị tác động (trong bảng `farms` hoặc `batches`).",
+        examples=[2],
+    )
+    created_at: datetime = Field(
+        ...,
+        description="Thời điểm ghi log (UTC, ISO 8601).",
+        examples=["2026-01-20T03:15:42.123456"],
     )

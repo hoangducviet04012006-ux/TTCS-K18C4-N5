@@ -48,6 +48,10 @@ backend tạo tự động ở lần chạy đầu tiên:
 - Đóng tab là mất phiên (sessionStorage); bấm nút **Đăng xuất** để xoá phiên ngay.
 - Backend trả **`401`** khi thiếu/sai thông tin đăng nhập và **`403`** khi đã đăng
   nhập nhưng sai vai trò (chi tiết xem `backend/README.md`, mục Sprint 4).
+- **Bảo mật (Sprint 6):** nhập sai mật khẩu **5 lần liên tiếp** → tài khoản bị
+  **tạm khoá 5 phút** (`403` kèm header `Retry-After`); trong thời gian khoá, gõ
+  **đúng** mật khẩu vẫn bị chặn. Hết 5 phút thì tự mở khoá và bộ đếm về 0
+  (chi tiết: `backend/README.md`, mục *Bảo mật đăng nhập*).
 
 ### CRUD & phân quyền (Sprint 5)
 
@@ -68,3 +72,23 @@ trồng, tổng lô nông sản, tổng sản lượng kg) và 2 bảng dữ li�
   và quay về màn hình đăng nhập.
 - API tương ứng: `POST` / `GET` / `PUT` / `DELETE` cho `/farms` và `/batches`
   (bảng endpoint đầy đủ: xem `backend/README.md`, mục 3).
+
+### Lịch sử thao tác — audit log (Sprint 7)
+
+Theo dõi **ai đã làm gì trong hệ thống**: mỗi lần tạo/sửa/xoá **vùng trồng** hoặc
+**lô nông sản** thành công, backend tự ghi 1 dòng vào bảng `audit_logs`
+(`user_id`, `action` = `create`/`update`/`delete`, `entity` = `farm`/`batch`,
+`entity_id`, `created_at`). Thao tác bị chặn (`401`/`403`/`404`/`422`) **không**
+sinh log, và log **không** sửa/xoá được qua API.
+
+| Endpoint | Quyền | Ghi chú |
+| --- | --- | --- |
+| `GET /audit-logs` | **chỉ `admin`** (farmer → `403`) | Trả log **mới nhất trước**; lọc `?entity=farm\|batch`, `?user_id=`, `?limit=` |
+
+- Đây là phần **backend**; giao diện frontend hiện **chưa** có màn hình xem lịch sử
+  (xem log nhanh bằng Swagger UI tại <http://127.0.0.1:8000/docs> → `GET /audit-logs`).
+- **Không thay đổi API cũ:** status code và body của `/farms`, `/batches`,
+  `/auth/login`, `/users` giữ nguyên như Sprint 5/6 — chỉ ghi thêm log khi thao tác
+  thành công.
+- Database cũ (`backend/ttcs.db`) **không cần xoá**: bảng `audit_logs` được tạo tự
+  động khi server khởi động (`init_db()`), dữ liệu sẵn có vẫn nguyên vẹn.

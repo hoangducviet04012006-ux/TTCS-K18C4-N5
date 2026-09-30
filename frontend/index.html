@@ -4,7 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Truy xuất nguồn gốc và giám sát chuỗi lạnh nông sản</title>
-  <link rel="stylesheet" href="css/style.css" />
+  <!-- Sprint 7: tham số `?v=` ép trình duyệt tải lại CSS/JS sau mỗi lần sửa.
+       Nếu thiếu nó, trình duyệt có thể dùng bản `app.js` cũ trong cache -
+       bản cũ không biết các id mới nên mục "3. Lịch sử thao tác" không hiện
+       dù index.html đã có. Sửa app.js/style.css thì tăng số này lên. -->
+  <link rel="stylesheet" href="css/style.css?v=7" />
 </head>
 <body>
   <!-- ================================= HEADER ================================= -->
@@ -80,6 +84,16 @@
         <span class="stat-card__label">Tổng sản lượng (kg)</span>
         <strong id="stat-yield" class="stat-card__value">0</strong>
         <span class="stat-card__hint">Cộng <code>quantity</code> của mọi lô</span>
+      </article>
+      <!-- Sprint 7: thẻ đếm lịch sử thao tác - chỉ admin thấy
+           (app.js bật/tắt trong applySessionToUi). -->
+      <article id="stat-audit-card" class="stat-card" hidden>
+        <span class="stat-card__label">Lịch sử thao tác</span>
+        <strong id="stat-audit" class="stat-card__value">0</strong>
+        <span class="stat-card__hint">
+          Đếm từ <code>GET /audit-logs</code> ·
+          <a href="#audit-card">xem bảng chi tiết ↓</a>
+        </span>
       </article>
       <article class="stat-card">
         <span class="stat-card__label">API backend</span>
@@ -258,6 +272,56 @@
       </div>
       <p id="user-empty" class="empty" hidden>Chưa có tài khoản nào.</p>
     </section>
+
+    <!-- =========== 3. LỊCH SỬ THAO TÁC (chỉ admin - Sprint 7) =========== -->
+    <!-- Backend tự ghi 1 dòng log cho mỗi thao tác tạo/sửa/xoá vùng trồng hoặc
+         lô nông sản; mục này chỉ hiện với tài khoản admin (farmer gọi API
+         GET /audit-logs sẽ nhận 403 Forbidden). -->
+    <section id="audit-card" class="card" hidden>
+      <header class="card__header">
+        <div>
+          <h2 class="card__title">3. Lịch sử thao tác <span class="tag">admin</span></h2>
+          <p class="card__desc">
+            Ai đã làm gì trong hệ thống: mỗi thao tác tạo/sửa/xoá vùng trồng hoặc lô nông sản
+            thành công được ghi lại 1 dòng. Chỉ <strong>admin</strong> xem được mục này;
+            <code>GET /audit-logs</code> gọi bằng farmer sẽ nhận <code>403 Forbidden</code>.
+          </p>
+        </div>
+        <p class="card__endpoints">
+          <code>GET /audit-logs</code>
+        </p>
+      </header>
+
+      <div class="audit-toolbar">
+        <button id="btn-load-audit" class="btn btn--primary" type="button">Tải lịch sử thao tác</button>
+        <span class="audit-toolbar__hint">
+          Log mới nhất hiển thị trước · thời gian theo giờ máy
+          (backend lưu UTC — rê chuột lên ô Thời gian để xem giá trị gốc)
+        </span>
+      </div>
+
+      <h3 class="table-title">Danh sách thao tác</h3>
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Thời gian</th>
+              <th>Người thực hiện</th>
+              <th>Hành động</th>
+              <th>Đối tượng</th>
+              <th class="is-right">ID dữ liệu</th>
+            </tr>
+          </thead>
+          <tbody id="audit-table-body"></tbody>
+        </table>
+      </div>
+      <p id="audit-empty" class="empty" hidden>
+        Chưa có thao tác nào được ghi nhận. Hãy tạo/sửa/xoá vùng trồng hoặc lô nông sản
+        rồi bấm <strong>Tải lịch sử thao tác</strong>.
+      </p>
+      <p id="audit-error" class="empty empty--error" hidden></p>
+    </section>
   </div>
   <!-- /#app-view -->
 
@@ -277,6 +341,10 @@
       <code>/farms</code> và <code>/batches</code> · xoá dữ liệu chỉ dành cho <code>admin</code>
       (farmer nhận <code>403 Forbidden</code>)
     </p>
+    <p>
+      Lịch sử thao tác: <code>GET /audit-logs</code> — chỉ <code>admin</code> xem được (farmer nhận
+      <code>403 Forbidden</code>) · log tự ghi khi tạo/sửa/xoá <code>/farms</code>, <code>/batches</code>
+    </p>
   </footer>
 
   <!-- Vùng hiển thị thông báo thêm thành công / thất bại -->
@@ -286,6 +354,6 @@
     <p class="noscript">Trang này cần JavaScript để gọi API backend. Hãy bật JavaScript và tải lại trang.</p>
   </noscript>
 
-  <script src="js/app.js"></script>
+  <script src="js/app.js?v=7"></script>
 </body>
 </html>

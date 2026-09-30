@@ -12,6 +12,12 @@ Cung cấp **đầy đủ CRUD** (hoàn thiện ở Sprint 5):
 và ``admin``. Riêng ``DELETE`` dùng ``require_admin`` -> **chỉ admin** được xoá
 (trên giao diện, nút Xoá cũng bị ẩn với farmer). Chưa đăng nhập → **401**,
 sai vai trò → **403**.
+
+**Lịch sử thao tác (Sprint 7):** mỗi lần ``POST``/``PUT``/``DELETE`` thành công,
+router ghi thêm 1 dòng vào bảng ``audit_logs`` (ai làm gì, lúc nào) thông qua
+``record_action()`` - xem ``app/audit.py`` và endpoint ``GET /audit-logs``.
+Log được ghi **trong cùng transaction** với thao tác nên thao tác thất bại
+(404/403/500) sẽ không để lại log.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Path, status
@@ -19,8 +25,16 @@ from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
+from app.audit import record_action
 from app.database import get_db
-from app.models import Farm, User
+from app.models import (
+    ACTION_CREATE,
+    ACTION_DELETE,
+    ACTION_UPDATE,
+    ENTITY_FARM,
+    Farm,
+    User,
+)
 from app.schemas import DeleteResponse, FarmCreate, FarmResponse, FarmUpdate
 from app.security import require_admin, require_farmer
 
@@ -54,7 +68,8 @@ def create_farm(
 
     Args:
         payload: Dữ liệu vùng trồng đã được Pydantic validate.
-        current_user: Tài khoản đã đăng nhập (farmer hoặc admin).
+        current_user: Tài khoản đã đăng nhập (farmer hoặc admin) - cũng là người
+            được ghi vào lịch sử thao tác.
         db: Session SQLAlchemy được cấp và tự đóng bởi dependency ``get_db``.
 
     Returns:
@@ -64,16 +79,19 @@ def create_farm(
         HTTPException: 401/403 nếu chưa đăng nhập hoặc sai vai trò;
             500 nếu ghi database thất bại (đã rollback).
     """
-    _ = current_user  # bắt buộc khai báo để dependency kiểm tra quyền chạy
-
     # `model_dump()` chuyển Pydantic model -> dict để map thẳng vào ORM model.
     farm = Farm(**payload.model_dump())
     db.add(farm)
 
     try:
+        # `flush()` để database sinh `id` cho vùng trồng - audit log cần ID thật.
+        db.flush()
+        # Sprint 7: ghi lịch sử "ai đã tạo vùng trồng nào" (chưa commit vội).
+        record_action(db, current_user, ACTION_CREATE, ENTITY_FARM, farm.id)
         db.commit()
     except SQLAlchemyError as exc:
         # Rollback để session không ở trạng thái lỗi cho các request sau.
+        # Log cũng nằm trong transaction này nên bị huỷ theo -> không có log rác.
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -160,8 +178,6 @@ def update_farm(
             404 nếu không tìm thấy vùng trồng;
             500 nếu ghi database thất bại (đã rollback).
     """
-    _ = current_user
-
     farm = db.get(Farm, farm_id)
     if farm is None:
         raise HTTPException(
@@ -174,6 +190,8 @@ def update_farm(
         setattr(farm, field, value)
 
     try:
+        # Sprint 7: ghi lịch sử "ai đã sửa vùng trồng nào" trong cùng transaction.
+        record_action(db, current_user, ACTION_UPDATE, ENTITY_FARM, farm_id)
         db.commit()
     except SQLAlchemyError as exc:
         db.rollback()
@@ -196,7 +214,10 @@ def update_farm(
         "đó (nhờ `cascade=\"all, delete-orphan\"` ở quan hệ Farm 1-N). Số lô bị "
         "xoá kèm được trả về ở field `deleted_batches` để giao diện thông báo.\n\n"
         "**Phân quyền:** chỉ `role = admin` được xoá (dùng `require_admin`). "
-        "Farmer gọi sẽ nhận `403 Forbidden` - giao diện cũng ẩn nút Xoá với farmer."
+        "Farmer gọi sẽ nhận `403 Forbidden` - giao diện cũng ẩn nút Xoá với farmer.\n\n"
+        "**Lịch sử thao tác:** ghi 1 dòng log cho vùng trồng vừa xoá "
+        "(`action=delete`, `entity=farm`). Các lô nông sản bị xoá kèm theo cơ chế "
+        "cascade **không** sinh log riêng (xem `deleted_batches` trong response)."
     ),
     responses={
         status.HTTP_401_UNAUTHORIZED: {"description": "Chưa đăng nhập."},
@@ -213,7 +234,8 @@ def delete_farm(
 
     Args:
         farm_id: ID vùng trồng cần xoá.
-        current_user: Tài khoản admin đã được ``require_admin`` kiểm tra quyền.
+        current_user: Tài khoản admin đã được ``require_admin`` kiểm tra quyền -
+            cũng là người được ghi vào lịch sử thao tác.
         db: Session SQLAlchemy từ dependency ``get_db``.
 
     Returns:
@@ -224,8 +246,6 @@ def delete_farm(
             404 nếu không tìm thấy vùng trồng;
             500 nếu xoá trong database thất bại (đã rollback).
     """
-    _ = current_user
-
     farm = db.get(Farm, farm_id)
     if farm is None:
         raise HTTPException(
@@ -239,6 +259,8 @@ def delete_farm(
 
     db.delete(farm)  # cascade -> các Batch con bị xoá theo
     try:
+        # Sprint 7: ghi lịch sử "ai đã xoá vùng trồng nào" trong cùng transaction.
+        record_action(db, current_user, ACTION_DELETE, ENTITY_FARM, farm_id)
         db.commit()
     except SQLAlchemyError as exc:
         db.rollback()

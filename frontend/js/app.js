@@ -20,6 +20,28 @@ const ROLE_ADMIN = "admin";
 /** Lấy element theo id cho ngắn gọn. */
 const $ = (id) => document.getElementById(id);
 
+/**
+ * Bật/tắt hiển thị của phần tử theo id (dùng trong `applySessionToUi`).
+ *
+ * Vì sao không viết thẳng `$(id).hidden = ...`: nếu index.html thiếu id đó -
+ * thường do trình duyệt còn cache bản `app.js` cũ hoặc bản HTML cũ, tức HTML
+ * và app.js lệch phiên bản - thì `$(id)` là null và câu lệnh sẽ ném lỗi làm
+ * `applySessionToUi` dừng giữa đường: các mục phía sau (trong đó có
+ * "3. Lịch sử thao tác") không bao giờ được bật mà cũng không thấy báo lỗi.
+ * Hàm này chỉ cảnh báo trong Console rồi bỏ qua để giao diện còn lại vẫn chạy.
+ */
+function setHidden(id, hidden) {
+  const element = $(id);
+  if (element === null) {
+    console.warn(
+      `[frontend] Không tìm thấy #${id} trong index.html — HTML và app.js có thể ` +
+      "lệch phiên bản (nhấn Ctrl+F5 để tải lại bản mới)."
+    );
+    return;
+  }
+  element.hidden = hidden;
+}
+
 /** Chống XSS: escape dữ liệu do người dùng nhập trước khi chèn vào HTML. */
 function escapeHtml(value) {
   return String(value ?? "")
@@ -41,6 +63,39 @@ function formatDate(value) {
   if (!value) return "—";
   const parts = String(value).split("-");
   return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : String(value);
+}
+
+/**
+ * "2026-09-30T14:20:05.123456" (backend lưu UTC, **không** kèm múi giờ) ->
+ * "30/09/2026 21:20:05" (giờ của máy người dùng, Sprint 7).
+ *
+ * Cách làm: đọc các thành phần ngày/giờ của chuỗi bằng regex (tránh việc mỗi
+ * trình duyệt parse phần giây lẻ `.123456` một kiểu), dựng `Date` theo **UTC**
+ * rồi lấy các thành phần theo giờ địa phương. Chuỗi lạ -> trả về nguyên bản.
+ */
+function formatDateTime(value) {
+  if (!value) return "—";
+
+  const text = String(value);
+  const match = text.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?/);
+  if (match === null) {
+    return text;
+  }
+
+  const [, year, month, day, hour, minute, second] = match;
+  const date = new Date(
+    Date.UTC(Number(year), Number(month) - 1, Number(day),
+             Number(hour), Number(minute), Number(second || 0))
+  );
+  if (Number.isNaN(date.getTime())) {
+    return text;
+  }
+
+  const pad = (number) => String(number).padStart(2, "0");
+  return (
+    `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()} ` +
+    `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
+  );
 }
 
 const TOAST_DURATION_MS = 4500;
@@ -86,14 +141,22 @@ async function apiRequest(path, { method = "GET", body, auth = true } = {}) {
       body: body ? JSON.stringify(body) : undefined,
     });
   } catch (error) {
-    throw new Error(
+    // `status = 0`: không có phản hồi HTTP (backend chưa chạy hoặc sai cổng).
+    const offline = new Error(
       `Không kết nối được backend (${API_BASE_URL}). Hãy chắc chắn uvicorn đang chạy.`
     );
+    offline.status = 0;
+    throw offline;
   }
 
   const data = await readJson(response);
   if (!response.ok) {
-    throw new Error(describeError(data, response.status));
+    // Sprint 7: gắn mã HTTP vào Error để nơi gọi xử lý riêng 401/403 (xem
+    // `loadAuditLogs`). Các đoạn `catch` cũ chỉ đọc `error.message` nên không
+    // bị ảnh hưởng.
+    const error = new Error(describeError(data, response.status));
+    error.status = response.status;
+    throw error;
   }
   return data;
 }
@@ -131,6 +194,8 @@ function describeError(data, status) {
 let farms = [];
 let batches = [];
 let users = [];
+// Sprint 7: lịch sử thao tác (chỉ admin tải được - xem `loadAuditLogs`).
+let auditLogs = [];
 
 // ID bản ghi đang được SỬA trên form (null = form đang ở chế độ "thêm mới").
 // Sprint 5: bấm nút "Sửa" ở bảng -> form phía trên đổ sẵn dữ liệu và nút submit
@@ -215,21 +280,30 @@ function clearSession() {
  */
 function applySessionToUi() {
   const isLoggedIn = session !== null;
-  const isAdmin = isLoggedIn && session.role === ROLE_ADMIN;
+  const adminUser = isAdmin();
 
-  $("login-view").hidden = isLoggedIn;
-  $("app-view").hidden = !isLoggedIn;
-  $("btn-reload").hidden = !isLoggedIn;
-  $("btn-logout").hidden = !isLoggedIn;
+  setHidden("login-view", isLoggedIn);
+  setHidden("app-view", !isLoggedIn);
+  setHidden("btn-reload", !isLoggedIn);
+  setHidden("btn-logout", !isLoggedIn);
+  setHidden("user-badge", !isLoggedIn);
 
   const badge = $("user-badge");
-  badge.hidden = !isLoggedIn;
-  if (isLoggedIn) {
+  if (badge !== null && isLoggedIn) {
     badge.textContent = `${session.username} · role: ${session.role}`;
-    badge.className = isAdmin ? "badge badge--ok" : "badge badge--muted";
+    badge.className = adminUser ? "badge badge--ok" : "badge badge--muted";
   }
 
-  $("users-card").hidden = !isAdmin;
+  setHidden("users-card", !adminUser);
+  // Sprint 7: lịch sử thao tác chỉ dành cho admin; farmer không thấy mục này
+  // (và nếu cố gọi `GET /audit-logs` thì backend trả 403).
+  setHidden("audit-card", !adminUser);
+  setHidden("stat-audit-card", !adminUser);
+}
+
+/** Phiên hiện tại có phải tài khoản **admin** không (dùng cho chức năng chỉ admin). */
+function isAdmin() {
+  return session !== null && session.role === ROLE_ADMIN;
 }
 
 /**
@@ -238,7 +312,7 @@ function applySessionToUi() {
  * trả `403 Forbidden` (`require_admin`) - đây chỉ là lớp bảo vệ ở UI.
  */
 function canDelete() {
-  return session !== null && session.role === ROLE_ADMIN;
+  return isAdmin();
 }
 
 /** Xử lý submit form đăng nhập -> POST /auth/login. */
@@ -278,12 +352,14 @@ function handleLogout() {
   farms = [];
   batches = [];
   users = [];
+  auditLogs = []; // Sprint 7: xoá lịch sử thao tác đang hiển thị
   resetFarmForm(); // bỏ chế độ sửa (nếu đang sửa) trước khi vẽ lại bảng rỗng
   resetBatchForm();
   renderFarms();
   renderFarmOptions();
   renderBatches();
   renderUsers();
+  renderAuditLogs(); // bảng lịch sử trống (thẻ thống kê trở về 0)
 
   applySessionToUi();
   toast(username ? `Đã đăng xuất tài khoản ${username}.` : "Đã đăng xuất.", "info");
@@ -415,6 +491,7 @@ async function handleFarmSubmit(event) {
     resetFarmForm(); // về lại chế độ "thêm mới"
     await loadFarms(); // bảng lô nông sản cũng hiển thị tên vùng trồng -> tải lại
     await loadBatches();
+    await refreshAuditLogsIfAdmin(); // Sprint 7: vừa ghi dữ liệu -> cập nhật lịch sử
     $("farm-name").focus();
   } catch (error) {
     toast(`${isEditing ? "Cập nhật" : "Thêm"} vùng trồng thất bại: ${error.message}`, "error");
@@ -489,6 +566,7 @@ async function deleteFarm(farmId) {
     }
     await loadFarms();
     await loadBatches(); // các lô của vùng trồng vừa xoá cũng biến mất
+    await refreshAuditLogsIfAdmin(); // Sprint 7: vừa xoá -> cập nhật lịch sử
   } catch (error) {
     toast(`Xoá vùng trồng thất bại: ${error.message}`, "error");
   }
@@ -594,6 +672,7 @@ async function handleBatchSubmit(event) {
     resetBatchForm(); // về lại chế độ "tạo mới"
     farmSelect.value = String(payload.farm_id); // giữ lại vùng trồng vừa chọn
     await loadBatches();
+    await refreshAuditLogsIfAdmin(); // Sprint 7: vừa ghi dữ liệu -> cập nhật lịch sử
   } catch (error) {
     toast(`${isEditing ? "Cập nhật" : "Tạo"} lô nông sản thất bại: ${error.message}`, "error");
   } finally {
@@ -655,6 +734,7 @@ async function deleteBatch(batchId) {
       resetBatchForm(); // lô đang sửa đã bị xoá -> form về chế độ tạo mới
     }
     await loadBatches();
+    await refreshAuditLogsIfAdmin(); // Sprint 7: vừa xoá -> cập nhật lịch sử
   } catch (error) {
     toast(`Xoá lô nông sản thất bại: ${error.message}`, "error");
   }
@@ -662,13 +742,15 @@ async function deleteBatch(batchId) {
 
 /* ------------------------------------------------------- 9. Thống kê --- */
 /**
- * Cập nhật 3 thẻ thống kê trên dashboard từ dữ liệu đang hiển thị:
+ * Cập nhật các thẻ thống kê trên dashboard từ dữ liệu đang hiển thị:
  * - **Tổng vùng trồng**: số phần tử của `farms` (nguồn: `GET /farms`);
  * - **Tổng lô nông sản**: số phần tử của `batches` (nguồn: `GET /batches`);
- * - **Tổng sản lượng (kg)**: cộng `quantity` của mọi lô (làm tròn 2 chữ số).
+ * - **Tổng sản lượng (kg)**: cộng `quantity` của mọi lô (làm tròn 2 chữ số);
+ * - **Lịch sử thao tác** (Sprint 7, chỉ admin thấy): số phần tử của `auditLogs`
+ *   (nguồn: `GET /audit-logs`) - farmer không tải được nên thẻ này bị ẩn.
  *
- * Hàm được gọi lại mỗi khi vẽ xong bảng (`renderFarms` / `renderBatches`) nên
- * số liệu luôn khớp với dữ liệu vừa tải.
+ * Hàm được gọi lại mỗi khi vẽ xong bảng (`renderFarms` / `renderBatches` /
+ * `renderAuditLogs`) nên số liệu luôn khớp với dữ liệu vừa tải.
  */
 function renderStats() {
   const totalYield = batches.reduce((sum, batch) => sum + Number(batch.quantity || 0), 0);
@@ -676,6 +758,7 @@ function renderStats() {
   $("stat-farms").textContent = formatNumber(farms.length);
   $("stat-batches").textContent = formatNumber(batches.length);
   $("stat-yield").textContent = formatNumber(Math.round(totalYield * 100) / 100);
+  $("stat-audit").textContent = formatNumber(auditLogs.length);
 }
 
 /* ------------------------------------------ 10. Tài khoản (chỉ admin) --- */
@@ -708,7 +791,108 @@ function renderUsers() {
   $("user-empty").hidden = users.length > 0;
 }
 
-/* --------------------------------------------------------- 11. Sự kiện --- */
+/* -------------------------------------- 11. Lịch sử thao tác (chỉ admin) --- */
+/**
+ * GET /audit-logs (Sprint 7, **chỉ admin**) -> vẽ bảng "Lịch sử thao tác" và
+ * cập nhật thẻ thống kê "Lịch sử thao tác" trên dashboard.
+ *
+ * Ba trạng thái giao diện:
+ * - **đang tải**: khoá nút "Tải lịch sử thao tác" + 1 dòng "Đang tải…" trong bảng;
+ * - **rỗng**: hiện `#audit-empty` khi chưa có bản ghi nào;
+ * - **lỗi**: hiện `#audit-error` - thông báo riêng cho **401/403** vì backend chỉ
+ *   cho tài khoản admin gọi API này.
+ *
+ * `silent = true` dùng khi tải kèm lúc đăng nhập/khôi phục phiên hoặc sau mỗi
+ * thao tác ghi, để không hiện quá nhiều toast làm phiền người dùng.
+ */
+async function loadAuditLogs({ silent = false } = {}) {
+  const button = $("btn-load-audit");
+  const errorBox = $("audit-error");
+
+  // --- trạng thái đang tải ---
+  setButtonLoading(button, true, "Đang tải…", "Tải lịch sử thao tác");
+  errorBox.hidden = true;
+  $("audit-empty").hidden = true;
+  $("audit-table-body").innerHTML =
+    '<tr class="is-loading"><td class="is-center" colspan="6">Đang tải lịch sử thao tác…</td></tr>';
+
+  try {
+    const data = await apiRequest("/audit-logs");
+    auditLogs = Array.isArray(data) ? data : [];
+    renderAuditLogs(); // backend trả log mới nhất trước -> vẽ đúng thứ tự đó
+
+    if (!silent) {
+      toast(
+        auditLogs.length > 0
+          ? `Đã tải ${formatNumber(auditLogs.length)} bản ghi lịch sử thao tác (mới nhất trước).`
+          : "Chưa có thao tác nào được ghi nhận.",
+        auditLogs.length > 0 ? "success" : "info"
+      );
+    }
+  } catch (error) {
+    auditLogs = [];
+    renderAuditLogs();
+    $("audit-empty").hidden = true; // đang có lỗi -> chỉ hiện thông báo lỗi
+
+    // 401 (chưa/hết phiên đăng nhập) hoặc 403 (không phải admin).
+    const denied = error.status === 401 || error.status === 403;
+    errorBox.textContent = denied
+      ? `Không có quyền xem lịch sử thao tác - mục này chỉ dành cho admin (${error.message})`
+      : `Không tải được lịch sử thao tác: ${error.message}`;
+    errorBox.hidden = false;
+
+    // Lỗi quyền luôn được báo (kể cả khi tải im lặng) vì người dùng cần biết.
+    if (!silent || denied) {
+      toast(errorBox.textContent, "error");
+    }
+  } finally {
+    setButtonLoading(button, false, "Đang tải…", "Tải lịch sử thao tác");
+  }
+}
+
+/** Vẽ bảng lịch sử thao tác (mới nhất trước) + cập nhật thẻ thống kê. */
+function renderAuditLogs() {
+  $("audit-table-body").innerHTML = auditLogs
+    .map(
+      (log) => `
+      <tr>
+        <td class="id-cell">${escapeHtml(log.id)}</td>
+        <td class="is-nowrap" title="UTC: ${escapeHtml(log.created_at)}">${escapeHtml(
+          formatDateTime(log.created_at)
+        )}</td>
+        <td>${escapeHtml(auditUserLabel(log))}</td>
+        <td><span class="action-badge action-badge--${escapeHtml(log.action)}">${escapeHtml(
+          log.action
+        )}</span></td>
+        <td><code>${escapeHtml(log.entity)}</code></td>
+        <td class="is-right">${escapeHtml(log.entity_id)}</td>
+      </tr>`
+    )
+    .join("");
+
+  $("audit-empty").hidden = auditLogs.length > 0;
+  $("audit-error").hidden = true; // dữ liệu đã vẽ xong -> không còn lỗi cũ
+  renderStats(); // thẻ "Lịch sử thao tác" đếm từ mảng `auditLogs`
+}
+
+/** Nhãn người thực hiện: ưu tiên `username`, thiếu thì hiển thị `#user_id`. */
+function auditUserLabel(log) {
+  return log.username ? log.username : `#${log.user_id}`;
+}
+
+/**
+ * Sau mỗi thao tác ghi thành công (tạo/sửa/xoá vùng trồng hoặc lô nông sản),
+ * admin thấy lịch sử mới ngay mà không cần bấm nút: gọi im lặng để bảng log và
+ * thẻ thống kê không bị cũ. Farmer không gọi được `GET /audit-logs` nên bỏ qua.
+ */
+async function refreshAuditLogsIfAdmin() {
+  if (!isAdmin()) {
+    return;
+  }
+  await loadAuditLogs({ silent: true });
+}
+
+/* --------------------------------------------------------- 12. Sự kiện --- */
 function bindEvents() {
   $("login-form").addEventListener("submit", handleLoginSubmit);
   $("btn-logout").addEventListener("click", handleLogout);
@@ -717,6 +901,8 @@ function bindEvents() {
   $("farm-cancel").addEventListener("click", () => cancelEdit("farm"));
   $("batch-cancel").addEventListener("click", () => cancelEdit("batch"));
   $("btn-reload").addEventListener("click", () => reloadAll());
+  // Sprint 7: nút tải lịch sử thao tác (chỉ admin thấy - xem applySessionToUi).
+  $("btn-load-audit").addEventListener("click", () => loadAuditLogs());
 
   // Cột "Thao tác" của 2 bảng dùng event delegation: nội dung bảng được vẽ lại
   // liên tục nên chỉ gắn 1 listener cho mỗi <tbody> thay vì gắn cho từng nút.
@@ -782,8 +968,9 @@ async function loadAllData() {
   await checkHealth();
   await loadFarms(); // phải chạy trước để bảng lô hiển thị được tên vùng trồng
   await loadBatches();
-  if (session !== null && session.role === ROLE_ADMIN) {
+  if (isAdmin()) {
     await loadUsers(); // chỉ admin gọi được GET /users
+    await loadAuditLogs({ silent: true }); // Sprint 7: bảng "Lịch sử thao tác"
   }
 }
 
@@ -796,11 +983,15 @@ async function reloadAll({ silent = false } = {}) {
 
   setButtonLoading(button, false, "Đang tải…", "Tải lại dữ liệu");
   if (!silent) {
-    toast(`Đã tải lại: ${farms.length} vùng trồng, ${batches.length} lô nông sản.`, "info");
+    const parts = [`${farms.length} vùng trồng`, `${batches.length} lô nông sản`];
+    if (isAdmin()) {
+      parts.push(`${auditLogs.length} bản ghi lịch sử`); // Sprint 7
+    }
+    toast(`Đã tải lại: ${parts.join(", ")}.`, "info");
   }
 }
 
-/* -------------------------------------------------------- 12. Khởi động --- */
+/* ------------------------------------------------------- 13. Khởi động --- */
 /**
  * Khởi động ứng dụng:
  * 1. gắn sự kiện + kiểm tra backend đang chạy;

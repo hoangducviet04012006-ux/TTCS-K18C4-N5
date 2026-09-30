@@ -14,6 +14,12 @@ Các sprint:
   dependency ``require_admin``/``require_farmer``) - **không dùng JWT**.
 - Sprint 5: hoàn thiện CRUD - thêm ``PUT``/``DELETE`` cho ``/farms`` và
   ``/batches`` (xoá chỉ dành cho ``admin``).
+- Sprint 6: bảo mật đăng nhập - sai mật khẩu 5 lần liên tiếp thì khoá tài khoản
+  5 phút (``POST /auth/login`` trả ``403`` kèm header ``Retry-After``, mọi API
+  cần quyền cũng bị chặn khi tài khoản đang bị khoá) - xem ``app/security.py``.
+- Sprint 7: lịch sử thao tác (audit log) - tự ghi log mỗi lần tạo/sửa/xoá vùng
+  trồng hoặc lô nông sản, xem lại bằng ``GET /audit-logs`` (chỉ ``admin``) -
+  xem ``app/audit.py``.
 """
 
 from collections.abc import AsyncIterator
@@ -24,7 +30,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app import __version__
 from app.database import init_db
-from app.routers import auth, batches, farms, health, users
+from app.routers import audit, auth, batches, farms, health, users
 
 # ------------------------------------------------------------------ Lifespan ---
 @asynccontextmanager
@@ -56,7 +62,16 @@ app = FastAPI(
         "`farmer` / `123456`) để test.\n"
         "- **Sprint 5**: hoàn thiện CRUD (`PUT`/`DELETE` cho `/farms` và "
         "`/batches`) + dashboard thống kê trên giao diện. Nhóm `DELETE` yêu cầu "
-        "role `admin` (farmer nhận `403`), các API còn lại cho cả `farmer`."
+        "role `admin` (farmer nhận `403`), các API còn lại cho cả `farmer`.\n"
+        "- **Sprint 6**: bảo mật đăng nhập - nhập sai mật khẩu **5 lần liên tiếp** "
+        "thì tài khoản bị **tạm khoá 5 phút**: `/auth/login` và mọi API cần quyền "
+        "trả `403` (kèm header `Retry-After`), kể cả khi gõ đúng mật khẩu. "
+        "Đăng nhập thành công hoặc hết thời gian khoá thì bộ đếm tự đặt lại về 0.\n"
+        "- **Sprint 7**: lịch sử thao tác (audit log) - mỗi lần tạo/sửa/xoá vùng "
+        "trồng hoặc lô nông sản, backend tự ghi 1 dòng vào bảng `audit_logs`; "
+        "xem lại toàn bộ bằng `GET /audit-logs` (**chỉ `admin`**, farmer nhận "
+        "`403`) kèm bộ lọc `entity` / `user_id` / `limit`. Log **không** sửa/xoá "
+        "được qua API và ghi sai thao tác (404/403/500) thì không phát sinh log."
     ),
     version=__version__,
     docs_url="/docs",
@@ -82,3 +97,4 @@ app.include_router(auth.router)
 app.include_router(farms.router)
 app.include_router(batches.router)
 app.include_router(users.router)
+app.include_router(audit.router)

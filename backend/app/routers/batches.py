@@ -15,6 +15,12 @@ Cung cấp **đầy đủ CRUD** (hoàn thiện ở Sprint 5):
 403 nếu sai vai trò); ``DELETE`` dùng ``require_admin`` -> chỉ admin. Hai endpoint
 ``GET`` giữ nguyên như trước (không yêu cầu đăng nhập) vì phục vụ tra cứu nguồn
 gốc công khai.
+
+**Lịch sử thao tác (Sprint 7):** mỗi lần ``POST``/``PUT``/``DELETE`` thành công,
+router ghi thêm 1 dòng vào bảng ``audit_logs`` (``entity=batch``) thông qua
+``record_action()`` - xem ``app/audit.py`` và endpoint ``GET /audit-logs``.
+Log nằm trong cùng transaction với thao tác nên thao tác thất bại
+(404/403/500) không để lại log.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Path, status
@@ -22,8 +28,17 @@ from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
+from app.audit import record_action
 from app.database import get_db
-from app.models import Batch, Farm, User
+from app.models import (
+    ACTION_CREATE,
+    ACTION_DELETE,
+    ACTION_UPDATE,
+    ENTITY_BATCH,
+    Batch,
+    Farm,
+    User,
+)
 from app.schemas import BatchCreate, BatchResponse, BatchUpdate, DeleteResponse
 from app.security import require_admin, require_farmer
 
@@ -65,7 +80,8 @@ def create_batch(
 
     Args:
         payload: Dữ liệu lô đã được Pydantic validate.
-        current_user: Tài khoản đã đăng nhập (farmer hoặc admin).
+        current_user: Tài khoản đã đăng nhập (farmer hoặc admin) - cũng là người
+            được ghi vào lịch sử thao tác.
         db: Session SQLAlchemy từ dependency ``get_db``.
 
     Returns:
@@ -76,8 +92,6 @@ def create_batch(
             404 nếu ``farm_id`` không tồn tại;
             500 nếu ghi database thất bại (đã rollback).
     """
-    _ = current_user  # bắt buộc khai báo để dependency kiểm tra quyền chạy
-
     # Bước 1: kiểm tra toàn vẹn tham chiếu - vùng trồng phải tồn tại.
     farm = db.get(Farm, payload.farm_id)
     if farm is None:
@@ -91,6 +105,10 @@ def create_batch(
     db.add(batch)
 
     try:
+        # `flush()` để database sinh `id` cho lô - audit log cần ID thật.
+        db.flush()
+        # Sprint 7: ghi lịch sử "ai đã tạo lô nông sản nào" (chưa commit vội).
+        record_action(db, current_user, ACTION_CREATE, ENTITY_BATCH, batch.id)
         db.commit()
     except SQLAlchemyError as exc:
         db.rollback()
@@ -189,7 +207,8 @@ def update_batch(
     Args:
         payload: Dữ liệu mới đã được Pydantic validate (đủ 4 trường).
         batch_id: ID lô cần sửa.
-        current_user: Tài khoản đã đăng nhập (farmer hoặc admin).
+        current_user: Tài khoản đã đăng nhập (farmer hoặc admin) - cũng là người
+            được ghi vào lịch sử thao tác.
         db: Session SQLAlchemy từ dependency ``get_db``.
 
     Returns:
@@ -200,8 +219,6 @@ def update_batch(
             404 nếu không tìm thấy lô hoặc ``farm_id`` mới;
             500 nếu ghi database thất bại (đã rollback).
     """
-    _ = current_user
-
     batch = db.get(Batch, batch_id)
     if batch is None:
         raise HTTPException(
@@ -221,6 +238,8 @@ def update_batch(
         setattr(batch, field, value)
 
     try:
+        # Sprint 7: ghi lịch sử "ai đã sửa lô nông sản nào" trong cùng transaction.
+        record_action(db, current_user, ACTION_UPDATE, ENTITY_BATCH, batch_id)
         db.commit()
     except SQLAlchemyError as exc:
         db.rollback()
@@ -241,7 +260,9 @@ def update_batch(
     description=(
         "Xoá một lô nông sản theo `id`.\n\n"
         "**Phân quyền:** chỉ `role = admin` được xoá (dùng `require_admin`). "
-        "Farmer gọi sẽ nhận `403 Forbidden` - giao diện cũng ẩn nút Xoá với farmer."
+        "Farmer gọi sẽ nhận `403 Forbidden` - giao diện cũng ẩn nút Xoá với farmer.\n\n"
+        "**Lịch sử thao tác:** ghi 1 dòng log cho lô vừa xoá "
+        "(`action=delete`, `entity=batch`)."
     ),
     responses={
         status.HTTP_401_UNAUTHORIZED: {"description": "Chưa đăng nhập."},
@@ -258,7 +279,8 @@ def delete_batch(
 
     Args:
         batch_id: ID lô cần xoá.
-        current_user: Tài khoản admin đã được ``require_admin`` kiểm tra quyền.
+        current_user: Tài khoản admin đã được ``require_admin`` kiểm tra quyền -
+            cũng là người được ghi vào lịch sử thao tác.
         db: Session SQLAlchemy từ dependency ``get_db``.
 
     Returns:
@@ -269,8 +291,6 @@ def delete_batch(
             404 nếu không tìm thấy lô;
             500 nếu xoá trong database thất bại (đã rollback).
     """
-    _ = current_user
-
     batch = db.get(Batch, batch_id)
     if batch is None:
         raise HTTPException(
@@ -283,6 +303,8 @@ def delete_batch(
 
     db.delete(batch)
     try:
+        # Sprint 7: ghi lịch sử "ai đã xoá lô nông sản nào" trong cùng transaction.
+        record_action(db, current_user, ACTION_DELETE, ENTITY_BATCH, batch_id)
         db.commit()
     except SQLAlchemyError as exc:
         db.rollback()

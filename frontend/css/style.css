@@ -147,6 +147,15 @@ a {
   color: var(--color-primary-dark);
 }
 
+/* Link "xem bảng chi tiết" trong thẻ thống kê lịch sử thao tác: nhảy xuống
+   card "3. Lịch sử thao tác" ở cuối trang (card nằm dưới màn hình đầu tiên
+   nên nếu không có link này rất dễ tưởng là chưa có mục đó). */
+.stat-card__hint a {
+  color: var(--color-primary-dark);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
 /* ----------------------------------------------------------- 5. Card --- */
 .card {
   background: var(--color-surface);
@@ -414,6 +423,12 @@ a {
   background: var(--color-primary-light);
 }
 
+/* Dòng "Đang tải…" trong lúc chờ API (xem loadAuditLogs trong app.js). */
+.table tbody tr.is-loading td {
+  font-style: italic;
+  color: var(--color-text-muted);
+}
+
 .id-cell {
   font-weight: 700;
   color: var(--color-primary-dark);
@@ -531,7 +546,62 @@ a {
   border-radius: 999px;
 }
 
-/* ------------------------------------------------------ 13. Responsive --- */
+/* ----------------------------- 13. Lịch sử thao tác (Sprint 7) --- */
+/* Thanh công cụ của card "Lịch sử thao tác": nút tải + ghi chú về thứ tự/giờ. */
+.audit-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: var(--space);
+}
+
+.audit-toolbar__hint {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}
+
+/* Nhãn hành động (create / update / delete) trong bảng lịch sử thao tác.
+   Hành động không có modifier riêng sẽ dùng màu xám mặc định của .action-badge. */
+.action-badge {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  background: #eef5f0;
+  color: var(--color-text-muted);
+}
+
+.action-badge--create {
+  background: var(--color-primary-light);
+  color: var(--color-primary-dark);
+}
+
+.action-badge--update {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.action-badge--delete {
+  background: var(--color-danger-light);
+  color: var(--color-danger);
+}
+
+/* Cột thời gian của bảng lịch sử: giữ trên 1 dòng cho dễ đọc. */
+.is-nowrap {
+  white-space: nowrap;
+}
+
+/* Khối báo lỗi khi không tải được lịch sử (kế thừa style của .empty). */
+.empty--error {
+  color: var(--color-danger);
+  background: var(--color-danger-light);
+  border-color: var(--color-danger);
+}
+
+/* ------------------------------------------------------ 14. Responsive --- */
 @media (max-width: 640px) {
   .app-header__inner {
     flex-direction: column;

@@ -10,6 +10,9 @@ SQLite ở dưới - phần ORM (models/schemas/routers) không phải sửa.
 
 Sprint 4: thêm `seed_default_users()` - tạo sẵn 2 tài khoản demo
 (`admin`/`farmer`, mật khẩu `123456`) mỗi khi khởi động nếu chưa có.
+
+Sprint 6: thêm `migrate_user_security_columns()` - bổ sung 2 cột chống dò mật
+khẩu (`failed_login_attempts`, `locked_until`) cho database tạo từ Sprint 4.
 """
 
 from collections.abc import Generator
@@ -120,6 +123,38 @@ def seed_default_users() -> None:
         db.close()
 
 
+def migrate_user_security_columns() -> None:
+    """Thêm 2 cột bảo mật đăng nhập vào bảng ``users`` **nếu còn thiếu**.
+
+    ``Base.metadata.create_all()`` chỉ tạo bảng *mới*, không thêm cột vào bảng đã
+    tồn tại, nên database tạo từ Sprint 4 (``backend/ttcs.db``) vẫn thiếu
+    ``failed_login_attempts`` và ``locked_until``. Hàm này chạy ``ALTER TABLE``
+    để nâng cấp tại chỗ - **không** xoá bảng, **không** mất dữ liệu tài khoản.
+
+    An toàn khi gọi lặp lại (idempotent): chỉ thêm những cột chưa tồn tại.
+
+    Ghi chú: khi dự án chuyển sang PostgreSQL/MySQL, đây là điểm nên thay bằng
+    công cụ migration thật (Alembic) thay vì ``ALTER TABLE`` thủ công.
+    """
+    required_columns: dict[str, str] = {
+        "failed_login_attempts": "INTEGER NOT NULL DEFAULT 0",
+        "locked_until": "DATETIME",
+    }
+
+    with engine.begin() as connection:
+        existing_columns = {
+            row[1] for row in connection.exec_driver_sql("PRAGMA table_info(users)")
+        }
+        if not existing_columns:
+            return  # bảng chưa tồn tại -> create_all() đã tạo đủ cột
+
+        for column_name, column_type in required_columns.items():
+            if column_name not in existing_columns:
+                connection.exec_driver_sql(
+                    f"ALTER TABLE users ADD COLUMN {column_name} {column_type}"
+                )
+
+
 def init_db() -> None:
     """Tạo toàn bộ bảng trong database dựa trên metadata của các models.
 
@@ -127,6 +162,8 @@ def init_db() -> None:
 
     - ``Base.metadata.create_all()``: bảng chưa có thì tạo, bảng đã có thì
       giữ nguyên (không làm mất dữ liệu đang lưu).
+    - ``migrate_user_security_columns()``: bổ sung 2 cột chống dò mật khẩu cho
+      bảng ``users`` của database cũ (Sprint 6).
     - ``seed_default_users()``: tạo 2 tài khoản mặc định cho chức năng đăng nhập
       + phân quyền (Sprint 4).
     """
@@ -136,4 +173,5 @@ def init_db() -> None:
     from app import models  # noqa: F401  (import để đăng ký metadata)
 
     Base.metadata.create_all(bind=engine)
+    migrate_user_security_columns()
     seed_default_users()
