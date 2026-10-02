@@ -58,19 +58,36 @@ class LoginRequest(BaseModel):
     )
 
 
+# ---------------------------------------------------------- Organization ---
+class OrganizationCreate(BaseModel):
+    """Dữ liệu tạo tổ chức mới."""
+
+    name: str = Field(..., min_length=1, max_length=255, description="Tên tổ chức / hợp tác xã.")
+    code: str = Field(..., min_length=1, max_length=50, description="Mã định danh tổ chức (duy nhất).")
+    description: str | None = Field(default=None, max_length=500, description="Mô tả tổ chức.")
+
+
+class OrganizationResponse(OrganizationCreate):
+    """Thông tin tổ chức trả về API."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int = Field(..., description="Mã ID tổ chức.")
+    created_at: datetime = Field(..., description="Thời điểm tạo.")
+
+
 class LoginResponse(BaseModel):
-    """Kết quả đăng nhập thành công: ``username`` + ``role``.
-
-    **Không có token** (vì dự án không dùng JWT). Frontend dùng ``role`` để
-    hiển thị đúng chức năng theo phân quyền.
-
-    Ví dụ::
-
-        {"username": "admin", "role": "admin"}
-    """
+    """Kết quả đăng nhập thành công: ``username``, ``role``, ``organization_id``, ``organization_name``."""
 
     model_config = ConfigDict(
-        json_schema_extra={"example": {"username": "admin", "role": "admin"}},
+        json_schema_extra={
+            "example": {
+                "username": "admin",
+                "role": "admin",
+                "organization_id": 1,
+                "organization_name": "Hợp tác xã Nông sản An Toàn Đồng Tháp",
+            }
+        },
     )
 
     username: str = Field(
@@ -83,28 +100,27 @@ class LoginResponse(BaseModel):
         description="Vai trò của tài khoản: `admin` (toàn quyền) hoặc `farmer` (nông dân).",
         examples=["admin", "farmer"],
     )
+    organization_id: int | None = Field(
+        default=None,
+        description="ID tổ chức / hợp tác xã trực thuộc.",
+        examples=[1],
+    )
+    organization_name: str | None = Field(
+        default=None,
+        description="Tên tổ chức / hợp tác xã trực thuộc.",
+        examples=["Hợp tác xã Nông sản An Toàn Đồng Tháp"],
+    )
 
 
 class AccountLockedResponse(BaseModel):
-    """Body lỗi **403 Forbidden** khi tài khoản bị tạm khoá (Sprint 6).
-
-    ``POST /auth/login`` trả về cấu trúc này khi nhập sai mật khẩu
-    ``MAX_FAILED_LOGIN_ATTEMPTS`` (5) lần liên tiếp - xem ``app/security.py``.
-    Message nêu rõ **thời gian chờ còn lại**; response còn có header
-    ``Retry-After`` (số giây) cho client tự động đếm ngược.
-
-    Ví dụ::
-
-        {"detail": "Tài khoản 'farmer' đã bị tạm khoá do nhập sai mật khẩu 5 lần
-                    liên tiếp. Vui lòng thử lại sau 4 phút 30 giây."}
-    """
+    """Body lỗi **403 Forbidden** khi tài khoản bị tạm khoá (Sprint 6)."""
 
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
                 "detail": (
                     "Tài khoản 'farmer' đã bị tạm khoá do nhập sai mật khẩu "
-                    "5 lần liên tiếp. Vui lòng thử lại sau 4 phút 30 giây."
+                    "5 lần liên tiếp. Vui lòng thử lại sau 15 phút."
                 )
             }
         },
@@ -117,20 +133,28 @@ class AccountLockedResponse(BaseModel):
 
 
 class UserResponse(BaseModel):
-    """Thông tin tài khoản trả ra API (``GET /users`` - chỉ admin).
-
-    Cố tình **không** có field ``password``: mật khẩu (đã băm) không bao giờ
-    được trả về client.
-    """
+    """Thông tin tài khoản trả ra API (``GET /users`` - chỉ admin)."""
 
     model_config = ConfigDict(
         from_attributes=True,
-        json_schema_extra={"example": {"id": 1, "username": "admin", "role": "admin"}},
+        json_schema_extra={
+            "example": {
+                "id": 1,
+                "username": "admin",
+                "role": "admin",
+                "organization_id": 1,
+            }
+        },
     )
 
     id: int = Field(..., description="Mã định danh tài khoản.", examples=[1])
     username: str = Field(..., description="Tên đăng nhập.", examples=["admin"])
     role: str = Field(..., description="Vai trò: `admin` hoặc `farmer`.", examples=["admin"])
+    organization_id: int | None = Field(
+        default=None,
+        description="ID tổ chức trực thuộc.",
+        examples=[1],
+    )
 
 
 # ------------------------------------------------------------------ Farm ---
@@ -180,6 +204,12 @@ class FarmCreate(BaseModel):
         description="Diện tích canh tác, đơn vị hecta (ha). Phải lớn hơn 0.",
         examples=[2.5],
     )
+    coordinates: str | None = Field(
+        default=None,
+        max_length=255,
+        description="Tọa độ GPS của thửa đất (ví dụ: '10.4539, 105.6324').",
+        examples=["10.4539, 105.6324"],
+    )
     owner: str = Field(
         ...,
         min_length=1,
@@ -194,15 +224,7 @@ class FarmUpdate(FarmCreate):
 
     Kế thừa ``FarmCreate`` để dùng lại đúng bộ quy tắc validate (tên/địa điểm/
     chủ sở hữu không rỗng, diện tích > 0). ``PUT`` là cập nhật *thay thế* nên
-    client gửi **đầy đủ 4 trường** như khi tạo mới; backend ghi đè giá trị cũ.
-
-    Khai báo class riêng (dù giống hệt ``FarmCreate``) để Swagger UI hiển thị
-    đúng tên schema ``FarmUpdate`` ở endpoint ``PUT``.
-
-    Ví dụ::
-
-        {"name": "Vùng trồng xoài Cao Lãnh", "location": "...", "area": 3.2,
-         "owner": "Hợp tác xã Xoài Mỹ Xương"}
+    client gửi **đầy đủ các trường** như khi tạo mới; backend ghi đè giá trị cũ.
     """
 
     model_config = ConfigDict(
@@ -211,6 +233,7 @@ class FarmUpdate(FarmCreate):
                 "name": "Vùng trồng xoài Cao Lãnh",
                 "location": "Xã Mỹ Xương, Huyện Cao Lãnh, Tỉnh Đồng Tháp",
                 "area": 3.2,
+                "coordinates": "10.4539, 105.6324",
                 "owner": "Hợp tác xã Xoài Mỹ Xương",
             }
         },
@@ -218,13 +241,7 @@ class FarmUpdate(FarmCreate):
 
 
 class FarmResponse(BaseModel):
-    """Dữ liệu API trả về cho một vùng trồng (kèm ``id``).
-
-    ``from_attributes=True`` cho phép khởi tạo trực tiếp từ ORM object
-    (``Farm``) mà không cần convert thủ công::
-
-        FarmResponse.model_validate(farm_obj)
-    """
+    """Dữ liệu API trả về cho một vùng trồng (kèm ``id`` và ``organization_id``)."""
 
     model_config = ConfigDict(
         from_attributes=True,
@@ -232,9 +249,11 @@ class FarmResponse(BaseModel):
     )
 
     id: int = Field(..., description="Mã định danh vùng trồng.", examples=[1])
+    organization_id: int = Field(..., description="ID tổ chức trực thuộc.", examples=[1])
     name: str = Field(..., description="Tên vùng trồng.")
     location: str = Field(..., description="Địa điểm của vùng trồng.")
     area: float = Field(..., description="Diện tích canh tác (ha).")
+    coordinates: str | None = Field(default=None, description="Tọa độ GPS của thửa đất.")
     owner: str = Field(..., description="Chủ sở hữu vùng trồng.")
 
 

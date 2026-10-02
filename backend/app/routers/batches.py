@@ -100,6 +100,12 @@ def create_batch(
             detail=f"Không tìm thấy vùng trồng có id={payload.farm_id}.",
         )
 
+    if current_user.organization_id is not None and farm.organization_id != current_user.organization_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Bạn không có quyền tạo lô nông sản cho vùng trồng của tổ chức khác.",
+        )
+
     # Bước 2: lưu lô nông sản.
     batch = Batch(**payload.model_dump())
     db.add(batch)
@@ -226,12 +232,25 @@ def update_batch(
             detail=f"Không tìm thấy lô nông sản có id={batch_id}.",
         )
 
+    current_farm = db.get(Farm, batch.farm_id)
+    if current_farm and current_user.organization_id is not None and current_farm.organization_id != current_user.organization_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Bạn không có quyền sửa lô nông sản của tổ chức khác.",
+        )
+
     # Kiểm tra lại toàn vẹn tham chiếu: vùng trồng (mới) phải tồn tại.
     farm = db.get(Farm, payload.farm_id)
     if farm is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Không tìm thấy vùng trồng có id={payload.farm_id}.",
+        )
+
+    if current_user.organization_id is not None and farm.organization_id != current_user.organization_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Bạn không có quyền chuyển lô nông sản sang vùng trồng của tổ chức khác.",
         )
 
     for field, value in payload.model_dump().items():
@@ -296,6 +315,13 @@ def delete_batch(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Không tìm thấy lô nông sản có id={batch_id}.",
+        )
+
+    current_farm = db.get(Farm, batch.farm_id)
+    if current_farm and current_user.organization_id is not None and current_farm.organization_id != current_user.organization_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Bạn không có quyền xoá lô nông sản của tổ chức khác.",
         )
 
     # Lưu lại tên sản phẩm để viết thông báo (sau khi xoá không đọc được nữa).

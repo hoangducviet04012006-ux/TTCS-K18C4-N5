@@ -65,7 +65,10 @@ def test_login_dung_van_hoat_dong(
     response = login(client, TEST_USERNAME_ADMIN, TEST_PASSWORD)
 
     assert response.status_code == 200
-    assert response.json() == {"username": TEST_USERNAME_ADMIN, "role": "admin"}
+    data = response.json()
+    assert data["username"] == TEST_USERNAME_ADMIN
+    assert data["role"] == "admin"
+    assert "organization_id" in data
     assert lock_state(session_factory, TEST_USERNAME_ADMIN) == (0, None)
 
 
@@ -74,7 +77,9 @@ def test_login_farmer_van_hoat_dong(client: TestClient) -> None:
     response = login(client, TEST_USERNAME_FARMER, TEST_PASSWORD)
 
     assert response.status_code == 200
-    assert response.json() == {"username": TEST_USERNAME_FARMER, "role": "farmer"}
+    data = response.json()
+    assert data["username"] == TEST_USERNAME_FARMER
+    assert data["role"] == "farmer"
 
 
 def test_sai_bon_lan_chua_khoa_va_dem_dung_so_lan(
@@ -168,7 +173,9 @@ def test_het_thoi_gian_khoa_dang_nhap_lai_duoc(
     response = login(client, TEST_USERNAME_ADMIN, TEST_PASSWORD)
 
     assert response.status_code == 200
-    assert response.json() == {"username": TEST_USERNAME_ADMIN, "role": "admin"}
+    data = response.json()
+    assert data["username"] == TEST_USERNAME_ADMIN
+    assert data["role"] == "admin"
     # Hết khoá thì bộ đếm sai cũng được xoá.
     assert lock_state(session_factory, TEST_USERNAME_ADMIN) == (0, None)
 

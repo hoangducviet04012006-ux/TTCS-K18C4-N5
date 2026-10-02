@@ -1,20 +1,10 @@
 """Cấu hình kết nối cơ sở dữ liệu SQLite bằng SQLAlchemy.
 
-File này chịu trách nhiệm duy nhất một việc: tạo `engine`, `SessionLocal`,
-`Base` và các hàm tiện ích dùng chung cho tầng truy cập dữ liệu.
-
-Sprint 1: SQLite (file local, không cần cài server) để chạy demo nhanh.
-Sprint sau: muốn đổi sang PostgreSQL/MySQL thì sửa `DATABASE_URL`, cài driver
-tương ứng (`psycopg`, `pymysql`...), bỏ `connect_args` chỉ dành riêng cho
-SQLite ở dưới - phần ORM (models/schemas/routers) không phải sửa.
-
-Sprint 4: thêm `seed_default_users()` - tạo sẵn 2 tài khoản demo
-(`admin`/`farmer`, mật khẩu `123456`) mỗi khi khởi động nếu chưa có.
-
-Sprint 6: thêm `migrate_user_security_columns()` - bổ sung 2 cột chống dò mật
-khẩu (`failed_login_attempts`, `locked_until`) cho database tạo từ Sprint 4.
+File này chịu trách nhiệm: tạo engine, SessionLocal, Base và các hàm tiện ích
+khởi tạo database, seed dữ liệu mẫu và migration.
 """
 
+import os
 from collections.abc import Generator
 from pathlib import Path
 
@@ -23,48 +13,32 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 # ---------------------------------------------------------------- Cấu hình ---
-# Thư mục `backend/` (cha của thư mục `app/`) - nơi đặt file database .db
 BASE_DIR: Path = Path(__file__).resolve().parent.parent
-
-# Đường dẫn file SQLite: backend/ttcs.db
 DATABASE_FILE: Path = BASE_DIR / "ttcs.db"
-DATABASE_URL: str = f"sqlite:///{DATABASE_FILE.as_posix()}"
+DATABASE_URL: str = os.getenv("DATABASE_URL", f"sqlite:///{DATABASE_FILE.as_posix()}")
 
-# -------------------------------------------------------------- SQLAlchemy ---
-# `check_same_thread=False` là bắt buộc với SQLite khi dùng cùng FastAPI,
-# vì mỗi request có thể được xử lý trên một thread khác nhau.
+# Đảm bảo thư mục chứa file SQLite tồn tại (hỗ trợ mount volume Docker)
+if DATABASE_URL.startswith("sqlite:///"):
+    _db_path_str = DATABASE_URL.replace("sqlite:///", "")
+    if _db_path_str and not _db_path_str.startswith(":memory:"):
+        _db_path = Path(_db_path_str)
+        _db_path.parent.mkdir(parents=True, exist_ok=True)
+
 engine = create_engine(
     DATABASE_URL,
     connect_args={"check_same_thread": False},
-    echo=False,  # đổi thành True nếu muốn xem câu SQL sinh ra khi debug
+    echo=False,
 )
 
-# Mỗi request sẽ mở một Session riêng, không tự commit/autoflush (an toàn hơn).
 SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
 
 
 class Base(DeclarativeBase):
-    """Base class cho toàn bộ ORM models.
-
-    Mọi model trong ``app/models.py`` đều kế thừa class này để SQLAlchemy
-    biết cách ánh xạ (map) class Python -> bảng trong database.
-    """
+    """Base class cho toàn bộ ORM models."""
 
 
-# ------------------------------------------------------------------- Helper ---
 def get_db() -> Generator[Session, None, None]:
-    """Dependency cung cấp Session cho mỗi request và tự đóng khi xong.
-
-    Cách dùng trong router::
-
-        from fastapi import Depends
-        from sqlalchemy.orm import Session
-        from app.database import get_db
-
-        @router.get("/items")
-        def list_items(db: Session = Depends(get_db)):
-            ...
-    """
+    """Dependency cung cấp Session cho mỗi request và tự đóng khi xong."""
     db: Session = SessionLocal()
     try:
         yield db
@@ -73,104 +47,128 @@ def get_db() -> Generator[Session, None, None]:
 
 
 def seed_default_users() -> None:
-    """Tạo 2 tài khoản mặc định (``admin`` / ``farmer``) nếu chưa tồn tại.
+    """Tạo tổ chức mặc định và các tài khoản demo mẫu (Argon2id).
 
-    Tài khoản mặc định (mật khẩu giống nhau để dễ demo):
-
-    ==========  ==========  =====================
-    username    password    role
-    ==========  ==========  =====================
-    ``admin``   ``123456``  ``admin`` (toàn quyền)
-    ``farmer``  ``123456``  ``farmer`` (nông dân)
-    ==========  ==========  =====================
-
-    Hàm **idempotent** - gọi lại nhiều lần (mỗi lần server khởi động) cũng
-    không tạo trùng, và **không ghi đè** tài khoản đã có (kể cả khi người dùng
-    đã đổi mật khẩu), nhờ kiểm tra ``username`` trước khi insert.
-
-    Mật khẩu được băm bằng ``hash_password`` (SHA-256) trước khi lưu - database
-    không bao giờ chứa mật khẩu dạng thô.
+    Tạo:
+    - Tổ chức 1: Hợp tác xã Nông sản An Toàn Đồng Tháp (HTX-DT)
+    - Tổ chức 2: Hợp tác xã Nông nghiệp Sạch Tiền Giang (HTX-TG) - phục vụ test cách ly dữ liệu
+    - Tài khoản: admin (HTX-DT), farmer (HTX-DT), farmer_tg (HTX-TG), mật khẩu demo: 123456
     """
-    # Import trong hàm để tránh import vòng: models cần `Base` ở module này,
-    # còn security cần `get_db` ở module này.
-    from app.models import ROLE_ADMIN, ROLE_FARMER, User
+    from app.models import ROLE_ADMIN, ROLE_FARMER, Organization, User
     from app.security import hash_password
-
-    default_users: tuple[dict[str, str], ...] = (
-        {"username": "admin", "password": "123456", "role": ROLE_ADMIN},
-        {"username": "farmer", "password": "123456", "role": ROLE_FARMER},
-    )
 
     db: Session = SessionLocal()
     try:
-        for item in default_users:
-            exists = db.scalar(select(User).where(User.username == item["username"]))
-            if exists is not None:
-                continue  # tài khoản đã có -> giữ nguyên, không ghi đè
-
-            db.add(
-                User(
-                    username=item["username"],
-                    password=hash_password(item["password"]),
-                    role=item["role"],
-                )
+        # 1. Tạo tổ chức mặc định nếu chưa có
+        org_dt = db.scalar(select(Organization).where(Organization.code == "HTX-DT"))
+        if org_dt is None:
+            org_dt = Organization(
+                name="Hợp tác xã Nông sản An Toàn Đồng Tháp",
+                code="HTX-DT",
+                description="Hợp tác xã chuyên canh tác xoài và cây ăn trái xuất khẩu tỉnh Đồng Tháp",
             )
+            db.add(org_dt)
+            db.flush()
+
+        org_tg = db.scalar(select(Organization).where(Organization.code == "HTX-TG"))
+        if org_tg is None:
+            org_tg = Organization(
+                name="Hợp tác xã Nông nghiệp Sạch Tiền Giang",
+                code="HTX-TG",
+                description="Hợp tác xã sầu riêng & nông sản sạch tỉnh Tiền Giang",
+            )
+            db.add(org_tg)
+            db.flush()
+
+        # 2. Tạo tài khoản demo
+        default_users: tuple[dict, ...] = (
+            {"username": "admin", "password": "123456", "role": ROLE_ADMIN, "organization_id": org_dt.id},
+            {"username": "farmer", "password": "123456", "role": ROLE_FARMER, "organization_id": org_dt.id},
+            {"username": "farmer_tg", "password": "123456", "role": ROLE_FARMER, "organization_id": org_tg.id},
+        )
+
+        for item in default_users:
+            user = db.scalar(select(User).where(User.username == item["username"]))
+            if user is None:
+                db.add(
+                    User(
+                        username=item["username"],
+                        password=hash_password(item["password"]),
+                        role=item["role"],
+                        organization_id=item["organization_id"],
+                    )
+                )
+            else:
+                if user.organization_id is None:
+                    user.organization_id = item["organization_id"]
+
+        # Cập nhật các thửa đất cũ chưa có organization_id về org_dt.id
+        try:
+            from sqlalchemy import text
+            db.execute(
+                text("UPDATE farms SET organization_id = :org_id WHERE organization_id IS NULL"),
+                {"org_id": org_dt.id},
+            )
+        except Exception:
+            pass
+
+        # Tạo mẫu 1 thửa đất cho HTX Tiền Giang nếu chưa có để demo cách ly dữ liệu
+        try:
+            from app.models import Farm
+            farm_tg = db.scalar(select(Farm).where(Farm.organization_id == org_tg.id))
+            if farm_tg is None:
+                db.add(
+                    Farm(
+                        name="Vườn sầu riêng Ri6 Cai Lậy",
+                        location="Xã Tam Bình, huyện Cai Lậy, Tiền Giang",
+                        area=2.8,
+                        owner="HTX Nông nghiệp Sạch Tiền Giang",
+                        coordinates="10.4123, 106.0123",
+                        organization_id=org_tg.id,
+                    )
+                )
+        except Exception:
+            pass
         db.commit()
     except SQLAlchemyError:
-        # Không để server chết vì lỗi seed dữ liệu mẫu.
         db.rollback()
     finally:
         db.close()
 
 
 def migrate_user_security_columns() -> None:
-    """Thêm 2 cột bảo mật đăng nhập vào bảng ``users`` **nếu còn thiếu**.
-
-    ``Base.metadata.create_all()`` chỉ tạo bảng *mới*, không thêm cột vào bảng đã
-    tồn tại, nên database tạo từ Sprint 4 (``backend/ttcs.db``) vẫn thiếu
-    ``failed_login_attempts`` và ``locked_until``. Hàm này chạy ``ALTER TABLE``
-    để nâng cấp tại chỗ - **không** xoá bảng, **không** mất dữ liệu tài khoản.
-
-    An toàn khi gọi lặp lại (idempotent): chỉ thêm những cột chưa tồn tại.
-
-    Ghi chú: khi dự án chuyển sang PostgreSQL/MySQL, đây là điểm nên thay bằng
-    công cụ migration thật (Alembic) thay vì ``ALTER TABLE`` thủ công.
-    """
-    required_columns: dict[str, str] = {
+    """Thêm cột bảo mật đăng nhập cho users và cột organization_id, coordinates nếu thiếu."""
+    user_columns: dict[str, str] = {
         "failed_login_attempts": "INTEGER NOT NULL DEFAULT 0",
         "locked_until": "DATETIME",
+        "organization_id": "INTEGER",
+    }
+    farm_columns: dict[str, str] = {
+        "organization_id": "INTEGER",
+        "coordinates": "VARCHAR(255)",
     }
 
     with engine.begin() as connection:
-        existing_columns = {
+        existing_users = {
             row[1] for row in connection.exec_driver_sql("PRAGMA table_info(users)")
         }
-        if not existing_columns:
-            return  # bảng chưa tồn tại -> create_all() đã tạo đủ cột
+        if existing_users:
+            for col_name, col_type in user_columns.items():
+                if col_name not in existing_users:
+                    connection.exec_driver_sql(f"ALTER TABLE users ADD COLUMN {col_name} {col_type}")
 
-        for column_name, column_type in required_columns.items():
-            if column_name not in existing_columns:
-                connection.exec_driver_sql(
-                    f"ALTER TABLE users ADD COLUMN {column_name} {column_type}"
-                )
+        existing_farms = {
+            row[1] for row in connection.exec_driver_sql("PRAGMA table_info(farms)")
+        }
+        if existing_farms:
+            for col_name, col_type in farm_columns.items():
+                if col_name not in existing_farms:
+                    connection.exec_driver_sql(f"ALTER TABLE farms ADD COLUMN {col_name} {col_type}")
 
 
 def init_db() -> None:
-    """Tạo toàn bộ bảng trong database dựa trên metadata của các models.
-
-    Được gọi một lần khi ứng dụng khởi động (xem ``app/main.py``):
-
-    - ``Base.metadata.create_all()``: bảng chưa có thì tạo, bảng đã có thì
-      giữ nguyên (không làm mất dữ liệu đang lưu).
-    - ``migrate_user_security_columns()``: bổ sung 2 cột chống dò mật khẩu cho
-      bảng ``users`` của database cũ (Sprint 6).
-    - ``seed_default_users()``: tạo 2 tài khoản mặc định cho chức năng đăng nhập
-      + phân quyền (Sprint 4).
-    """
-    # Import models ngay trong hàm để tránh import vòng (circular import):
-    # models.py cần `Base` từ module này, còn module này cần models đã được
-    # đăng ký vào metadata trước khi gọi create_all().
-    from app import models  # noqa: F401  (import để đăng ký metadata)
+    """Tạo bảng và chạy migration khi ứng dụng khởi động."""
+    from app import models  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
     migrate_user_security_columns()

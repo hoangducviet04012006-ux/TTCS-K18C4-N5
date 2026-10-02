@@ -1,23 +1,11 @@
-"""Router quản lý vùng trồng (Farm) - module đầu tiên của Sprint 2.
+"""Router quản lý vùng trồng / thửa đất (Farm) - Sprint 1.
 
-Cung cấp **đầy đủ CRUD** (hoàn thiện ở Sprint 5):
-
-- ``POST   /farms``           : tạo vùng trồng mới.
-- ``GET    /farms``           : lấy danh sách vùng trồng.
-- ``PUT    /farms/{farm_id}`` : cập nhật (thay thế) thông tin vùng trồng.
-- ``DELETE /farms/{farm_id}`` : xoá vùng trồng - **xoá kèm** mọi lô nông sản của nó.
-
-**Phân quyền (Sprint 4):** ``POST``/``GET``/``PUT`` dùng dependency
-``require_farmer`` -> yêu cầu đăng nhập bằng HTTP Basic, cho phép role ``farmer``
-và ``admin``. Riêng ``DELETE`` dùng ``require_admin`` -> **chỉ admin** được xoá
-(trên giao diện, nút Xoá cũng bị ẩn với farmer). Chưa đăng nhập → **401**,
-sai vai trò → **403**.
-
-**Lịch sử thao tác (Sprint 7):** mỗi lần ``POST``/``PUT``/``DELETE`` thành công,
-router ghi thêm 1 dòng vào bảng ``audit_logs`` (ai làm gì, lúc nào) thông qua
-``record_action()`` - xem ``app/audit.py`` và endpoint ``GET /audit-logs``.
-Log được ghi **trong cùng transaction** với thao tác nên thao tác thất bại
-(404/403/500) sẽ không để lại log.
+Cung cấp đầy đủ CRUD có kiểm soát cách ly theo tổ chức (organization_id):
+- POST /farms           : tạo thửa đất mới (gán vào organization_id của user).
+- GET /farms            : danh sách thửa đất (chỉ lấy của tổ chức hiện tại).
+- GET /farms/{farm_id}  : chi tiết thửa đất (chặn 403 nếu thuộc tổ chức khác).
+- PUT /farms/{farm_id}  : cập nhật thông tin thửa đất (chặn 403 nếu thuộc tổ chức khác).
+- DELETE /farms/{farm_id}: xoá thửa đất (chỉ admin, chặn 403 nếu thuộc tổ chức khác).
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Path, status
@@ -48,15 +36,14 @@ router = APIRouter(
     "",
     response_model=FarmResponse,
     status_code=status.HTTP_201_CREATED,
-    summary="Tạo vùng trồng mới",
+    summary="Tạo vùng trồng / thửa đất mới",
     description=(
-        "Lưu một vùng trồng mới vào database và trả về bản ghi vừa tạo (kèm `id`).\n\n"
-        "**Phân quyền:** đăng nhập với role `farmer` hoặc `admin` (yêu cầu header "
-        "`Authorization: Basic ...`)."
+        "Lưu một thửa đất mới vào database, tự động gán theo `organization_id` của tài khoản hiện tại.\n\n"
+        "**Phân quyền:** đăng nhập với role `farmer` hoặc `admin`."
     ),
     responses={
         status.HTTP_401_UNAUTHORIZED: {"description": "Chưa đăng nhập."},
-        status.HTTP_403_FORBIDDEN: {"description": "Vai trò không được phép."},
+        status.HTTP_403_FORBIDDEN: {"description": "Vai trò hoặc tổ chức không hợp lệ."},
     },
 )
 def create_farm(
@@ -64,41 +51,28 @@ def create_farm(
     current_user: User = Depends(require_farmer),
     db: Session = Depends(get_db),
 ) -> Farm:
-    """Tạo vùng trồng mới.
+    """Tạo thửa đất mới thuộc tổ chức hiện tại."""
+    org_id = current_user.organization_id
+    if org_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tài khoản chưa được liên kết với tổ chức nào.",
+        )
 
-    Args:
-        payload: Dữ liệu vùng trồng đã được Pydantic validate.
-        current_user: Tài khoản đã đăng nhập (farmer hoặc admin) - cũng là người
-            được ghi vào lịch sử thao tác.
-        db: Session SQLAlchemy được cấp và tự đóng bởi dependency ``get_db``.
-
-    Returns:
-        Farm: Bản ghi vùng trồng vừa tạo (HTTP 201).
-
-    Raises:
-        HTTPException: 401/403 nếu chưa đăng nhập hoặc sai vai trò;
-            500 nếu ghi database thất bại (đã rollback).
-    """
-    # `model_dump()` chuyển Pydantic model -> dict để map thẳng vào ORM model.
-    farm = Farm(**payload.model_dump())
+    farm = Farm(**payload.model_dump(), organization_id=org_id)
     db.add(farm)
 
     try:
-        # `flush()` để database sinh `id` cho vùng trồng - audit log cần ID thật.
         db.flush()
-        # Sprint 7: ghi lịch sử "ai đã tạo vùng trồng nào" (chưa commit vội).
         record_action(db, current_user, ACTION_CREATE, ENTITY_FARM, farm.id)
         db.commit()
     except SQLAlchemyError as exc:
-        # Rollback để session không ở trạng thái lỗi cho các request sau.
-        # Log cũng nằm trong transaction này nên bị huỷ theo -> không có log rác.
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Không thể lưu vùng trồng vào cơ sở dữ liệu.",
         ) from exc
 
-    # Đọc lại bản ghi để lấy `id` do database sinh ra.
     db.refresh(farm)
     return farm
 
@@ -109,75 +83,34 @@ def create_farm(
     status_code=status.HTTP_200_OK,
     summary="Lấy danh sách vùng trồng",
     description=(
-        "Trả về toàn bộ vùng trồng, sắp xếp theo `id` tăng dần.\n\n"
-        "**Phân quyền:** đăng nhập với role `farmer` hoặc `admin` - cả hai vai trò "
-        "đều được phép xem."
+        "Trả về danh sách vùng trồng thuộc tổ chức của tài khoản hiện tại.\n\n"
+        "**Phân quyền:** đăng nhập với role `farmer` hoặc `admin`."
     ),
-    responses={
-        status.HTTP_401_UNAUTHORIZED: {"description": "Chưa đăng nhập."},
-        status.HTTP_403_FORBIDDEN: {"description": "Vai trò không được phép."},
-    },
 )
 def list_farms(
     current_user: User = Depends(require_farmer),
     db: Session = Depends(get_db),
 ) -> list[Farm]:
-    """Lấy danh sách vùng trồng.
-
-    Args:
-        current_user: Tài khoản đã đăng nhập (farmer hoặc admin).
-        db: Session SQLAlchemy từ dependency ``get_db``.
-
-    Returns:
-        list[Farm]: Danh sách vùng trồng (rỗng nếu chưa có dữ liệu).
-
-    Raises:
-        HTTPException: 401/403 nếu chưa đăng nhập hoặc sai vai trò.
-    """
-    _ = current_user
-    # SQLAlchemy 2.0 style: `select()` + `db.scalars()` -> trả về ORM objects.
-    return list(db.scalars(select(Farm).order_by(Farm.id)).all())
+    """Lấy danh sách vùng trồng (cách ly theo tổ chức)."""
+    query = select(Farm).order_by(Farm.id)
+    if current_user.organization_id is not None:
+        query = query.where(Farm.organization_id == current_user.organization_id)
+    return list(db.scalars(query).all())
 
 
-@router.put(
+@router.get(
     "/{farm_id}",
     response_model=FarmResponse,
     status_code=status.HTTP_200_OK,
-    summary="Cập nhật vùng trồng",
-    description=(
-        "Cập nhật (thay thế) thông tin vùng trồng theo `id`. Client gửi đầy đủ "
-        "các trường như khi tạo mới. Trả `404` nếu vùng trồng không tồn tại.\n\n"
-        "**Phân quyền:** đăng nhập với role `farmer` hoặc `admin` - cả hai vai "
-        "trò đều được sửa dữ liệu nông sản."
-    ),
-    responses={
-        status.HTTP_401_UNAUTHORIZED: {"description": "Chưa đăng nhập."},
-        status.HTTP_403_FORBIDDEN: {"description": "Vai trò không được phép."},
-        status.HTTP_404_NOT_FOUND: {"description": "Không tìm thấy vùng trồng."},
-    },
+    summary="Chi tiết vùng trồng",
+    description="Xem chi tiết một vùng trồng. Trả về 403 nếu vùng trồng thuộc tổ chức khác.",
 )
-def update_farm(
-    payload: FarmUpdate,
-    farm_id: int = Path(..., ge=1, description="ID vùng trồng cần sửa."),
+def get_farm(
+    farm_id: int = Path(..., ge=1, description="ID vùng trồng."),
     current_user: User = Depends(require_farmer),
     db: Session = Depends(get_db),
 ) -> Farm:
-    """Cập nhật thông tin vùng trồng theo ``id``.
-
-    Args:
-        payload: Dữ liệu mới đã được Pydantic validate (đủ 4 trường).
-        farm_id: ID vùng trồng cần sửa.
-        current_user: Tài khoản đã đăng nhập (farmer hoặc admin).
-        db: Session SQLAlchemy từ dependency ``get_db``.
-
-    Returns:
-        Farm: Bản ghi vùng trồng sau khi cập nhật (HTTP 200).
-
-    Raises:
-        HTTPException: 401/403 nếu chưa đăng nhập hoặc sai vai trò;
-            404 nếu không tìm thấy vùng trồng;
-            500 nếu ghi database thất bại (đã rollback).
-    """
+    """Lấy chi tiết thửa đất (kiểm tra cách ly tổ chức)."""
     farm = db.get(Farm, farm_id)
     if farm is None:
         raise HTTPException(
@@ -185,12 +118,46 @@ def update_farm(
             detail=f"Không tìm thấy vùng trồng có id={farm_id}.",
         )
 
-    # Ghi đè từng trường (PUT = cập nhật thay thế) - không tạo bản ghi mới.
+    if current_user.organization_id is not None and farm.organization_id != current_user.organization_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Bạn không có quyền truy cập dữ liệu của tổ chức khác.",
+        )
+
+    return farm
+
+
+@router.put(
+    "/{farm_id}",
+    response_model=FarmResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Cập nhật vùng trồng",
+    description="Cập nhật thông tin thửa đất. Trả 403 nếu thửa đất thuộc tổ chức khác.",
+)
+def update_farm(
+    payload: FarmUpdate,
+    farm_id: int = Path(..., ge=1, description="ID vùng trồng cần sửa."),
+    current_user: User = Depends(require_farmer),
+    db: Session = Depends(get_db),
+) -> Farm:
+    """Cập nhật thông tin vùng trồng theo id."""
+    farm = db.get(Farm, farm_id)
+    if farm is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Không tìm thấy vùng trồng có id={farm_id}.",
+        )
+
+    if current_user.organization_id is not None and farm.organization_id != current_user.organization_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Bạn không có quyền truy cập dữ liệu của tổ chức khác.",
+        )
+
     for field, value in payload.model_dump().items():
         setattr(farm, field, value)
 
     try:
-        # Sprint 7: ghi lịch sử "ai đã sửa vùng trồng nào" trong cùng transaction.
         record_action(db, current_user, ACTION_UPDATE, ENTITY_FARM, farm_id)
         db.commit()
     except SQLAlchemyError as exc:
@@ -208,44 +175,15 @@ def update_farm(
     "/{farm_id}",
     response_model=DeleteResponse,
     status_code=status.HTTP_200_OK,
-    summary="Xoá vùng trồng (chỉ admin)",
-    description=(
-        "Xoá vùng trồng theo `id` và **xoá kèm toàn bộ lô nông sản** thuộc vùng "
-        "đó (nhờ `cascade=\"all, delete-orphan\"` ở quan hệ Farm 1-N). Số lô bị "
-        "xoá kèm được trả về ở field `deleted_batches` để giao diện thông báo.\n\n"
-        "**Phân quyền:** chỉ `role = admin` được xoá (dùng `require_admin`). "
-        "Farmer gọi sẽ nhận `403 Forbidden` - giao diện cũng ẩn nút Xoá với farmer.\n\n"
-        "**Lịch sử thao tác:** ghi 1 dòng log cho vùng trồng vừa xoá "
-        "(`action=delete`, `entity=farm`). Các lô nông sản bị xoá kèm theo cơ chế "
-        "cascade **không** sinh log riêng (xem `deleted_batches` trong response)."
-    ),
-    responses={
-        status.HTTP_401_UNAUTHORIZED: {"description": "Chưa đăng nhập."},
-        status.HTTP_403_FORBIDDEN: {"description": "Đã đăng nhập nhưng không phải admin."},
-        status.HTTP_404_NOT_FOUND: {"description": "Không tìm thấy vùng trồng."},
-    },
+    summary="Xoá vùng trồng (chỉ admin của tổ chức)",
+    description="Xoá vùng trồng và các lô nông sản kèm theo. Trả 403 nếu vùng trồng thuộc tổ chức khác.",
 )
 def delete_farm(
     farm_id: int = Path(..., ge=1, description="ID vùng trồng cần xoá."),
     current_user: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ) -> DeleteResponse:
-    """Xoá một vùng trồng (chỉ admin) cùng các lô nông sản của nó.
-
-    Args:
-        farm_id: ID vùng trồng cần xoá.
-        current_user: Tài khoản admin đã được ``require_admin`` kiểm tra quyền -
-            cũng là người được ghi vào lịch sử thao tác.
-        db: Session SQLAlchemy từ dependency ``get_db``.
-
-    Returns:
-        DeleteResponse: Thông báo + số lô nông sản bị xoá kèm (HTTP 200).
-
-    Raises:
-        HTTPException: 401 nếu chưa đăng nhập; 403 nếu không phải admin;
-            404 nếu không tìm thấy vùng trồng;
-            500 nếu xoá trong database thất bại (đã rollback).
-    """
+    """Xoá một vùng trồng cùng các lô con của nó."""
     farm = db.get(Farm, farm_id)
     if farm is None:
         raise HTTPException(
@@ -253,13 +191,15 @@ def delete_farm(
             detail=f"Không tìm thấy vùng trồng có id={farm_id}.",
         )
 
-    # Đếm số lô TRƯỚC khi xoá: sau `db.delete()` không nên truy vấn lại quan hệ
-    # này (bản ghi đang chờ bị xoá ở transaction hiện tại).
-    deleted_batches = len(farm.batches)
+    if current_user.organization_id is not None and farm.organization_id != current_user.organization_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Bạn không có quyền truy cập dữ liệu của tổ chức khác.",
+        )
 
-    db.delete(farm)  # cascade -> các Batch con bị xoá theo
+    deleted_batches = len(farm.batches)
+    db.delete(farm)
     try:
-        # Sprint 7: ghi lịch sử "ai đã xoá vùng trồng nào" trong cùng transaction.
         record_action(db, current_user, ACTION_DELETE, ENTITY_FARM, farm_id)
         db.commit()
     except SQLAlchemyError as exc:
@@ -270,11 +210,7 @@ def delete_farm(
         ) from exc
 
     return DeleteResponse(
-        message=(
-            f"Đã xoá vùng trồng #{farm_id} và {deleted_batches} lô nông sản "
-            "thuộc vùng đó."
-        ),
+        message=f"Đã xoá vùng trồng #{farm_id} và {deleted_batches} lô nông sản thuộc vùng đó.",
         deleted_id=farm_id,
         deleted_batches=deleted_batches,
     )
-

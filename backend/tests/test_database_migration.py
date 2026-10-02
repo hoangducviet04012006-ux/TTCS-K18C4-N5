@@ -141,6 +141,6 @@ def test_init_db_tao_them_bang_audit_logs_cho_database_cu(tmp_path, monkeypatch)
     ]
     # Database cũ vẫn được nâng cấp 2 cột bảo mật và giữ nguyên tài khoản đang có.
     assert {"failed_login_attempts", "locked_until"} <= user_columns
-    assert usernames == {"admin", "farmer"}
+    assert {"admin", "farmer"} <= usernames
 
     legacy_engine.dispose()

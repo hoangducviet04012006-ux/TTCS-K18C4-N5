@@ -9,7 +9,30 @@ Dự án TTCS K18C4 - Truy xuất nguồn gốc và giám sát chuỗi lạnh n�
 | `frontend/` | Demo giao diện: `index.html`, `css/style.css`, `js/app.js` — HTML5 + CSS + JavaScript thuần, không framework |
 | `docs/` | Tài liệu dự án |
 
-## Chạy backend
+## 🚀 Khởi chạy nhanh bằng một lệnh (Docker Compose)
+
+Yêu cầu máy đã cài [Docker Desktop](https://www.docker.com/). Tại thư mục gốc của dự án, chạy lệnh:
+
+```bash
+docker-compose up -d --build
+```
+
+Sau khi khởi chạy thành công:
+- **Giao diện Web Nông sản:** <http://localhost> (hoặc <http://127.0.0.1>)
+- **Backend API:** <http://localhost:8000>
+- **Tài liệu API Swagger UI:** <http://localhost:8000/docs> (hoặc qua proxy <http://localhost/docs>)
+- **Tài liệu ReDoc:** <http://localhost:8000/redoc> (hoặc qua proxy <http://localhost/redoc>)
+
+Dữ liệu SQLite được bảo toàn tự động qua volume `sqlite_data`. Khi muốn dừng hệ thống:
+```bash
+docker-compose down
+```
+
+---
+
+## 🛠️ Chạy trực tiếp (Local Development)
+
+### 1. Chạy backend
 
 ```powershell
 cd backend
@@ -29,6 +52,16 @@ python -m http.server 5500
 
 Mở <http://127.0.0.1:5500>. Có thể mở trực tiếp `frontend/index.html`,
 nhưng nên chạy qua static server để `fetch`/CORS hoạt động ổn định nhất.
+
+### 3. Kiểm thử tự động (CI / Pytest)
+
+Hệ thống tích hợp GitHub Actions CI Pipeline (`.github/workflows/ci.yml`) tự động kích hoạt khi `push`/`pull_request` vào `main`, `master`, `develop`.
+
+Chạy toàn bộ 38 bài test tự động từ thư mục gốc:
+
+```powershell
+pytest backend/tests/ -v
+```
 
 Frontend gọi API tại `http://127.0.0.1:8000` (hằng số `API_BASE_URL` trong `frontend/js/app.js`).
 

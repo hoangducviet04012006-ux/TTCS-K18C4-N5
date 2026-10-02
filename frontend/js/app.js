@@ -241,11 +241,11 @@ function requestLogin(username, password) {
 }
 
 /** Lưu phiên đăng nhập vào bộ nhớ + sessionStorage (giữ được khi F5 trong tab). */
-function startSession({ username, role, password }) {
-  session = { username, role, password };
+function startSession({ username, role, password, organization_id, organization_name }) {
+  session = { username, role, password, organization_id, organization_name };
   window.sessionStorage.setItem(
     SESSION_STORAGE_KEY,
-    JSON.stringify({ username, password })
+    JSON.stringify({ username, password, organization_id, organization_name })
   );
   applySessionToUi();
 }
@@ -271,12 +271,11 @@ function clearSession() {
 }
 
 /**
- * Cập nhật giao diện theo trạng thái đăng nhập và vai trò (role):
+ * Cập nhật giao diện theo trạng thái đăng nhập, vai trò (role) và tổ chức:
  * - chưa đăng nhập: chỉ hiện màn hình login;
- * - farmer: hiện chức năng quản lý nông sản (vùng trồng, lô nông sản);
- * - admin: hiện toàn bộ, thêm mục quản trị tài khoản.
- * Đây chỉ là phân quyền ở giao diện; backend vẫn kiểm tra lại bằng
- * `require_farmer` / `require_admin` nên gọi API trái phép sẽ nhận 401/403.
+ * - farmer: hiện chức năng quản lý nông sản (thửa đất, lô nông sản) của tổ chức mình;
+ * - admin: hiện toàn bộ, thêm mục quản trị tài khoản;
+ * - hiển thị logo/tên tổ chức của user đang hoạt động.
  */
 function applySessionToUi() {
   const isLoggedIn = session !== null;
@@ -287,16 +286,26 @@ function applySessionToUi() {
   setHidden("btn-reload", !isLoggedIn);
   setHidden("btn-logout", !isLoggedIn);
   setHidden("user-badge", !isLoggedIn);
+  setHidden("org-badge", !isLoggedIn || !session?.organization_name);
+
+  const orgBadge = $("org-badge");
+  if (orgBadge !== null && isLoggedIn && session?.organization_name) {
+    orgBadge.textContent = `🏢 ${session.organization_name}`;
+  }
 
   const badge = $("user-badge");
   if (badge !== null && isLoggedIn) {
-    badge.textContent = `${session.username} · role: ${session.role}`;
+    const roleText = adminUser ? "Quản trị viên" : "Chủ nông hộ / Nông dân";
+    badge.textContent = `👤 ${session.username} (${roleText})`;
     badge.className = adminUser ? "badge badge--ok" : "badge badge--muted";
   }
 
+  const orgContext = $("farm-org-context");
+  if (orgContext !== null && isLoggedIn) {
+    orgContext.textContent = `Các thửa đất thuộc: ${session.organization_name || "Tổ chức của bạn"}`;
+  }
+
   setHidden("users-card", !adminUser);
-  // Sprint 7: lịch sử thao tác chỉ dành cho admin; farmer không thấy mục này
-  // (và nếu cố gọi `GET /audit-logs` thì backend trả 403).
   setHidden("audit-card", !adminUser);
   setHidden("stat-audit-card", !adminUser);
 }
@@ -332,12 +341,23 @@ async function handleLoginSubmit(event) {
 
   try {
     const data = await requestLogin(username, password);
-    startSession({ username: data.username, role: data.role, password });
+    startSession({
+      username: data.username,
+      role: data.role,
+      password,
+      organization_id: data.organization_id,
+      organization_name: data.organization_name,
+    });
     form.reset();
-    toast(`Xin chào ${data.username} (role: ${data.role}).`, "success");
+    const orgGreeting = data.organization_name ? ` · ${data.organization_name}` : "";
+    toast(`Đăng nhập thành công! Xin chào ${data.username}${orgGreeting}.`, "success");
     await reloadAll({ silent: true });
   } catch (error) {
-    toast(`Đăng nhập thất bại: ${error.message}`, "error");
+    if (error.status === 401) {
+      toast("Sai tên đăng nhập hoặc mật khẩu. Vui lòng kiểm tra lại!", "error");
+    } else {
+      toast(error.message, "error");
+    }
     $("login-password").select();
   } finally {
     setButtonLoading(button, false, "Đang kiểm tra…", "Đăng nhập");
@@ -352,14 +372,14 @@ function handleLogout() {
   farms = [];
   batches = [];
   users = [];
-  auditLogs = []; // Sprint 7: xoá lịch sử thao tác đang hiển thị
-  resetFarmForm(); // bỏ chế độ sửa (nếu đang sửa) trước khi vẽ lại bảng rỗng
+  auditLogs = [];
+  resetFarmForm();
   resetBatchForm();
   renderFarms();
   renderFarmOptions();
   renderBatches();
   renderUsers();
-  renderAuditLogs(); // bảng lịch sử trống (thẻ thống kê trở về 0)
+  renderAuditLogs();
 
   applySessionToUi();
   toast(username ? `Đã đăng xuất tài khoản ${username}.` : "Đã đăng xuất.", "info");
@@ -371,12 +391,12 @@ async function checkHealth() {
   const badge = $("health-badge");
   try {
     const data = await apiRequest("/health");
-    badge.textContent = `Backend: ${data.status}`;
+    badge.textContent = "Hệ thống trực tuyến";
     badge.className = "badge badge--ok";
   } catch (error) {
-    badge.textContent = "Backend: không kết nối được";
+    badge.textContent = "Mất kết nối máy chủ";
     badge.className = "badge badge--error";
-    toast(error.message, "error");
+    toast("Không kết nối được tới máy chủ API: " + error.message, "error");
   }
 }
 
@@ -393,37 +413,106 @@ async function loadFarms() {
   }
 }
 
-/** Vẽ bảng danh sách vùng trồng (kèm cột "Thao tác": Sửa/Xoá). */
+let farmViewMode = "cards"; // "cards" | "table"
+
+/** Chuyển đổi giữa chế độ xem Dạng Thẻ và Dạng Bảng */
+function setFarmViewMode(mode) {
+  farmViewMode = mode;
+  const isCards = mode === "cards";
+  const btnCards = $("btn-view-cards");
+  const btnTable = $("btn-view-table");
+
+  if (btnCards && btnTable) {
+    btnCards.className = isCards ? "btn btn--sm btn--active" : "btn btn--sm btn--light";
+    btnTable.className = !isCards ? "btn btn--sm btn--active" : "btn btn--sm btn--light";
+  }
+
+  setHidden("farm-cards-container", !isCards);
+  setHidden("farm-table-wrap", isCards);
+}
+
+/** Vẽ danh sách thửa đất (cả dạng thẻ trực quan và dạng bảng chi tiết). */
 function renderFarms() {
-  $("farm-table-body").innerHTML = farms
-    .map(
-      (farm) => `
-      <tr class="${farm.id === editingFarmId ? "is-editing" : ""}">
-        <td class="id-cell">${escapeHtml(farm.id)}</td>
-        <td>${escapeHtml(farm.name)}</td>
-        <td>${escapeHtml(farm.location)}</td>
-        <td class="is-right">${formatNumber(farm.area)}</td>
-        <td>${escapeHtml(farm.owner)}</td>
-        <td>
-          <div class="table__actions">
+  const cardsContainer = $("farm-cards-container");
+  const tableBody = $("farm-table-body");
+
+  // 1. Dạng Thẻ (Cards) - trực quan, tối ưu cho nông dân
+  if (cardsContainer) {
+    cardsContainer.innerHTML = farms
+      .map(
+        (farm) => `
+        <article class="farm-card ${farm.id === editingFarmId ? "is-editing" : ""}">
+          <div class="farm-card__header">
+            <div class="farm-card__title-group">
+              <span class="farm-card__icon">🌾</span>
+              <h4 class="farm-card__name">${escapeHtml(farm.name)}</h4>
+            </div>
+            <span class="farm-card__area-badge">${formatNumber(farm.area)} ha</span>
+          </div>
+          <div class="farm-card__body">
+            <div class="farm-card__meta">
+              <span class="meta-label">📍 Vị trí:</span>
+              <span class="meta-value">${escapeHtml(farm.location)}</span>
+            </div>
+            <div class="farm-card__meta">
+              <span class="meta-label">🌐 Tọa độ GPS:</span>
+              <span class="meta-value">${farm.coordinates ? escapeHtml(farm.coordinates) : '<em style="color:#9ca3af">Chưa cập nhật</em>'}</span>
+            </div>
+            <div class="farm-card__meta">
+              <span class="meta-label">👤 Nông hộ phụ trách:</span>
+              <span class="meta-value">${escapeHtml(farm.owner)}</span>
+            </div>
+          </div>
+          <div class="farm-card__footer">
             <button class="btn btn--primary btn--sm" type="button"
                     data-action="edit" data-entity="farm"
-                    data-id="${escapeHtml(farm.id)}">Sửa</button>
+                    data-id="${escapeHtml(farm.id)}">✏️ Sửa</button>
             ${
               canDelete()
                 ? `<button class="btn btn--danger btn--sm" type="button"
                     data-action="delete" data-entity="farm"
-                    data-id="${escapeHtml(farm.id)}">Xoá</button>`
+                    data-id="${escapeHtml(farm.id)}">🗑️ Xoá</button>`
                 : ""
             }
           </div>
-        </td>
-      </tr>`
-    )
-    .join("");
+        </article>`
+      )
+      .join("");
+  }
+
+  // 2. Dạng Bảng (Table)
+  if (tableBody) {
+    tableBody.innerHTML = farms
+      .map(
+        (farm) => `
+        <tr class="${farm.id === editingFarmId ? "is-editing" : ""}">
+          <td><strong>${escapeHtml(farm.name)}</strong></td>
+          <td>${escapeHtml(farm.location)}</td>
+          <td>${farm.coordinates ? escapeHtml(farm.coordinates) : '<em style="color:#9ca3af">—</em>'}</td>
+          <td class="is-right">${formatNumber(farm.area)}</td>
+          <td>${escapeHtml(farm.owner)}</td>
+          <td>
+            <div class="table__actions">
+              <button class="btn btn--primary btn--sm" type="button"
+                      data-action="edit" data-entity="farm"
+                      data-id="${escapeHtml(farm.id)}">Sửa</button>
+              ${
+                canDelete()
+                  ? `<button class="btn btn--danger btn--sm" type="button"
+                      data-action="delete" data-entity="farm"
+                      data-id="${escapeHtml(farm.id)}">Xoá</button>`
+                  : ""
+              }
+            </div>
+          </td>
+        </tr>`
+      )
+      .join("");
+  }
 
   $("farm-empty").hidden = farms.length > 0;
-  renderStats(); // thẻ "Tổng vùng trồng" lấy từ mảng `farms`
+  setFarmViewMode(farmViewMode);
+  renderStats();
 }
 
 /** Đổ danh sách vùng trồng vào select `farm_id` của form tạo lô. */
@@ -432,7 +521,7 @@ function renderFarmOptions() {
   const selected = select.value;
 
   if (farms.length === 0) {
-    select.innerHTML = '<option value="">— Chưa có vùng trồng, hãy thêm ở mục 1 —</option>';
+    select.innerHTML = '<option value="">— Chưa có thửa đất nào, hãy thêm thửa đất trước —</option>';
     select.disabled = true;
     return;
   }
@@ -441,7 +530,7 @@ function renderFarmOptions() {
   select.innerHTML = farms
     .map(
       (farm) =>
-        `<option value="${escapeHtml(farm.id)}">#${escapeHtml(farm.id)} — ${escapeHtml(farm.name)}</option>`
+        `<option value="${escapeHtml(farm.id)}">${escapeHtml(farm.name)} (${formatNumber(farm.area)} ha)</option>`
     )
     .join("");
 
@@ -453,7 +542,7 @@ function renderFarmOptions() {
 
 /** Nhãn nút submit form vùng trồng theo chế độ hiện tại (thêm mới / sửa). */
 function farmSubmitLabel() {
-  return editingFarmId === null ? "Thêm vùng trồng" : "Cập nhật vùng trồng";
+  return editingFarmId === null ? "Thêm thửa đất" : "Cập nhật thửa đất";
 }
 
 /**
@@ -469,10 +558,18 @@ async function handleFarmSubmit(event) {
     return;
   }
 
+  const area = Number($("farm-area").value);
+  if (isNaN(area) || area <= 0) {
+    toast("Diện tích thửa đất bắt buộc phải lớn hơn 0 ha!", "error");
+    $("farm-area").focus();
+    return;
+  }
+
   const payload = {
     name: $("farm-name").value.trim(),
     location: $("farm-location").value.trim(),
-    area: Number($("farm-area").value),
+    area: area,
+    coordinates: $("farm-coordinates").value.trim() || null,
     owner: $("farm-owner").value.trim(),
   };
 
@@ -483,21 +580,19 @@ async function handleFarmSubmit(event) {
   try {
     if (isEditing) {
       const updated = await apiRequest(`/farms/${editingFarmId}`, { method: "PUT", body: payload });
-      toast(`Đã cập nhật vùng trồng #${updated.id}: ${updated.name}`, "success");
+      toast(`Đã cập nhật thửa đất: ${updated.name}`, "success");
     } else {
       const created = await apiRequest("/farms", { method: "POST", body: payload });
-      toast(`Thêm thành công vùng trồng #${created.id}: ${created.name}`, "success");
+      toast(`Thêm thành công thửa đất: ${created.name}`, "success");
     }
     resetFarmForm(); // về lại chế độ "thêm mới"
-    await loadFarms(); // bảng lô nông sản cũng hiển thị tên vùng trồng -> tải lại
+    await loadFarms(); // cập nhật danh sách thửa đất và select lô nông sản
     await loadBatches();
-    await refreshAuditLogsIfAdmin(); // Sprint 7: vừa ghi dữ liệu -> cập nhật lịch sử
+    await refreshAuditLogsIfAdmin();
     $("farm-name").focus();
   } catch (error) {
-    toast(`${isEditing ? "Cập nhật" : "Thêm"} vùng trồng thất bại: ${error.message}`, "error");
+    toast(`${isEditing ? "Cập nhật" : "Thêm"} thửa đất thất bại: ${error.message}`, "error");
   } finally {
-    // `farmSubmitLabel()` đọc `editingFarmId` hiện tại -> sau khi lưu xong form
-    // đã về chế độ "thêm mới" nên nhãn nút cũng trở lại bình thường.
     setButtonLoading(button, false, "Đang lưu…", farmSubmitLabel());
   }
 }
@@ -512,13 +607,12 @@ function resetFarmForm() {
 }
 
 /**
- * Bấm nút "Sửa" ở bảng -> đổ dữ liệu vùng trồng lên form và chuyển sang chế độ
- * sửa (nút submit sẽ gọi ``PUT /farms/{id}``).
+ * Bấm nút "Sửa" ở bảng/thẻ -> đổ dữ liệu vùng trồng lên form và chuyển sang chế độ sửa.
  */
 function startEditFarm(farmId) {
   const farm = farms.find((item) => item.id === farmId);
   if (!farm) {
-    toast(`Không tìm thấy vùng trồng #${farmId} trong dữ liệu đang hiển thị.`, "error");
+    toast(`Không tìm thấy thửa đất #${farmId} trong dữ liệu đang hiển thị.`, "error");
     return;
   }
 
@@ -526,15 +620,16 @@ function startEditFarm(farmId) {
   $("farm-name").value = farm.name;
   $("farm-location").value = farm.location;
   $("farm-area").value = farm.area;
+  $("farm-coordinates").value = farm.coordinates || "";
   $("farm-owner").value = farm.owner;
 
   const mode = $("farm-form-mode");
-  mode.textContent = `Đang sửa vùng trồng #${farm.id} — ${farm.name}. Bấm "Cập nhật vùng trồng" để lưu.`;
+  mode.textContent = `Đang sửa thửa đất: ${farm.name}. Bấm "Cập nhật thửa đất" để lưu.`;
   mode.hidden = false;
   $("farm-cancel").hidden = false;
   $("farm-submit").textContent = farmSubmitLabel();
 
-  renderFarms(); // tô nền dòng đang sửa trong bảng
+  renderFarms(); // tô viền card/dòng đang sửa
   $("farm-form").scrollIntoView({ behavior: "smooth", block: "start" });
   $("farm-name").focus();
 }
@@ -550,8 +645,8 @@ async function deleteFarm(farmId) {
   const childCount = batches.filter((batch) => batch.farm_id === farmId).length;
 
   const question =
-    `Xoá vùng trồng ${label}?` +
-    (childCount > 0 ? `\n${childCount} lô nông sản của vùng này cũng bị xoá theo.` : "") +
+    `Bạn có chắc chắn muốn xoá vùng trồng ${label}?` +
+    (childCount > 0 ? `\nLưu ý: Toàn bộ ${childCount} lô nông sản trực thuộc vùng này cũng sẽ bị xoá theo.` : "") +
     "\nHành động này không thể hoàn tác.";
   if (!window.confirm(question)) {
     return;
@@ -596,9 +691,9 @@ function renderBatches() {
     .map(
       (batch) => `
       <tr class="${batch.id === editingBatchId ? "is-editing" : ""}">
-        <td class="id-cell">${escapeHtml(batch.id)}</td>
+        <td class="id-cell">#${escapeHtml(batch.id)}</td>
         <td>${escapeHtml(farmLabel(batch.farm_id))}</td>
-        <td>${escapeHtml(batch.product_name)}</td>
+        <td><strong>${escapeHtml(batch.product_name)}</strong></td>
         <td class="is-right">${formatNumber(batch.quantity)}</td>
         <td>${escapeHtml(formatDate(batch.harvest_date))}</td>
         <td>
@@ -643,7 +738,7 @@ async function handleBatchSubmit(event) {
 
   const farmSelect = $("batch-farm-id");
   if (!farmSelect.value) {
-    toast("Chưa có vùng trồng nào. Hãy thêm vùng trồng ở mục 1 trước khi tạo lô.", "error");
+    toast("Chưa có vùng trồng nào. Vui lòng thêm vùng trồng trước khi tạo lô nông sản.", "error");
     return;
   }
 
@@ -722,7 +817,7 @@ async function deleteBatch(batchId) {
   const batch = batches.find((item) => item.id === batchId);
   const label = batch ? `#${batch.id} — ${batch.product_name}` : `#${batchId}`;
 
-  if (!window.confirm(`Xoá lô nông sản ${label}?\nHành động này không thể hoàn tác.`)) {
+  if (!window.confirm(`Bạn có chắc chắn muốn xoá lô nông sản ${label}?\nHành động này không thể hoàn tác.`)) {
     return;
   }
 
@@ -775,104 +870,106 @@ async function loadUsers() {
   }
 }
 
-/** Vẽ bảng tài khoản (chỉ username + role; backend không trả mật khẩu). */
+/** Vẽ bảng tài khoản (hiển thị username + vai trò tiếng Việt dạng badge). */
 function renderUsers() {
   $("user-table-body").innerHTML = users
-    .map(
-      (user) => `
+    .map((user) => {
+      const isAdminRole = user.role === ROLE_ADMIN;
+      const roleLabel = isAdminRole ? "Quản trị viên" : "Chủ nông hộ / HTX";
+      const roleClass = isAdminRole ? "role-badge role-badge--admin" : "role-badge role-badge--farmer";
+      return `
       <tr>
-        <td class="id-cell">${escapeHtml(user.id)}</td>
-        <td>${escapeHtml(user.username)}</td>
-        <td><code>${escapeHtml(user.role)}</code></td>
-      </tr>`
-    )
+        <td class="id-cell">#${escapeHtml(user.id)}</td>
+        <td><strong>${escapeHtml(user.username)}</strong></td>
+        <td><span class="${roleClass}">${roleLabel}</span></td>
+      </tr>`;
+    })
     .join("");
 
   $("user-empty").hidden = users.length > 0;
 }
 
-/* -------------------------------------- 11. Lịch sử thao tác (chỉ admin) --- */
+/* -------------------------------------- 11. Nhật ký hoạt động (chỉ admin) --- */
 /**
- * GET /audit-logs (Sprint 7, **chỉ admin**) -> vẽ bảng "Lịch sử thao tác" và
- * cập nhật thẻ thống kê "Lịch sử thao tác" trên dashboard.
- *
- * Ba trạng thái giao diện:
- * - **đang tải**: khoá nút "Tải lịch sử thao tác" + 1 dòng "Đang tải…" trong bảng;
- * - **rỗng**: hiện `#audit-empty` khi chưa có bản ghi nào;
- * - **lỗi**: hiện `#audit-error` - thông báo riêng cho **401/403** vì backend chỉ
- *   cho tài khoản admin gọi API này.
- *
- * `silent = true` dùng khi tải kèm lúc đăng nhập/khôi phục phiên hoặc sau mỗi
- * thao tác ghi, để không hiện quá nhiều toast làm phiền người dùng.
+ * GET /audit-logs (chỉ admin) -> vẽ bảng "Nhật ký hoạt động" và
+ * cập nhật thẻ thống kê "Nhật ký hoạt động" trên dashboard.
  */
 async function loadAuditLogs({ silent = false } = {}) {
   const button = $("btn-load-audit");
   const errorBox = $("audit-error");
 
   // --- trạng thái đang tải ---
-  setButtonLoading(button, true, "Đang tải…", "Tải lịch sử thao tác");
+  setButtonLoading(button, true, "Đang tải…", "Làm mới nhật ký");
   errorBox.hidden = true;
   $("audit-empty").hidden = true;
   $("audit-table-body").innerHTML =
-    '<tr class="is-loading"><td class="is-center" colspan="6">Đang tải lịch sử thao tác…</td></tr>';
+    '<tr class="is-loading"><td class="is-center" colspan="6">Đang tải nhật ký hoạt động…</td></tr>';
 
   try {
     const data = await apiRequest("/audit-logs");
     auditLogs = Array.isArray(data) ? data : [];
-    renderAuditLogs(); // backend trả log mới nhất trước -> vẽ đúng thứ tự đó
+    renderAuditLogs();
 
     if (!silent) {
       toast(
         auditLogs.length > 0
-          ? `Đã tải ${formatNumber(auditLogs.length)} bản ghi lịch sử thao tác (mới nhất trước).`
-          : "Chưa có thao tác nào được ghi nhận.",
+          ? `Đã tải ${formatNumber(auditLogs.length)} bản ghi nhật ký hoạt động.`
+          : "Chưa có hoạt động nào được ghi nhận.",
         auditLogs.length > 0 ? "success" : "info"
       );
     }
   } catch (error) {
     auditLogs = [];
     renderAuditLogs();
-    $("audit-empty").hidden = true; // đang có lỗi -> chỉ hiện thông báo lỗi
+    $("audit-empty").hidden = true;
 
-    // 401 (chưa/hết phiên đăng nhập) hoặc 403 (không phải admin).
     const denied = error.status === 401 || error.status === 403;
     errorBox.textContent = denied
-      ? `Không có quyền xem lịch sử thao tác - mục này chỉ dành cho admin (${error.message})`
-      : `Không tải được lịch sử thao tác: ${error.message}`;
+      ? `Không có quyền xem nhật ký hoạt động - mục này chỉ dành cho Quản trị viên (${error.message})`
+      : `Không tải được nhật ký hoạt động: ${error.message}`;
     errorBox.hidden = false;
 
-    // Lỗi quyền luôn được báo (kể cả khi tải im lặng) vì người dùng cần biết.
     if (!silent || denied) {
       toast(errorBox.textContent, "error");
     }
   } finally {
-    setButtonLoading(button, false, "Đang tải…", "Tải lịch sử thao tác");
+    setButtonLoading(button, false, "Đang tải…", "Làm mới nhật ký");
   }
 }
 
-/** Vẽ bảng lịch sử thao tác (mới nhất trước) + cập nhật thẻ thống kê. */
+/** Vẽ bảng nhật ký hoạt động (mới nhất trước) + cập nhật thẻ thống kê. */
 function renderAuditLogs() {
+  const actionLabels = {
+    create: "Thêm mới",
+    update: "Cập nhật",
+    delete: "Xóa",
+  };
+  const entityLabels = {
+    farm: "Vùng trồng",
+    batch: "Lô nông sản",
+  };
+
   $("audit-table-body").innerHTML = auditLogs
     .map(
       (log) => `
       <tr>
-        <td class="id-cell">${escapeHtml(log.id)}</td>
+        <td class="id-cell">#${escapeHtml(log.id)}</td>
         <td class="is-nowrap" title="UTC: ${escapeHtml(log.created_at)}">${escapeHtml(
           formatDateTime(log.created_at)
         )}</td>
-        <td>${escapeHtml(auditUserLabel(log))}</td>
+        <td><strong>${escapeHtml(auditUserLabel(log))}</strong></td>
         <td><span class="action-badge action-badge--${escapeHtml(log.action)}">${escapeHtml(
-          log.action
+          actionLabels[log.action] || log.action
         )}</span></td>
-        <td><code>${escapeHtml(log.entity)}</code></td>
-        <td class="is-right">${escapeHtml(log.entity_id)}</td>
+        <td><span class="entity-badge">${escapeHtml(entityLabels[log.entity] || log.entity)}</span></td>
+        <td class="is-right">#${escapeHtml(log.entity_id)}</td>
       </tr>`
     )
     .join("");
 
   $("audit-empty").hidden = auditLogs.length > 0;
-  $("audit-error").hidden = true; // dữ liệu đã vẽ xong -> không còn lỗi cũ
-  renderStats(); // thẻ "Lịch sử thao tác" đếm từ mảng `auditLogs`
+  $("audit-error").hidden = true;
+  renderStats();
 }
 
 /** Nhãn người thực hiện: ưu tiên `username`, thiếu thì hiển thị `#user_id`. */
@@ -901,11 +998,49 @@ function bindEvents() {
   $("farm-cancel").addEventListener("click", () => cancelEdit("farm"));
   $("batch-cancel").addEventListener("click", () => cancelEdit("batch"));
   $("btn-reload").addEventListener("click", () => reloadAll());
-  // Sprint 7: nút tải lịch sử thao tác (chỉ admin thấy - xem applySessionToUi).
   $("btn-load-audit").addEventListener("click", () => loadAuditLogs());
 
-  // Cột "Thao tác" của 2 bảng dùng event delegation: nội dung bảng được vẽ lại
-  // liên tục nên chỉ gắn 1 listener cho mỗi <tbody> thay vì gắn cho từng nút.
+  // Đăng nhập nhanh cho tài khoản demo (Quản trị viên & Chủ nông hộ)
+  const quickAdmin = $("btn-quick-admin");
+  if (quickAdmin) {
+    quickAdmin.addEventListener("click", () => {
+      $("login-username").value = "admin";
+      $("login-password").value = "123456";
+      $("login-submit").focus();
+    });
+  }
+  const quickFarmer = $("btn-quick-farmer");
+  if (quickFarmer) {
+    quickFarmer.addEventListener("click", () => {
+      $("login-username").value = "farmer";
+      $("login-password").value = "123456";
+      $("login-submit").focus();
+    });
+  }
+  const quickFarmerTg = $("btn-quick-farmer-tg");
+  if (quickFarmerTg) {
+    quickFarmerTg.addEventListener("click", () => {
+      $("login-username").value = "farmer_tg";
+      $("login-password").value = "123456";
+      $("login-submit").focus();
+    });
+  }
+
+  // Chuyển đổi hiển thị Thẻ / Bảng cho Thửa đất
+  const btnViewCards = $("btn-view-cards");
+  if (btnViewCards) {
+    btnViewCards.addEventListener("click", () => setFarmViewMode("cards"));
+  }
+  const btnViewTable = $("btn-view-table");
+  if (btnViewTable) {
+    btnViewTable.addEventListener("click", () => setFarmViewMode("table"));
+  }
+
+  // Cột "Thao tác" (Sửa / Xoá) trên thẻ và bảng dùng event delegation
+  const cardsContainer = $("farm-cards-container");
+  if (cardsContainer) {
+    cardsContainer.addEventListener("click", handleTableAction);
+  }
   $("farm-table-body").addEventListener("click", handleTableAction);
   $("batch-table-body").addEventListener("click", handleTableAction);
 }
@@ -914,7 +1049,7 @@ function bindEvents() {
 function cancelEdit(entity) {
   if (entity === "farm") {
     resetFarmForm();
-    renderFarms(); // bỏ tô nền dòng đang sửa
+    renderFarms();
     toast("Đã huỷ chế độ sửa vùng trồng.", "info");
     return;
   }
@@ -933,7 +1068,7 @@ function cancelEdit(entity) {
 function handleTableAction(event) {
   const button = event.target.closest("button[data-action]");
   if (button === null) {
-    return; // bấm ra ngoài nút -> không làm gì
+    return;
   }
 
   const id = Number(button.dataset.id);
@@ -950,9 +1085,8 @@ function handleTableAction(event) {
   }
 
   if (action === "delete") {
-    // Chốt chặn ở giao diện; backend cũng chặn bằng `require_admin` -> 403.
     if (!canDelete()) {
-      toast("Chỉ tài khoản admin được phép xoá dữ liệu.", "error");
+      toast("Chỉ tài khoản Quản trị viên mới có quyền xoá dữ liệu.", "error");
       return;
     }
     if (entity === "farm") {
@@ -966,11 +1100,11 @@ function handleTableAction(event) {
 /** Tải dữ liệu dùng chung cho giao diện sau khi đăng nhập (theo phân quyền). */
 async function loadAllData() {
   await checkHealth();
-  await loadFarms(); // phải chạy trước để bảng lô hiển thị được tên vùng trồng
+  await loadFarms();
   await loadBatches();
   if (isAdmin()) {
-    await loadUsers(); // chỉ admin gọi được GET /users
-    await loadAuditLogs({ silent: true }); // Sprint 7: bảng "Lịch sử thao tác"
+    await loadUsers();
+    await loadAuditLogs({ silent: true });
   }
 }
 
@@ -985,9 +1119,9 @@ async function reloadAll({ silent = false } = {}) {
   if (!silent) {
     const parts = [`${farms.length} vùng trồng`, `${batches.length} lô nông sản`];
     if (isAdmin()) {
-      parts.push(`${auditLogs.length} bản ghi lịch sử`); // Sprint 7
+      parts.push(`${auditLogs.length} nhật ký hoạt động`);
     }
-    toast(`Đã tải lại: ${parts.join(", ")}.`, "info");
+    toast(`Đã cập nhật dữ liệu: ${parts.join(", ")}.`, "info");
   }
 }
 
@@ -1000,27 +1134,29 @@ async function reloadAll({ silent = false } = {}) {
  * 3. ngược lại, hiện màn hình đăng nhập.
  */
 async function init() {
-  $("stat-api").textContent = API_BASE_URL;
+  const apiEl = $("stat-api");
+  if (apiEl) {
+    apiEl.textContent = API_BASE_URL;
+  }
   bindEvents();
-  resetFarmForm(); // 2 form luôn khởi động ở chế độ "thêm mới / tạo mới"
+  resetFarmForm();
   resetBatchForm();
-  await checkHealth(); // báo ngay nếu uvicorn chưa chạy
+  await checkHealth();
 
   const saved = restoreSession();
   if (saved !== null) {
     try {
       const data = await requestLogin(saved.username, saved.password);
       startSession({ username: data.username, role: data.role, password: saved.password });
-      toast(`Đã khôi phục phiên: ${data.username} (role: ${data.role}).`, "info");
+      toast(`Đã khôi phục phiên đăng nhập: ${data.username}.`, "info");
       await reloadAll({ silent: true });
       return;
     } catch (error) {
-      // Phiên cũ hết hiệu lực (đổi mật khẩu, xoá database...) -> yêu cầu đăng nhập lại.
       clearSession();
     }
   }
 
-  applySessionToUi(); // chỉ hiện màn hình login
+  applySessionToUi();
   $("login-username").focus();
 }
 

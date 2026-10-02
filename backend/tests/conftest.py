@@ -54,19 +54,31 @@ def session_factory(engine: Engine) -> sessionmaker[Session]:
 
 @pytest.fixture()
 def users(session_factory: sessionmaker[Session]) -> list[str]:
-    """Tạo sẵn 2 tài khoản test (``admin`` + ``farmer``, mật khẩu ``123456``)."""
+    """Tạo sẵn tổ chức mặc định và 2 tài khoản test (``admin`` + ``farmer``, mật khẩu ``123456``)."""
+    from app.models import Organization
     with session_factory() as session:
+        org = Organization(
+            id=1,
+            name="Hợp tác xã Nông sản An Toàn Đồng Tháp",
+            code="HTX-DT",
+            description="Tổ chức mặc định cho kiểm thử",
+        )
+        session.add(org)
+        session.flush()
+
         session.add_all(
             [
                 User(
                     username=TEST_USERNAME_ADMIN,
                     password=hash_password(TEST_PASSWORD),
                     role=ROLE_ADMIN,
+                    organization_id=org.id,
                 ),
                 User(
                     username=TEST_USERNAME_FARMER,
                     password=hash_password(TEST_PASSWORD),
                     role=ROLE_FARMER,
+                    organization_id=org.id,
                 ),
             ]
         )

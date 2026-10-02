@@ -94,5 +94,10 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)) -> LoginResponse
             detail="Sai tên đăng nhập hoặc mật khẩu.",
         )
 
-    return LoginResponse(username=user.username, role=user.role)
+    return LoginResponse(
+        username=user.username,
+        role=user.role,
+        organization_id=user.organization_id,
+        organization_name=user.organization.name if user.organization else None,
+    )
 
