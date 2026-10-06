@@ -105,4 +105,4 @@ def list_audit_logs(
     # `current_user` không dùng trong thân hàm nhưng bắt buộc phải khai báo để
     # FastAPI chạy dependency kiểm tra quyền trước khi vào endpoint.
     _ = current_user
-    return fetch_audit_logs(db, entity=entity, user_id=user_id, limit=limit)
+    return fetch_audit_logs(db, entity=entity, user_id=user_id, limit=limit)
