@@ -1,0 +1,21 @@
+# TTCS K18C4 - Backend dependencies (Sprint 1)
+# Cài đặt: pip install -r requirements.txt
+
+# Web framework
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+
+# ORM + driver SQLite (sqlite3 có sẵn trong Python standard library)
+SQLAlchemy==2.0.36
+
+# Validation / serialization (FastAPI dùng ở tầng schema)
+pydantic==2.10.4
+
+# Băm mật khẩu an toàn theo chuẩn Argon2id
+argon2-cffi==25.1.0
+
+# Kiểm thử (dev) - chạy: python -m pytest
+# `httpx` cần cho TestClient của FastAPI (test gọi API mà không cần bật server).
+pytest==9.1.1
+httpx==0.28.1
+
