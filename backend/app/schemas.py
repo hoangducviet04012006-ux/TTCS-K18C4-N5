@@ -7,7 +7,7 @@ Tách riêng schemas (Pydantic) khỏi models (SQLAlchemy) giúp:
 
 from datetime import date, datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, Field, ConfigDict, field_validator
 
 
 class HealthResponse(BaseModel):
