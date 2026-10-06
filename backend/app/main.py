@@ -25,12 +25,25 @@ Các sprint:
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI, status
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
+from sqlalchemy.orm import Session
 
 from app import __version__
-from app.database import init_db
-from app.routers import audit, auth, batches, farms, health, users
+from app.database import get_db, init_db
+from app.routers import (
+    audit,
+    auth,
+    batches,
+    events,
+    farms,
+    handovers,
+    health,
+    users,
+)
+from app.schemas import HealthResponse
+
 
 # ------------------------------------------------------------------ Lifespan ---
 @asynccontextmanager
@@ -90,11 +103,33 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+# ------------------------------------------------------------- Health Check ---
+@app.get(
+    "/health",
+    response_model=HealthResponse,
+    status_code=status.HTTP_200_OK,
+    tags=["System"],
+    summary="Kiểm tra hệ thống (Health Check)",
+    description="Kiểm tra trạng thái máy chủ và kết nối cơ sở dữ liệu (SCRUM-17 / S-03).",
+)
+def health_check(db: Session = Depends(get_db)) -> HealthResponse:
+    """Endpoint kiểm tra sức khỏe hệ thống phục vụ CI/CD và deployment."""
+    try:
+        db.execute(text("SELECT 1"))
+        db_status = "connected"
+    except Exception:
+        db_status = "disconnected"
+    return HealthResponse(status="ok", database=db_status)
+
+
 # --------------------------------------------------------- Đăng ký các router ---
 # Mỗi module nghiệp vụ là 1 router; thêm module mới = thêm 1 dòng ở đây.
 app.include_router(health.router)
 app.include_router(auth.router)
 app.include_router(farms.router)
 app.include_router(batches.router)
+app.include_router(events.router)
 app.include_router(users.router)
 app.include_router(audit.router)
+app.include_router(handovers.router)

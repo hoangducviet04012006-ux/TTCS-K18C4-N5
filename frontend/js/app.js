@@ -196,6 +196,9 @@ let batches = [];
 let users = [];
 // Sprint 7: lịch sử thao tác (chỉ admin tải được - xem `loadAuditLogs`).
 let auditLogs = [];
+// SCRUM-27/28: Danh sách tổ chức và các bàn giao đang chờ duyệt
+let organizations = [];
+let pendingHandovers = [];
 
 // ID bản ghi đang được SỬA trên form (null = form đang ở chế độ "thêm mới").
 // Sprint 5: bấm nút "Sửa" ở bảng -> form phía trên đổ sẵn dữ liệu và nút submit
@@ -207,6 +210,9 @@ let editingBatchId = null;
 // Sprint 4 không dùng JWT: client giữ lại thông tin đăng nhập để gửi kèm header
 // `Authorization: Basic ...` trong mỗi request.
 let session = null;
+
+// [T-59] ID của lô đang được hiển thị trong chi tiết (dùng cho nút Timeline / Ancestors).
+let currentBatchId = null;
 
 /* --------------------------------------------------------- 5. Đăng nhập --- */
 /**
@@ -373,6 +379,8 @@ function handleLogout() {
   batches = [];
   users = [];
   auditLogs = [];
+  organizations = [];
+  pendingHandovers = [];
   resetFarmForm();
   resetBatchForm();
   renderFarms();
@@ -380,6 +388,7 @@ function handleLogout() {
   renderBatches();
   renderUsers();
   renderAuditLogs();
+  renderPendingHandovers();
 
   applySessionToUi();
   toast(username ? `Đã đăng xuất tài khoản ${username}.` : "Đã đăng xuất.", "info");
@@ -685,22 +694,51 @@ function farmLabel(farmId) {
   return farm ? `#${farmId} — ${farm.name}` : `#${farmId}`;
 }
 
-/** Vẽ bảng danh sách lô nông sản (kèm cột "Thao tác": Sửa/Xoá). */
+/** Vẽ bảng danh sách lô nông sản (kèm cột Đơn vị nắm giữ, Trạng thái & Thao tác). */
 function renderBatches() {
   $("batch-table-body").innerHTML = batches
-    .map(
-      (batch) => `
+    .map((batch) => {
+      const holdingOrg = batch.current_org_name || (session?.organization_name || farmLabel(batch.farm_id));
+      const isPending = (batch.pending_handover != null) || pendingHandovers.some((h) => h.batch_id === batch.id);
+      const statusBadge = isPending
+        ? '<span class="badge badge--warning">⏳ Chờ bàn giao</span>'
+        : '<span class="badge badge--ok">Đang quản lý</span>';
+
+      // Kiểm tra người dùng có thuộc tổ chức đang nắm giữ lô không
+      const isHolder = session && (
+        batch.current_org_id == null ||
+        session.organization_id == null ||
+        batch.current_org_id === session.organization_id
+      );
+
+      let handoverBtn = "";
+      if (isHolder) {
+        if (isPending) {
+          handoverBtn = `<button class="btn btn--light btn--sm" type="button" disabled title="Lô hàng đang có yêu cầu bàn giao chờ xác nhận">⏳ Chờ duyệt</button>`;
+        } else {
+          handoverBtn = `<button class="btn btn--outline-primary btn--sm" type="button"
+                           data-action="open-handover" data-id="${escapeHtml(batch.id)}">🚚 Bàn giao</button>`;
+        }
+      }
+
+      return `
       <tr class="${batch.id === editingBatchId ? "is-editing" : ""}">
-        <td class="id-cell">#${escapeHtml(batch.id)}</td>
+        <td class="id-cell"><a href="javascript:void(0)" onclick="openBatchDetail(${batch.id})" style="font-weight: bold; text-decoration: underline;" title="Xem chi tiết lô #${batch.id}">#${escapeHtml(batch.id)}</a></td>
         <td>${escapeHtml(farmLabel(batch.farm_id))}</td>
         <td><strong>${escapeHtml(batch.product_name)}</strong></td>
         <td class="is-right">${formatNumber(batch.quantity)}</td>
         <td>${escapeHtml(formatDate(batch.harvest_date))}</td>
+        <td><span class="badge badge--org">🏢 ${escapeHtml(holdingOrg)}</span></td>
+        <td>${statusBadge}</td>
         <td>
           <div class="table__actions">
+            <button class="btn btn--light btn--sm" type="button"
+                    data-action="view-detail" data-entity="batch"
+                    data-id="${escapeHtml(batch.id)}">👁️ Chi tiết</button>
             <button class="btn btn--primary btn--sm" type="button"
                     data-action="edit" data-entity="batch"
                     data-id="${escapeHtml(batch.id)}">Sửa</button>
+            ${handoverBtn}
             ${
               canDelete()
                 ? `<button class="btn btn--danger btn--sm" type="button"
@@ -710,12 +748,12 @@ function renderBatches() {
             }
           </div>
         </td>
-      </tr>`
-    )
+      </tr>`;
+    })
     .join("");
 
   $("batch-empty").hidden = batches.length > 0;
-  renderStats(); // thẻ "Tổng lô nông sản" + "Tổng sản lượng" lấy từ mảng `batches`
+  renderStats();
 }
 
 /** Nhãn nút submit form lô nông sản theo chế độ hiện tại (tạo mới / sửa). */
@@ -854,6 +892,10 @@ function renderStats() {
   $("stat-batches").textContent = formatNumber(batches.length);
   $("stat-yield").textContent = formatNumber(Math.round(totalYield * 100) / 100);
   $("stat-audit").textContent = formatNumber(auditLogs.length);
+  const pendingStat = $("stat-pending-handovers");
+  if (pendingStat) {
+    pendingStat.textContent = formatNumber(pendingHandovers.length);
+  }
 }
 
 /* ------------------------------------------ 10. Tài khoản (chỉ admin) --- */
@@ -1043,6 +1085,338 @@ function bindEvents() {
   }
   $("farm-table-body").addEventListener("click", handleTableAction);
   $("batch-table-body").addEventListener("click", handleTableAction);
+
+  // Bảng và nút của Lô chờ xác nhận bàn giao
+  const pendingTbody = $("pending-handovers-table-body");
+  if (pendingTbody) {
+    pendingTbody.addEventListener("click", handleTableAction);
+  }
+  const btnRefreshPending = $("btn-refresh-pending");
+  if (btnRefreshPending) {
+    btnRefreshPending.addEventListener("click", async () => {
+      await loadPendingHandovers();
+      toast("Đã làm mới danh sách lô chờ xác nhận.", "info");
+    });
+  }
+
+  // Modal bàn giao sự kiện
+  const btnCloseHandover = $("btn-close-handover-modal");
+  if (btnCloseHandover) btnCloseHandover.addEventListener("click", closeHandoverModal);
+  const btnCancelHandover = $("btn-cancel-handover");
+  if (btnCancelHandover) btnCancelHandover.addEventListener("click", closeHandoverModal);
+  const handoverForm = $("handover-form");
+  if (handoverForm) handoverForm.addEventListener("submit", handleHandoverSubmit);
+
+  // Modal từ chối sự kiện
+  const btnCloseReject = $("btn-close-reject-modal");
+  if (btnCloseReject) btnCloseReject.addEventListener("click", closeRejectModal);
+  const btnCancelReject = $("btn-cancel-reject");
+  if (btnCancelReject) btnCancelReject.addEventListener("click", closeRejectModal);
+  const rejectForm = $("reject-form");
+  if (rejectForm) rejectForm.addEventListener("submit", handleRejectSubmit);
+  const rejectReasonInput = $("reject-reason");
+  if (rejectReasonInput) rejectReasonInput.addEventListener("input", updateRejectCounter);
+
+  // Đóng modal khi bấm ra ngoài nền backdrop
+  const modalHandover = $("modal-handover");
+  if (modalHandover) {
+    modalHandover.addEventListener("click", (e) => {
+      if (e.target === modalHandover) closeHandoverModal();
+    });
+  }
+  const modalReject = $("modal-reject");
+  if (modalReject) {
+    modalReject.addEventListener("click", (e) => {
+      if (e.target === modalReject) closeRejectModal();
+    });
+  }
+
+  // Nút đóng trang chi tiết lô S-25
+  const btnCloseDetail = $("btn-close-batch-detail");
+  if (btnCloseDetail) btnCloseDetail.addEventListener("click", closeBatchDetail);
+
+  // [T-59] Header buttons: xem timeline / ancestors
+  const btnHeaderTimeline = $("btn-view-batch-timeline");
+  if (btnHeaderTimeline) {
+    btnHeaderTimeline.addEventListener("click", () => {
+      if (currentBatchId !== null) openBatchTimelineModal(currentBatchId);
+    });
+  }
+  const btnHeaderAncestors = $("btn-view-batch-ancestors");
+  if (btnHeaderAncestors) {
+    btnHeaderAncestors.addEventListener("click", () => {
+      if (currentBatchId !== null) openBatchAncestorsModal(currentBatchId);
+    });
+  }
+
+  // [T-59] Nav bar buttons (inside batch-detail-body)
+  const btnNavTimeline = $("btn-detail-nav-timeline");
+  if (btnNavTimeline) {
+    btnNavTimeline.addEventListener("click", () => {
+      if (currentBatchId !== null) openBatchTimelineModal(currentBatchId);
+    });
+  }
+  const btnNavAncestors = $("btn-detail-nav-ancestors");
+  if (btnNavAncestors) {
+    btnNavAncestors.addEventListener("click", () => {
+      if (currentBatchId !== null) openBatchAncestorsModal(currentBatchId);
+    });
+  }
+
+  // [T-59] Modal timeline: đóng bằng nút × và click backdrop
+  const btnCloseTimeline = $("btn-close-timeline-modal");
+  if (btnCloseTimeline) btnCloseTimeline.addEventListener("click", closeBatchTimelineModal);
+  const modalTimeline = $("modal-batch-timeline");
+  if (modalTimeline) {
+    modalTimeline.addEventListener("click", (e) => {
+      if (e.target === modalTimeline) closeBatchTimelineModal();
+    });
+  }
+
+  // [T-59] Modal ancestors: đóng bằng nút × và click backdrop
+  const btnCloseAncestors = $("btn-close-ancestors-modal");
+  if (btnCloseAncestors) btnCloseAncestors.addEventListener("click", closeBatchAncestorsModal);
+  const modalAncestors = $("modal-batch-ancestors");
+  if (modalAncestors) {
+    modalAncestors.addEventListener("click", (e) => {
+      if (e.target === modalAncestors) closeBatchAncestorsModal();
+    });
+  }
+}
+
+/* ------------------------------------------- 11. Bàn giao lô hàng (SCRUM-27/28) --- */
+/** GET /organizations -> danh sách tổ chức để chọn bên nhận */
+async function loadOrganizations() {
+  if (session === null) return;
+  try {
+    const data = await apiRequest("/organizations");
+    organizations = Array.isArray(data) ? data : [];
+  } catch (error) {
+    console.warn("Không tải được danh sách tổ chức:", error.message);
+  }
+}
+
+/** GET /handovers/pending -> danh sách bàn giao gửi đến tổ chức của user */
+async function loadPendingHandovers() {
+  if (session === null) {
+    pendingHandovers = [];
+    renderPendingHandovers();
+    return;
+  }
+  try {
+    const data = await apiRequest("/handovers/pending");
+    pendingHandovers = Array.isArray(data) ? data : [];
+    renderPendingHandovers();
+  } catch (error) {
+    console.warn("Không tải được danh sách lô chờ xác nhận:", error.message);
+    pendingHandovers = [];
+    renderPendingHandovers();
+  }
+}
+
+/** Vẽ danh sách các lô hàng đang chờ xác nhận bàn giao */
+function renderPendingHandovers() {
+  const tbody = $("pending-handovers-table-body");
+  if (!tbody) return;
+
+  tbody.innerHTML = pendingHandovers
+    .map((h) => {
+      const productName = h.batch_product_name || `Lô #${h.batch_id}`;
+      const fromOrg = h.from_org_name || `Tổ chức #${h.from_org_id}`;
+      const note = h.notes || h.note || "—";
+      return `
+      <tr>
+        <td class="id-cell">#${escapeHtml(h.batch_id)}</td>
+        <td><strong>${escapeHtml(productName)}</strong></td>
+        <td class="is-right">${formatNumber(h.batch_quantity)}</td>
+        <td><span class="badge badge--org">🏢 ${escapeHtml(fromOrg)}</span></td>
+        <td>${escapeHtml(formatDateTime(h.created_at))}</td>
+        <td>${escapeHtml(note)}</td>
+        <td class="is-center">
+          <div class="table__actions" style="justify-content: center;">
+            <button class="btn btn--success btn--sm" type="button"
+                    data-action="accept-handover" data-id="${escapeHtml(h.id)}">
+              ✓ Xác nhận nhận lô
+            </button>
+            <button class="btn btn--danger btn--sm" type="button"
+                    data-action="reject-handover" data-id="${escapeHtml(h.id)}">
+              ✕ Từ chối
+            </button>
+          </div>
+        </td>
+      </tr>`;
+    })
+    .join("");
+
+  const countBadge = $("badge-pending-count");
+  if (countBadge) {
+    countBadge.textContent = `${pendingHandovers.length} lô`;
+    countBadge.className = pendingHandovers.length > 0 ? "badge badge--warning" : "badge badge--muted";
+  }
+  const statPending = $("stat-pending-handovers");
+  if (statPending) {
+    statPending.textContent = formatNumber(pendingHandovers.length);
+  }
+  const emptyEl = $("pending-handovers-empty");
+  if (emptyEl) {
+    emptyEl.hidden = pendingHandovers.length > 0;
+  }
+  renderStats();
+}
+
+/** Mở modal bàn giao lô hàng */
+function openHandoverModal(batchId) {
+  const batch = batches.find((item) => item.id === batchId);
+  if (!batch) {
+    toast(`Không tìm thấy lô nông sản #${batchId}.`, "error");
+    return;
+  }
+
+  $("handover-batch-id").value = String(batch.id);
+  $("handover-note").value = "";
+
+  const summary = $("modal-handover-summary");
+  if (summary) {
+    summary.innerHTML = `
+      <div><strong>Lô hàng:</strong> #${escapeHtml(batch.id)} — <strong>${escapeHtml(batch.product_name)}</strong></div>
+      <div><strong>Khối lượng:</strong> ${formatNumber(batch.quantity)} kg · <strong>Vùng xuất xứ:</strong> ${escapeHtml(farmLabel(batch.farm_id))}</div>
+      <div><strong>Tổ chức bàn giao:</strong> ${escapeHtml(session?.organization_name || "Tổ chức của bạn")}</div>
+    `;
+  }
+
+  // Đổ danh sách tổ chức khác vào select
+  const select = $("handover-to-org");
+  if (select) {
+    const targetOrgs = organizations.filter((org) => org.id !== session?.organization_id);
+    if (targetOrgs.length === 0) {
+      select.innerHTML = '<option value="">— Chưa có tổ chức đối tác khác nào trong hệ thống —</option>';
+      select.disabled = true;
+    } else {
+      select.disabled = false;
+      select.innerHTML =
+        '<option value="">— Chọn tổ chức tiếp nhận —</option>' +
+        targetOrgs
+          .map((org) => `<option value="${escapeHtml(org.id)}">${escapeHtml(org.name)} (${escapeHtml(org.code)})</option>`)
+          .join("");
+    }
+  }
+
+  $("modal-handover").hidden = false;
+}
+
+/** Đóng modal bàn giao */
+function closeHandoverModal() {
+  $("modal-handover").hidden = true;
+  $("handover-form").reset();
+}
+
+/** Xử lý gửi form bàn giao */
+async function handleHandoverSubmit(event) {
+  event.preventDefault();
+  const batchId = Number($("handover-batch-id").value);
+  const toOrgId = Number($("handover-to-org").value);
+  const note = $("handover-note").value.trim() || null;
+
+  if (!toOrgId) {
+    toast("Vui lòng chọn tổ chức tiếp nhận lô hàng!", "error");
+    return;
+  }
+
+  const button = $("btn-submit-handover");
+  setButtonLoading(button, true, "Đang gửi…", "Xác nhận gửi bàn giao");
+
+  try {
+    await apiRequest(`/batches/${batchId}/handover`, {
+      method: "POST",
+      body: { to_org_id: toOrgId, note: note },
+    });
+    toast(`Đã gửi yêu cầu bàn giao lô nông sản #${batchId} thành công!`, "success");
+    closeHandoverModal();
+    await loadBatches();
+    await loadPendingHandovers();
+  } catch (error) {
+    toast(`Bàn giao thất bại: ${error.message}`, "error");
+  } finally {
+    setButtonLoading(button, false, "Đang gửi…", "Xác nhận gửi bàn giao");
+  }
+}
+
+/** Mở modal từ chối tiếp nhận */
+function openRejectModal(handoverId) {
+  $("reject-handover-id").value = String(handoverId);
+  $("reject-reason").value = "";
+  updateRejectCounter();
+  $("modal-reject").hidden = false;
+  $("reject-reason").focus();
+}
+
+/** Đóng modal từ chối tiếp nhận */
+function closeRejectModal() {
+  $("modal-reject").hidden = true;
+  $("reject-form").reset();
+}
+
+/** Cập nhật bộ đếm ký tự lý do từ chối */
+function updateRejectCounter() {
+  const reason = $("reject-reason").value.trim();
+  const counter = $("reject-reason-counter");
+  if (counter) {
+    counter.textContent = `Đã nhập: ${reason.length} / tối thiểu 10 ký tự`;
+    counter.style.color = reason.length >= 10 ? "var(--color-primary)" : "var(--color-danger)";
+  }
+}
+
+/** Xử lý gửi form từ chối tiếp nhận */
+async function handleRejectSubmit(event) {
+  event.preventDefault();
+  const handoverId = Number($("reject-handover-id").value);
+  const reason = $("reject-reason").value.trim();
+
+  if (reason.length < 10) {
+    toast("Lý do từ chối bắt buộc phải có tối thiểu 10 ký tự!", "error");
+    $("reject-reason").focus();
+    return;
+  }
+
+  const button = $("btn-submit-reject");
+  setButtonLoading(button, true, "Đang xử lý…", "Xác nhận từ chối");
+
+  try {
+    await apiRequest(`/handovers/${handoverId}/respond`, {
+      method: "POST",
+      body: { action: "REJECT", reject_reason: reason },
+    });
+    toast("Đã từ chối tiếp nhận lô hàng.", "info");
+    closeRejectModal();
+    await loadPendingHandovers();
+    await loadBatches();
+  } catch (error) {
+    toast(`Từ chối thất bại: ${error.message}`, "error");
+  } finally {
+    setButtonLoading(button, false, "Đang xử lý…", "Xác nhận từ chối");
+  }
+}
+
+/** Tiếp nhận lô hàng (ACCEPT) */
+async function handleAcceptHandover(handoverId) {
+  const h = pendingHandovers.find((item) => item.id === handoverId);
+  const batchName = h ? (h.batch_product_name || `lô #${h.batch_id}`) : `lô hàng #${handoverId}`;
+
+  if (!window.confirm(`Bạn có chắc chắn muốn xác nhận tiếp nhận ${batchName} về tổ chức của mình?`)) {
+    return;
+  }
+
+  try {
+    await apiRequest(`/handovers/${handoverId}/respond`, {
+      method: "POST",
+      body: { action: "ACCEPT" },
+    });
+    toast(`Đã tiếp nhận ${batchName} thành công!`, "success");
+    await loadPendingHandovers();
+    await loadBatches();
+  } catch (error) {
+    toast(`Tiếp nhận lô hàng thất bại: ${error.message}`, "error");
+  }
 }
 
 /** Huỷ chế độ sửa của form vùng trồng / lô nông sản (nút "Huỷ sửa"). */
@@ -1059,11 +1433,241 @@ function cancelEdit(entity) {
   toast("Đã huỷ chế độ sửa lô nông sản.", "info");
 }
 
+/** [S-25] Xem trang chi tiết một lô nông sản theo batchId. */
+async function openBatchDetail(batchId) {
+  const card = $("batch-detail-card");
+  const loading = $("batch-detail-loading");
+  const notFound = $("batch-detail-not-found");
+  const errorEl = $("batch-detail-error");
+  const body = $("batch-detail-body");
+
+  if (!card) return;
+
+  // [T-59] Lưu lại batch ID đang xem để header buttons dùng đúng batch.
+  currentBatchId = batchId;
+
+  card.hidden = false;
+  loading.hidden = false;
+  notFound.hidden = true;
+  errorEl.hidden = true;
+  body.hidden = true;
+
+  card.scrollIntoView({ behavior: "smooth", block: "start" });
+
+  try {
+    const data = await apiRequest(`/batches/${batchId}`);
+    loading.hidden = true;
+
+    if (!data || !data.id) {
+      notFound.hidden = false;
+      return;
+    }
+
+    $("batch-detail-header-title").textContent = `📦 Trang chi tiết lô nông sản #${data.id} - ${data.product_name}`;
+    $("bd-id").textContent = `#${data.id}`;
+    $("bd-product-name").textContent = data.product_name || "N/A";
+    $("bd-initial-qty").textContent = formatNumber(data.initial_quantity || data.quantity);
+    $("bd-remaining-qty").textContent = formatNumber(data.remaining_quantity != null ? data.remaining_quantity : (data.quantity || 0));
+    $("bd-unit-1").textContent = data.unit || "kg";
+    $("bd-unit-2").textContent = data.unit || "kg";
+    $("bd-status").textContent = data.status || "Đang lưu kho";
+    $("bd-harvest-date").textContent = formatDate(data.harvest_date);
+
+    $("bd-current-org").textContent = data.current_org_name ? `🏢 ${data.current_org_name}` : "Tổ chức chưa xác định";
+    $("bd-farm-name").textContent = data.farm_name || farmLabel(data.farm_id) || "N/A";
+    $("bd-farm-location").textContent = data.farm_location || "N/A";
+
+    // Lô mẹ trực tiếp
+    const parentContainer = $("bd-parent-container");
+    if (data.parent && data.parent.id) {
+      const p = data.parent;
+      parentContainer.innerHTML = `
+        <div class="tree-card">
+          <div class="tree-card__info">
+            <span class="tree-card__code">🌱 Lô mẹ trực tiếp: #${escapeHtml(p.id)}</span>
+            <span class="tree-card__name">${escapeHtml(p.product_name)}</span>
+            <span class="tree-card__meta">Khối lượng: ${formatNumber(p.remaining_quantity != null ? p.remaining_quantity : p.quantity)} / ${formatNumber(p.quantity)} ${escapeHtml(p.unit || "kg")} · Trạng thái: ${escapeHtml(p.status || "Đang lưu kho")} · Nơi giữ: ${escapeHtml(p.current_org_name || "N/A")}</span>
+          </div>
+          <button class="btn btn--outline-primary btn--sm tree-card__action" type="button" onclick="openBatchDetail(${p.id})">
+            👁️ Xem lô mẹ #${p.id} ↗
+          </button>
+        </div>
+      `;
+    } else {
+      parentContainer.innerHTML = `<div class="no-tree-msg">Không có lô mẹ</div>`;
+    }
+
+    // Lô con trực tiếp
+    const childrenContainer = $("bd-children-container");
+    if (data.children && data.children.length > 0) {
+      childrenContainer.innerHTML = data.children.map((c) => `
+        <div class="tree-card">
+          <div class="tree-card__info">
+            <span class="tree-card__code">🌿 Lô con trực tiếp: #${escapeHtml(c.id)}</span>
+            <span class="tree-card__name">${escapeHtml(c.product_name)}</span>
+            <span class="tree-card__meta">Khối lượng: ${formatNumber(c.remaining_quantity != null ? c.remaining_quantity : c.quantity)} / ${formatNumber(c.quantity)} ${escapeHtml(c.unit || "kg")} · Trạng thái: ${escapeHtml(c.status || "Đang lưu kho")} · Nơi giữ: ${escapeHtml(c.current_org_name || "N/A")}</span>
+          </div>
+          <button class="btn btn--outline-primary btn--sm tree-card__action" type="button" onclick="openBatchDetail(${c.id})">
+            👁️ Xem lô con #${c.id} ↗
+          </button>
+        </div>
+      `).join("");
+    } else {
+      childrenContainer.innerHTML = `<div class="no-tree-msg">Không có lô con</div>`;
+    }
+
+    body.hidden = false;
+  } catch (error) {
+    loading.hidden = true;
+    if (error.message && error.message.includes("404")) {
+      notFound.hidden = false;
+    } else {
+      errorEl.hidden = false;
+      errorEl.textContent = `⚠️ Đã xảy ra lỗi khi lấy chi tiết lô nông sản: ${error.message}`;
+    }
+  }
+}
+
+/** Đóng trang chi tiết lô */
+function closeBatchDetail() {
+  const card = $("batch-detail-card");
+  if (card) card.hidden = true;
+}
+
+/* ------------------------------------------- [T-59] Dòng thời gian & Tổ tiên --- */
+
+/** Mở modal xem dòng thời gian (timeline events) của một lô. */
+async function openBatchTimelineModal(batchId) {
+  const modal = $("modal-batch-timeline");
+  const loadingEl = $("modal-timeline-loading");
+  const errorEl = $("modal-timeline-error");
+  const emptyEl = $("modal-timeline-empty");
+  const listEl = $("modal-timeline-list");
+  const labelEl = $("modal-timeline-batch-label");
+
+  if (!modal) return;
+  modal.hidden = false;
+
+  loadingEl.hidden = false;
+  errorEl.hidden = true;
+  emptyEl.hidden = true;
+  listEl.hidden = true;
+  listEl.innerHTML = "";
+  if (labelEl) labelEl.textContent = `Lô nông sản #${batchId}`;
+
+  try {
+    const events = await apiRequest(`/batches/${batchId}/events`);
+    loadingEl.hidden = true;
+
+    if (!Array.isArray(events) || events.length === 0) {
+      emptyEl.hidden = false;
+      return;
+    }
+
+    listEl.innerHTML = events.map((ev, idx) => `
+      <div class="timeline-item">
+        <div class="timeline-item__dot">${idx + 1}</div>
+        <div class="timeline-item__body">
+          <div class="timeline-item__type">${escapeHtml(ev.event_type || "EVENT")}</div>
+          <div class="timeline-item__data">${escapeHtml(ev.event_data || "")}</div>
+          <div class="timeline-item__time">
+            ${ev.timestamp ? formatDate(ev.timestamp) : ""}
+            ${ev.user_id ? ` · Người ghi: #${ev.user_id}` : ""}
+          </div>
+        </div>
+      </div>
+    `).join("");
+    listEl.hidden = false;
+  } catch (err) {
+    loadingEl.hidden = true;
+    errorEl.hidden = false;
+    errorEl.textContent = `⚠️ Không thể tải dòng thời gian: ${err.message}`;
+  }
+}
+
+/** Đóng modal dòng thời gian. */
+function closeBatchTimelineModal() {
+  const modal = $("modal-batch-timeline");
+  if (modal) modal.hidden = true;
+}
+
+/** Mở modal xem danh sách tổ tiên (ancestors) của một lô. */
+async function openBatchAncestorsModal(batchId) {
+  const modal = $("modal-batch-ancestors");
+  const loadingEl = $("modal-ancestors-loading");
+  const errorEl = $("modal-ancestors-error");
+  const emptyEl = $("modal-ancestors-empty");
+  const listEl = $("modal-ancestors-list");
+  const labelEl = $("modal-ancestors-batch-label");
+
+  if (!modal) return;
+  modal.hidden = false;
+
+  loadingEl.hidden = false;
+  errorEl.hidden = true;
+  emptyEl.hidden = true;
+  listEl.hidden = true;
+  listEl.innerHTML = "";
+  if (labelEl) labelEl.textContent = `Lô nông sản #${batchId}`;
+
+  try {
+    const data = await apiRequest(`/batches/${batchId}/ancestors`);
+    loadingEl.hidden = true;
+
+    const ancestors = Array.isArray(data.ancestors) ? data.ancestors : [];
+
+    if (ancestors.length === 0) {
+      emptyEl.hidden = false;
+      return;
+    }
+
+    const genLabel = (gen) => {
+      if (gen === 1) return "Lô mẹ trực tiếp";
+      if (gen === 2) return "Lô bà";
+      if (gen === 3) return "Lô cố";
+      return `Thế hệ ${gen}`;
+    };
+
+    listEl.innerHTML = ancestors.map((anc) => `
+      <div class="ancestor-item">
+        <span class="ancestor-item__gen">${genLabel(anc.generation || 1)}</span>
+        <div class="ancestor-item__info">
+          <div class="ancestor-item__name">
+            #${escapeHtml(String(anc.id))} · ${escapeHtml(anc.product_name || anc.product || "")}
+          </div>
+          <div class="ancestor-item__meta">
+            KL còn lại: ${formatNumber(anc.remaining_quantity)} / ${formatNumber(anc.quantity)} ${escapeHtml(anc.unit || "kg")}
+            · ${escapeHtml(anc.current_org_name || "N/A")}
+          </div>
+        </div>
+        <div class="ancestor-item__action">
+          <button class="btn btn--outline-primary btn--sm" type="button" onclick="openBatchDetail(${anc.id})">
+            👁️ Xem #${anc.id}
+          </button>
+        </div>
+      </div>
+    `).join("");
+    listEl.hidden = false;
+  } catch (err) {
+    loadingEl.hidden = true;
+    if (err.message && err.message.includes("404")) {
+      errorEl.hidden = false;
+      errorEl.textContent = "❌ Không tìm thấy lô nông sản này.";
+    } else {
+      errorEl.hidden = false;
+      errorEl.textContent = `⚠️ Không thể tải danh sách tổ tiên: ${err.message}`;
+    }
+  }
+}
+
+/** Đóng modal danh sách tổ tiên. */
+function closeBatchAncestorsModal() {
+  const modal = $("modal-batch-ancestors");
+  if (modal) modal.hidden = true;
+}
+
 /**
- * Xử lý click ở cột "Thao tác" của cả 2 bảng (nút Sửa / Xoá).
- *
- * Đọc dữ liệu từ chính nút được bấm: `data-action` (edit|delete),
- * `data-entity` (farm|batch) và `data-id`.
+ * Xử lý click ở cột "Thao tác" (Chi tiết, Sửa, Xoá, Bàn giao, Tiếp nhận, Từ chối).
  */
 function handleTableAction(event) {
   const button = event.target.closest("button[data-action]");
@@ -1074,6 +1678,26 @@ function handleTableAction(event) {
   const id = Number(button.dataset.id);
   const entity = button.dataset.entity;
   const action = button.dataset.action;
+
+  if (action === "view-detail") {
+    openBatchDetail(id);
+    return;
+  }
+
+  if (action === "open-handover") {
+    openHandoverModal(id);
+    return;
+  }
+
+  if (action === "accept-handover") {
+    handleAcceptHandover(id);
+    return;
+  }
+
+  if (action === "reject-handover") {
+    openRejectModal(id);
+    return;
+  }
 
   if (action === "edit") {
     if (entity === "farm") {
@@ -1100,8 +1724,10 @@ function handleTableAction(event) {
 /** Tải dữ liệu dùng chung cho giao diện sau khi đăng nhập (theo phân quyền). */
 async function loadAllData() {
   await checkHealth();
+  await loadOrganizations();
   await loadFarms();
   await loadBatches();
+  await loadPendingHandovers();
   if (isAdmin()) {
     await loadUsers();
     await loadAuditLogs({ silent: true });
@@ -1118,6 +1744,9 @@ async function reloadAll({ silent = false } = {}) {
   setButtonLoading(button, false, "Đang tải…", "Tải lại dữ liệu");
   if (!silent) {
     const parts = [`${farms.length} vùng trồng`, `${batches.length} lô nông sản`];
+    if (pendingHandovers.length > 0) {
+      parts.push(`${pendingHandovers.length} lô chờ nhận`);
+    }
     if (isAdmin()) {
       parts.push(`${auditLogs.length} nhật ký hoạt động`);
     }

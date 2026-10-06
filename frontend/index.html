@@ -88,6 +88,14 @@
         <strong class="stat-card__value"><span id="stat-yield">0</span> <small class="unit">kg</small></strong>
         <span class="stat-card__hint">Tổng khối lượng toàn hệ thống</span>
       </article>
+      <!-- Thẻ đếm lô chờ xác nhận bàn giao -->
+      <article id="stat-pending-card" class="stat-card">
+        <span class="stat-card__label">Lô chờ xác nhận</span>
+        <strong id="stat-pending-handovers" class="stat-card__value">0</strong>
+        <span class="stat-card__hint">
+          Chờ tiếp nhận · <a href="#pending-handovers-card">Xem chi tiết ↓</a>
+        </span>
+      </article>
       <!-- Thẻ đếm lịch sử thao tác - chỉ admin thấy -->
       <article id="stat-audit-card" class="stat-card" hidden>
         <span class="stat-card__label">Nhật ký hoạt động</span>
@@ -183,6 +191,42 @@
       <p id="farm-empty" class="empty" hidden>Hợp tác xã chưa có thửa đất nào được khai báo. Vui lòng thêm thửa đất mới ở biểu mẫu phía trên.</p>
     </section>
 
+    <!-- ==================== LÔ CHỜ TIẾP NHẬN BÀN GIAO ==================== -->
+    <section id="pending-handovers-card" class="card card--highlight">
+      <header class="card__header">
+        <div class="card__header-flex">
+          <div>
+            <h2 class="card__title">
+              📥 Lô hàng chờ xác nhận bàn giao
+              <span id="badge-pending-count" class="badge badge--warning">0 lô</span>
+            </h2>
+            <p class="card__desc">
+              Danh sách các lô nông sản được tổ chức khác bàn giao đến tổ chức của bạn. Vui lòng xác nhận tiếp nhận hoặc từ chối.
+            </p>
+          </div>
+          <button id="btn-refresh-pending" class="btn btn--light btn--sm" type="button">🔄 Làm mới</button>
+        </div>
+      </header>
+
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Mã lô</th>
+              <th>Tên sản phẩm</th>
+              <th class="is-right">Khối lượng (kg)</th>
+              <th>Tổ chức gửi</th>
+              <th>Thời gian gửi</th>
+              <th>Ghi chú bàn giao</th>
+              <th class="is-center">Thao tác tiếp nhận</th>
+            </tr>
+          </thead>
+          <tbody id="pending-handovers-table-body"></tbody>
+        </table>
+      </div>
+      <p id="pending-handovers-empty" class="empty">Hiện không có lô hàng nào đang chờ tổ chức của bạn xác nhận.</p>
+    </section>
+
     <!-- ======================== QUẢN LÝ LÔ NÔNG SẢN ======================== -->
     <section class="card">
       <header class="card__header">
@@ -237,6 +281,8 @@
               <th>Tên sản phẩm</th>
               <th class="is-right">Khối lượng (kg)</th>
               <th>Ngày thu hoạch</th>
+              <th>Đơn vị nắm giữ</th>
+              <th>Trạng thái</th>
               <th class="is-center">Thao tác</th>
             </tr>
           </thead>
@@ -244,6 +290,119 @@
         </table>
       </div>
       <p id="batch-empty" class="empty" hidden>Chưa có lô nông sản nào được ghi nhận. Vui lòng tạo lô mới ở biểu mẫu phía trên.</p>
+    </section>
+
+    <!-- ==================== [S-25] TRANG CHI TIẾT LÔ NÔNG SẢN ==================== -->
+    <section id="batch-detail-card" class="card card--highlight" hidden>
+      <header class="card__header card__header-flex">
+        <div>
+          <h2 class="card__title" id="batch-detail-header-title">
+            📦 Trang chi tiết lô nông sản
+          </h2>
+          <p class="card__desc">
+            Hiển thị đầy đủ thông tin sản phẩm, khối lượng còn lại, đơn vị nắm giữ và quan hệ cây lô mẹ – lô con trực tiếp.
+          </p>
+        </div>
+        <div class="card__header-actions">
+          <button id="btn-view-batch-timeline" class="btn btn--outline-info btn--sm" type="button">⏱️ Xem dòng thời gian</button>
+          <button id="btn-view-batch-ancestors" class="btn btn--outline-warning btn--sm" type="button">🌳 Xem danh sách tổ tiên</button>
+          <button id="btn-close-batch-detail" class="btn btn--light btn--sm" type="button">✖️ Đóng chi tiết</button>
+        </div>
+      </header>
+
+      <!-- Trạng thái Loading -->
+      <div id="batch-detail-loading" class="empty" hidden>
+        ⌛ Đang tải thông tin chi tiết lô nông sản...
+      </div>
+
+      <!-- Trạng thái Không tìm thấy (404) -->
+      <div id="batch-detail-not-found" class="empty empty--error" hidden>
+        ❌ Rất tiếc, không tìm thấy lô nông sản với mã ID này trong hệ thống.
+      </div>
+
+      <!-- Trạng thái Lỗi API -->
+      <div id="batch-detail-error" class="empty empty--error" hidden>
+        ⚠️ Đã xảy ra lỗi khi kết nối với máy chủ API.
+      </div>
+
+      <!-- Nội dung chi tiết lô -->
+      <div id="batch-detail-body" hidden>
+        <div class="batch-detail-grid">
+          <!-- 1. THÔNG TIN LÔ & KHỐI LƯỢNG CÒN LẠI -->
+          <div class="batch-detail-box">
+            <h3 class="box-title">📋 1. Thông tin sản phẩm &amp; Khối lượng</h3>
+            <table class="detail-info-table">
+              <tr>
+                <th>Mã lô hàng:</th>
+                <td><strong id="bd-id" class="badge badge--org">#--</strong></td>
+              </tr>
+              <tr>
+                <th>Tên sản phẩm:</th>
+                <td><span id="bd-product-name" class="detail-highlight">--</span></td>
+              </tr>
+              <tr>
+                <th>Khối lượng ban đầu:</th>
+                <td><span id="bd-initial-qty">--</span> <small id="bd-unit-1">kg</small></td>
+              </tr>
+              <tr>
+                <th>Khối lượng còn lại:</th>
+                <td>
+                  <strong id="bd-remaining-qty" class="detail-qty">--</strong> <small id="bd-unit-2">kg</small>
+                </td>
+              </tr>
+              <tr>
+                <th>Trạng thái lô:</th>
+                <td><span id="bd-status" class="badge badge--success">--</span></td>
+              </tr>
+              <tr>
+                <th>Ngày thu hoạch:</th>
+                <td><span id="bd-harvest-date">--</span></td>
+              </tr>
+            </table>
+          </div>
+
+          <!-- 2. NƠI GIỮ HIỆN TẠI -->
+          <div class="batch-detail-box">
+            <h3 class="box-title">🏢 2. Nơi giữ hiện tại</h3>
+            <table class="detail-info-table">
+              <tr>
+                <th>Tổ chức/Đơn vị quản lý:</th>
+                <td><strong id="bd-current-org">--</strong></td>
+              </tr>
+              <tr>
+                <th>Vùng trồng xuất xứ:</th>
+                <td><span id="bd-farm-name">--</span></td>
+              </tr>
+              <tr>
+                <th>Địa điểm canh tác:</th>
+                <td><span id="bd-farm-location">--</span></td>
+              </tr>
+            </table>
+          </div>
+        </div>
+
+        <!-- 3. LÔ MẸ TRỰC TIẾP -->
+        <div class="batch-detail-box margin-top">
+          <h3 class="box-title">🌱 3. Lô mẹ trực tiếp</h3>
+          <div id="bd-parent-container">
+            <!-- Hiển thị lô mẹ hoặc "Không có lô mẹ" -->
+          </div>
+        </div>
+
+        <!-- 4. LÔ CON TRỰC TIẾP -->
+        <div class="batch-detail-box margin-top">
+          <h3 class="box-title">🌿 4. Danh sách lô con trực tiếp</h3>
+          <div id="bd-children-container">
+            <!-- Hiển thị danh sách lô con hoặc "Không có lô con" -->
+          </div>
+        </div>
+
+        <!-- [T-59] Thanh điều hướng nhanh sang Timeline / Ancestors -->
+        <div class="batch-detail-nav" id="batch-detail-nav">
+          <button id="btn-detail-nav-timeline" class="btn btn--info btn--sm" type="button">⏱️ Xem dòng thời gian</button>
+          <button id="btn-detail-nav-ancestors" class="btn btn--warning btn--sm" type="button">🌳 Xem danh sách tổ tiên</button>
+        </div>
+      </div>
     </section>
 
     <!-- ==================== TÀI KHOẢN (chỉ admin) ==================== -->
@@ -333,10 +492,102 @@
   <!-- Vùng hiển thị thông báo thêm thành công / thất bại -->
   <div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="true"></div>
 
+  <!-- ==================== POPUP / MODAL BÀN GIAO LÔ HÀNG ==================== -->
+  <div id="modal-handover" class="modal-backdrop" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-handover-title">
+      <header class="modal__header">
+        <h3 id="modal-handover-title" class="modal__title">🚚 Bàn giao lô nông sản</h3>
+        <button id="btn-close-handover-modal" class="modal__close" type="button" aria-label="Đóng">&times;</button>
+      </header>
+      <div class="modal__body">
+        <div id="modal-handover-summary" class="handover-batch-summary"></div>
+        <form id="handover-form" class="form">
+          <input id="handover-batch-id" type="hidden" />
+          <label class="field">
+            <span class="field__label">Tổ chức / Hợp tác xã tiếp nhận <em>*</em></span>
+            <select id="handover-to-org" required>
+              <option value="">— Chọn tổ chức tiếp nhận —</option>
+            </select>
+            <span class="field__hint">Chọn đơn vị đối tác nhận lô hàng này</span>
+          </label>
+          <label class="field">
+            <span class="field__label">Ghi chú bàn giao (tùy chọn)</span>
+            <textarea id="handover-note" rows="3" maxlength="500" placeholder="VD: Bàn giao lô xoài phục vụ kiểm nghiệm và đóng gói xuất khẩu..."></textarea>
+          </label>
+          <div class="modal__actions">
+            <button id="btn-cancel-handover" class="btn btn--ghost" type="button">Hủy bỏ</button>
+            <button id="btn-submit-handover" class="btn btn--primary" type="submit">Xác nhận gửi bàn giao</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== POPUP / MODAL TỪ CHỐI TIẾP NHẬN ==================== -->
+  <div id="modal-reject" class="modal-backdrop" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-reject-title">
+      <header class="modal__header">
+        <h3 id="modal-reject-title" class="modal__title">❌ Từ chối tiếp nhận lô hàng</h3>
+        <button id="btn-close-reject-modal" class="modal__close" type="button" aria-label="Đóng">&times;</button>
+      </header>
+      <div class="modal__body">
+        <p class="modal__desc">
+          Vui lòng nhập lý do từ chối để thông báo cho bên gửi và lưu trữ trong lịch sử sự kiện truy xuất nguồn gốc (tối thiểu 10 ký tự).
+        </p>
+        <form id="reject-form" class="form">
+          <input id="reject-handover-id" type="hidden" />
+          <label class="field">
+            <span class="field__label">Lý do từ chối <em>*</em></span>
+            <textarea id="reject-reason" rows="3" minlength="10" maxlength="500" required placeholder="Nhập lý do cụ thể (tối thiểu 10 ký tự, VD: Nông sản không đạt độ ngọt yêu cầu hoặc bị dập nát trong vận chuyển...)"></textarea>
+            <span id="reject-reason-counter" class="field__hint">Đã nhập: 0 / tối thiểu 10 ký tự</span>
+          </label>
+          <div class="modal__actions">
+            <button id="btn-cancel-reject" class="btn btn--ghost" type="button">Hủy bỏ</button>
+            <button id="btn-submit-reject" class="btn btn--danger" type="submit">Xác nhận từ chối</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== [T-59] MODAL DÒNG THỜI GIAN ==================== -->
+  <div id="modal-batch-timeline" class="modal-backdrop" hidden>
+    <div class="modal modal--wide" role="dialog" aria-modal="true" aria-labelledby="modal-timeline-title">
+      <header class="modal__header">
+        <h3 id="modal-timeline-title" class="modal__title">⏱️ Dòng thời gian lô nông sản</h3>
+        <button id="btn-close-timeline-modal" class="modal__close" type="button" aria-label="Đóng">&times;</button>
+      </header>
+      <div class="modal__body">
+        <p id="modal-timeline-batch-label" class="modal__desc"></p>
+        <div id="modal-timeline-loading" class="empty">⌛ Đang tải dòng thời gian...</div>
+        <div id="modal-timeline-error" class="empty empty--error" hidden></div>
+        <div id="modal-timeline-empty" class="empty" hidden>Chưa có sự kiện nào được ghi nhận cho lô này.</div>
+        <div id="modal-timeline-list" hidden></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== [T-59] MODAL DANH SÁCH TỔ TIÊN ==================== -->
+  <div id="modal-batch-ancestors" class="modal-backdrop" hidden>
+    <div class="modal modal--wide" role="dialog" aria-modal="true" aria-labelledby="modal-ancestors-title">
+      <header class="modal__header">
+        <h3 id="modal-ancestors-title" class="modal__title">🌳 Danh sách tổ tiên lô nông sản</h3>
+        <button id="btn-close-ancestors-modal" class="modal__close" type="button" aria-label="Đóng">&times;</button>
+      </header>
+      <div class="modal__body">
+        <p id="modal-ancestors-batch-label" class="modal__desc"></p>
+        <div id="modal-ancestors-loading" class="empty">⌛ Đang tải danh sách tổ tiên...</div>
+        <div id="modal-ancestors-error" class="empty empty--error" hidden></div>
+        <div id="modal-ancestors-empty" class="empty" hidden>Lô này là lô gốc, không có tổ tiên phía trên.</div>
+        <div id="modal-ancestors-list" hidden></div>
+      </div>
+    </div>
+  </div>
+
   <noscript>
     <p class="noscript">Trang này cần JavaScript để gọi API backend. Hãy bật JavaScript và tải lại trang.</p>
   </noscript>
 
-  <script src="js/app.js?v=8"></script>
+  <script src="js/app.js?v=10"></script>
 </body>
 </html>

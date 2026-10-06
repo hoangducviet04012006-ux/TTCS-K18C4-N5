@@ -100,4 +100,3 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)) -> LoginResponse
         organization_id=user.organization_id,
         organization_name=user.organization.name if user.organization else None,
     )
-
