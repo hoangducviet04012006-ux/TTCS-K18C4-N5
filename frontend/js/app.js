@@ -720,7 +720,7 @@ function renderBatches() {
 
       return `
       <tr class="${batch.id === editingBatchId ? "is-editing" : ""}">
-        <td class="id-cell">#${escapeHtml(batch.id)}</td>
+        <td class="id-cell"><a href="javascript:void(0)" onclick="openBatchDetail(${batch.id})" style="font-weight: bold; text-decoration: underline;" title="Xem chi tiết lô #${batch.id}">#${escapeHtml(batch.id)}</a></td>
         <td>${escapeHtml(farmLabel(batch.farm_id))}</td>
         <td><strong>${escapeHtml(batch.product_name)}</strong></td>
         <td class="is-right">${formatNumber(batch.quantity)}</td>
@@ -729,6 +729,9 @@ function renderBatches() {
         <td>${statusBadge}</td>
         <td>
           <div class="table__actions">
+            <button class="btn btn--light btn--sm" type="button"
+                    data-action="view-detail" data-entity="batch"
+                    data-id="${escapeHtml(batch.id)}">👁️ Chi tiết</button>
             <button class="btn btn--primary btn--sm" type="button"
                     data-action="edit" data-entity="batch"
                     data-id="${escapeHtml(batch.id)}">Sửa</button>
@@ -1124,6 +1127,10 @@ function bindEvents() {
       if (e.target === modalReject) closeRejectModal();
     });
   }
+
+  // Nút đóng trang chi tiết lô S-25
+  const btnCloseDetail = $("btn-close-batch-detail");
+  if (btnCloseDetail) btnCloseDetail.addEventListener("click", closeBatchDetail);
 }
 
 /* ------------------------------------------- 11. Bàn giao lô hàng (SCRUM-27/28) --- */
@@ -1375,8 +1382,106 @@ function cancelEdit(entity) {
   toast("Đã huỷ chế độ sửa lô nông sản.", "info");
 }
 
+/** [S-25] Xem trang chi tiết một lô nông sản theo batchId. */
+async function openBatchDetail(batchId) {
+  const card = $("batch-detail-card");
+  const loading = $("batch-detail-loading");
+  const notFound = $("batch-detail-not-found");
+  const errorEl = $("batch-detail-error");
+  const body = $("batch-detail-body");
+
+  if (!card) return;
+
+  card.hidden = false;
+  loading.hidden = false;
+  notFound.hidden = true;
+  errorEl.hidden = true;
+  body.hidden = true;
+
+  card.scrollIntoView({ behavior: "smooth", block: "start" });
+
+  try {
+    const data = await apiRequest(`/batches/${batchId}`);
+    loading.hidden = true;
+
+    if (!data || !data.id) {
+      notFound.hidden = false;
+      return;
+    }
+
+    $("batch-detail-header-title").textContent = `📦 Trang chi tiết lô nông sản #${data.id} - ${data.product_name}`;
+    $("bd-id").textContent = `#${data.id}`;
+    $("bd-product-name").textContent = data.product_name || "N/A";
+    $("bd-initial-qty").textContent = formatNumber(data.initial_quantity || data.quantity);
+    $("bd-remaining-qty").textContent = formatNumber(data.remaining_quantity != null ? data.remaining_quantity : (data.quantity || 0));
+    $("bd-unit-1").textContent = data.unit || "kg";
+    $("bd-unit-2").textContent = data.unit || "kg";
+    $("bd-status").textContent = data.status || "Đang lưu kho";
+    $("bd-harvest-date").textContent = formatDate(data.harvest_date);
+
+    $("bd-current-org").textContent = data.current_org_name ? `🏢 ${data.current_org_name}` : "Tổ chức chưa xác định";
+    $("bd-farm-name").textContent = data.farm_name || farmLabel(data.farm_id) || "N/A";
+    $("bd-farm-location").textContent = data.farm_location || "N/A";
+
+    // Lô mẹ trực tiếp
+    const parentContainer = $("bd-parent-container");
+    if (data.parent && data.parent.id) {
+      const p = data.parent;
+      parentContainer.innerHTML = `
+        <div class="tree-card">
+          <div class="tree-card__info">
+            <span class="tree-card__code">🌱 Lô mẹ trực tiếp: #${escapeHtml(p.id)}</span>
+            <span class="tree-card__name">${escapeHtml(p.product_name)}</span>
+            <span class="tree-card__meta">Khối lượng: ${formatNumber(p.remaining_quantity != null ? p.remaining_quantity : p.quantity)} / ${formatNumber(p.quantity)} ${escapeHtml(p.unit || "kg")} · Trạng thái: ${escapeHtml(p.status || "Đang lưu kho")} · Nơi giữ: ${escapeHtml(p.current_org_name || "N/A")}</span>
+          </div>
+          <button class="btn btn--outline-primary btn--sm tree-card__action" type="button" onclick="openBatchDetail(${p.id})">
+            👁️ Xem lô mẹ #${p.id} ↗
+          </button>
+        </div>
+      `;
+    } else {
+      parentContainer.innerHTML = `<div class="no-tree-msg">Không có lô mẹ</div>`;
+    }
+
+    // Lô con trực tiếp
+    const childrenContainer = $("bd-children-container");
+    if (data.children && data.children.length > 0) {
+      childrenContainer.innerHTML = data.children.map((c) => `
+        <div class="tree-card">
+          <div class="tree-card__info">
+            <span class="tree-card__code">🌿 Lô con trực tiếp: #${escapeHtml(c.id)}</span>
+            <span class="tree-card__name">${escapeHtml(c.product_name)}</span>
+            <span class="tree-card__meta">Khối lượng: ${formatNumber(c.remaining_quantity != null ? c.remaining_quantity : c.quantity)} / ${formatNumber(c.quantity)} ${escapeHtml(c.unit || "kg")} · Trạng thái: ${escapeHtml(c.status || "Đang lưu kho")} · Nơi giữ: ${escapeHtml(c.current_org_name || "N/A")}</span>
+          </div>
+          <button class="btn btn--outline-primary btn--sm tree-card__action" type="button" onclick="openBatchDetail(${c.id})">
+            👁️ Xem lô con #${c.id} ↗
+          </button>
+        </div>
+      `).join("");
+    } else {
+      childrenContainer.innerHTML = `<div class="no-tree-msg">Không có lô con</div>`;
+    }
+
+    body.hidden = false;
+  } catch (error) {
+    loading.hidden = true;
+    if (error.message && error.message.includes("404")) {
+      notFound.hidden = false;
+    } else {
+      errorEl.hidden = false;
+      errorEl.textContent = `⚠️ Đã xảy ra lỗi khi lấy chi tiết lô nông sản: ${error.message}`;
+    }
+  }
+}
+
+/** Đóng trang chi tiết lô */
+function closeBatchDetail() {
+  const card = $("batch-detail-card");
+  if (card) card.hidden = true;
+}
+
 /**
- * Xử lý click ở cột "Thao tác" (Sửa, Xoá, Bàn giao, Tiếp nhận, Từ chối).
+ * Xử lý click ở cột "Thao tác" (Chi tiết, Sửa, Xoá, Bàn giao, Tiếp nhận, Từ chối).
  */
 function handleTableAction(event) {
   const button = event.target.closest("button[data-action]");
@@ -1387,6 +1492,11 @@ function handleTableAction(event) {
   const id = Number(button.dataset.id);
   const entity = button.dataset.entity;
   const action = button.dataset.action;
+
+  if (action === "view-detail") {
+    openBatchDetail(id);
+    return;
+  }
 
   if (action === "open-handover") {
     openHandoverModal(id);

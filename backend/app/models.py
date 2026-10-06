@@ -183,8 +183,29 @@ class Batch(Base):
         index=True,
     )
 
+    # S-25: Quan hệ lô mẹ – lô con và thông tin mở rộng của lô
+    parent_id: Mapped[int | None] = mapped_column(
+        ForeignKey("batches.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    remaining_quantity: Mapped[float | None] = mapped_column(Float, nullable=True)
+    status: Mapped[str | None] = mapped_column(String(50), nullable=True, default="Đang lưu kho")
+    unit: Mapped[str | None] = mapped_column(String(20), nullable=True, default="kg")
+
     farm: Mapped["Farm"] = relationship(back_populates="batches")
     current_org: Mapped["Organization | None"] = relationship(foreign_keys=[current_org_id])
+    parent: Mapped["Batch | None"] = relationship(
+        "Batch",
+        remote_side=[id],
+        back_populates="children",
+        foreign_keys=[parent_id],
+    )
+    children: Mapped[list["Batch"]] = relationship(
+        "Batch",
+        back_populates="parent",
+        order_by="Batch.id.asc()",
+    )
     handovers: Mapped[list["Handover"]] = relationship(
         back_populates="batch",
         cascade="all, delete-orphan",
@@ -222,6 +243,21 @@ class Batch(Base):
             if h.status == HANDOVER_PENDING:
                 return h
         return None
+
+    @property
+    def remaining_qty(self) -> float:
+        """Khối lượng còn lại (nếu chưa gán thì fallback theo quantity ban đầu)."""
+        return self.remaining_quantity if self.remaining_quantity is not None else self.quantity
+
+    @property
+    def batch_status(self) -> str:
+        """Trạng thái hiện tại của lô nông sản."""
+        return self.status if self.status else "Đang lưu kho"
+
+    @property
+    def batch_unit(self) -> str:
+        """Đơn vị khối lượng."""
+        return self.unit if self.unit else "kg"
 
     def __repr__(self) -> str:  # pragma: no cover
         return f"<Batch id={self.id} farm_id={self.farm_id} product_name={self.product_name!r}>"

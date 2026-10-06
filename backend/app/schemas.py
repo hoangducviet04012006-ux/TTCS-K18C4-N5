@@ -361,6 +361,46 @@ class BatchResponse(BaseModel):
     harvest_date: date = Field(..., description="Ngày thu hoạch.")
     current_org_id: int | None = Field(default=None, description="ID tổ chức đang nắm giữ lô hàng.")
     current_org_name: str | None = Field(default=None, description="Tên tổ chức đang nắm giữ lô hàng.")
+    parent_id: int | None = Field(default=None, description="ID lô mẹ trực tiếp (nếu có).")
+    remaining_quantity: float | None = Field(default=None, description="Khối lượng còn lại (kg).")
+    status: str | None = Field(default="Đang lưu kho", description="Trạng thái lô nông sản.")
+    unit: str | None = Field(default="kg", description="Đơn vị khối lượng.")
+
+
+class BatchSummaryResponse(BaseModel):
+    """Tóm tắt thông tin một lô nông sản (dùng cho lô mẹ / lô con trực tiếp)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int = Field(..., description="Mã định danh lô.")
+    product_name: str = Field(..., description="Tên sản phẩm.")
+    quantity: float = Field(..., description="Khối lượng ban đầu (kg).")
+    remaining_quantity: float | None = Field(default=None, description="Khối lượng còn lại.")
+    unit: str = Field(default="kg", description="Đơn vị khối lượng.")
+    status: str = Field(default="Đang lưu kho", description="Trạng thái lô.")
+    current_org_name: str | None = Field(default=None, description="Tên tổ chức đang nắm giữ.")
+
+
+class BatchDetailResponse(BaseModel):
+    """Dữ liệu chi tiết đầy đủ của một lô nông sản phục vụ S-25 Trang chi tiết lô."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int = Field(..., description="Mã định danh lô nông sản.")
+    farm_id: int = Field(..., description="ID vùng trồng xuất xứ.")
+    farm_name: str | None = Field(default=None, description="Tên vùng trồng xuất xứ.")
+    farm_location: str | None = Field(default=None, description="Địa điểm vùng trồng xuất xứ.")
+    product_name: str = Field(..., description="Tên sản phẩm.")
+    initial_quantity: float = Field(..., description="Khối lượng ban đầu (kg).")
+    remaining_quantity: float = Field(..., description="Khối lượng còn lại (kg).")
+    unit: str = Field(default="kg", description="Đơn vị khối lượng.")
+    harvest_date: date = Field(..., description="Ngày thu hoạch.")
+    status: str = Field(default="Đang lưu kho", description="Trạng thái lô.")
+    current_org_id: int | None = Field(default=None, description="ID tổ chức đang nắm giữ.")
+    current_org_name: str | None = Field(default=None, description="Tên tổ chức đang nắm giữ.")
+    parent_id: int | None = Field(default=None, description="ID lô mẹ trực tiếp (nếu có).")
+    parent: BatchSummaryResponse | None = Field(default=None, description="Thông tin lô mẹ trực tiếp.")
+    children: list[BatchSummaryResponse] = Field(default_factory=list, description="Danh sách các lô con trực tiếp.")
 
 
 # ----------------------------------------------------------------- Chung ---

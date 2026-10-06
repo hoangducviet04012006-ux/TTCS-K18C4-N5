@@ -177,11 +177,36 @@ def migrate_handover_and_batch_columns() -> None:
                 connection.exec_driver_sql(
                     "ALTER TABLE batches ADD COLUMN current_org_id INTEGER REFERENCES organizations(id)"
                 )
+            if "parent_id" not in existing_batches:
+                connection.exec_driver_sql(
+                    "ALTER TABLE batches ADD COLUMN parent_id INTEGER REFERENCES batches(id)"
+                )
+            if "remaining_quantity" not in existing_batches:
+                connection.exec_driver_sql(
+                    "ALTER TABLE batches ADD COLUMN remaining_quantity REAL"
+                )
+            if "status" not in existing_batches:
+                connection.exec_driver_sql(
+                    "ALTER TABLE batches ADD COLUMN status TEXT"
+                )
+            if "unit" not in existing_batches:
+                connection.exec_driver_sql(
+                    "ALTER TABLE batches ADD COLUMN unit TEXT"
+                )
             try:
                 connection.exec_driver_sql(
                     "UPDATE batches SET current_org_id = ("
                     "    SELECT farms.organization_id FROM farms WHERE farms.id = batches.farm_id"
                     ") WHERE current_org_id IS NULL"
+                )
+                connection.exec_driver_sql(
+                    "UPDATE batches SET remaining_quantity = quantity WHERE remaining_quantity IS NULL"
+                )
+                connection.exec_driver_sql(
+                    "UPDATE batches SET status = 'Đang lưu kho' WHERE status IS NULL OR status = ''"
+                )
+                connection.exec_driver_sql(
+                    "UPDATE batches SET unit = 'kg' WHERE unit IS NULL OR unit = ''"
                 )
             except Exception:
                 pass

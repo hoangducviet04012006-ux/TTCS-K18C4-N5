@@ -1033,3 +1033,114 @@ a {
   box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.15);
 }
 
+/* ------------------------------------------- [S-25] Batch Detail Styles --- */
+.batch-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: var(--space);
+  margin-top: 10px;
+}
+
+.batch-detail-box {
+  background: #f8faf9;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 18px;
+}
+
+.batch-detail-box.margin-top {
+  margin-top: 16px;
+}
+
+.box-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--color-primary-dark);
+  margin-bottom: 12px;
+  padding-bottom: 6px;
+  border-bottom: 2px solid #e2ece5;
+}
+
+.detail-info-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.detail-info-table th {
+  text-align: left;
+  padding: 8px 10px 8px 0;
+  color: var(--color-text-muted);
+  font-weight: 500;
+  width: 45%;
+  font-size: 0.9rem;
+}
+
+.detail-info-table td {
+  padding: 8px 0;
+  color: var(--color-text);
+}
+
+.detail-highlight {
+  font-weight: 600;
+  color: var(--color-primary-dark);
+}
+
+.detail-qty {
+  font-size: 1.2rem;
+  color: #15803d;
+  font-weight: 700;
+}
+
+.tree-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-left: 4px solid var(--color-accent);
+  border-radius: var(--radius-sm);
+  padding: 12px 16px;
+  margin-top: 8px;
+  transition: all 0.2s ease;
+}
+
+.tree-card:hover {
+  border-color: var(--color-accent);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.06);
+}
+
+.tree-card__info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tree-card__code {
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.tree-card__name {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.tree-card__meta {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.tree-card__action {
+  cursor: pointer;
+}
+
+.no-tree-msg {
+  padding: 12px 16px;
+  background: #f1f5f9;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+  font-style: italic;
+  font-size: 0.95rem;
+}
+
+

@@ -40,7 +40,14 @@ from app.models import (
     Farm,
     User,
 )
-from app.schemas import BatchCreate, BatchResponse, BatchUpdate, DeleteResponse
+from app.schemas import (
+    BatchCreate,
+    BatchDetailResponse,
+    BatchResponse,
+    BatchSummaryResponse,
+    BatchUpdate,
+    DeleteResponse,
+)
 from app.security import require_admin, require_farmer
 
 router = APIRouter(
@@ -157,10 +164,13 @@ def list_batches(db: Session = Depends(get_db)) -> list[Batch]:
 
 @router.get(
     "/{batch_id}",
-    response_model=BatchResponse,
+    response_model=BatchDetailResponse,
     status_code=status.HTTP_200_OK,
     summary="Xem chi tiết một lô nông sản",
-    description="Trả về thông tin chi tiết của lô theo `id`. Trả `404` nếu không tồn tại.",
+    description=(
+        "Trả về thông tin chi tiết của lô theo `id` (kèm lô mẹ và danh sách lô con trực tiếp). "
+        "Trả `404` nếu không tồn tại."
+    ),
     responses={
         status.HTTP_404_NOT_FOUND: {
             "description": "Không tìm thấy lô nông sản.",
@@ -170,15 +180,15 @@ def list_batches(db: Session = Depends(get_db)) -> list[Batch]:
 def get_batch(
     batch_id: int = Path(..., ge=1, description="ID lô nông sản cần xem."),
     db: Session = Depends(get_db),
-) -> Batch:
-    """Lấy chi tiết một lô nông sản theo ``id``.
+) -> BatchDetailResponse:
+    """Lấy chi tiết một lô nông sản theo ``id`` (phục vụ S-25).
 
     Args:
         batch_id: ID của lô cần tìm.
         db: Session SQLAlchemy từ dependency ``get_db``.
 
     Returns:
-        Batch: Bản ghi lô tương ứng (HTTP 200).
+        BatchDetailResponse: Chi tiết lô nông sản bao gồm lô mẹ và các lô con trực tiếp.
 
     Raises:
         HTTPException: 404 nếu không tìm thấy lô.
@@ -189,7 +199,49 @@ def get_batch(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Không tìm thấy lô nông sản có id={batch_id}.",
         )
-    return batch
+
+    parent_summary = None
+    if batch.parent:
+        parent_summary = BatchSummaryResponse(
+            id=batch.parent.id,
+            product_name=batch.parent.product_name,
+            quantity=batch.parent.quantity,
+            remaining_quantity=batch.parent.remaining_qty,
+            unit=batch.parent.batch_unit,
+            status=batch.parent.batch_status,
+            current_org_name=batch.parent.current_org_name,
+        )
+
+    children_summary = [
+        BatchSummaryResponse(
+            id=child.id,
+            product_name=child.product_name,
+            quantity=child.quantity,
+            remaining_quantity=child.remaining_qty,
+            unit=child.batch_unit,
+            status=child.batch_status,
+            current_org_name=child.current_org_name,
+        )
+        for child in batch.children
+    ]
+
+    return BatchDetailResponse(
+        id=batch.id,
+        farm_id=batch.farm_id,
+        farm_name=batch.farm.name if batch.farm else None,
+        farm_location=batch.farm.location if batch.farm else None,
+        product_name=batch.product_name,
+        initial_quantity=batch.quantity,
+        remaining_quantity=batch.remaining_qty,
+        unit=batch.batch_unit,
+        harvest_date=batch.harvest_date,
+        status=batch.batch_status,
+        current_org_id=batch.holder_org_id,
+        current_org_name=batch.current_org_name,
+        parent_id=batch.parent_id,
+        parent=parent_summary,
+        children=children_summary,
+    )
 
 
 @router.put(

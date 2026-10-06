@@ -292,6 +292,109 @@
       <p id="batch-empty" class="empty" hidden>Chưa có lô nông sản nào được ghi nhận. Vui lòng tạo lô mới ở biểu mẫu phía trên.</p>
     </section>
 
+    <!-- ==================== [S-25] TRANG CHI TIẾT LÔ NÔNG SẢN ==================== -->
+    <section id="batch-detail-card" class="card card--highlight" hidden>
+      <header class="card__header card__header-flex">
+        <div>
+          <h2 class="card__title" id="batch-detail-header-title">
+            📦 Trang chi tiết lô nông sản
+          </h2>
+          <p class="card__desc">
+            Hiển thị đầy đủ thông tin sản phẩm, khối lượng còn lại, đơn vị nắm giữ và quan hệ cây lô mẹ – lô con trực tiếp.
+          </p>
+        </div>
+        <button id="btn-close-batch-detail" class="btn btn--light btn--sm" type="button">✖️ Đóng chi tiết</button>
+      </header>
+
+      <!-- Trạng thái Loading -->
+      <div id="batch-detail-loading" class="empty" hidden>
+        ⌛ Đang tải thông tin chi tiết lô nông sản...
+      </div>
+
+      <!-- Trạng thái Không tìm thấy (404) -->
+      <div id="batch-detail-not-found" class="empty empty--error" hidden>
+        ❌ Rất tiếc, không tìm thấy lô nông sản với mã ID này trong hệ thống.
+      </div>
+
+      <!-- Trạng thái Lỗi API -->
+      <div id="batch-detail-error" class="empty empty--error" hidden>
+        ⚠️ Đã xảy ra lỗi khi kết nối với máy chủ API.
+      </div>
+
+      <!-- Nội dung chi tiết lô -->
+      <div id="batch-detail-body" hidden>
+        <div class="batch-detail-grid">
+          <!-- 1. THÔNG TIN LÔ & KHỐI LƯỢNG CÒN LẠI -->
+          <div class="batch-detail-box">
+            <h3 class="box-title">📋 1. Thông tin sản phẩm &amp; Khối lượng</h3>
+            <table class="detail-info-table">
+              <tr>
+                <th>Mã lô hàng:</th>
+                <td><strong id="bd-id" class="badge badge--org">#--</strong></td>
+              </tr>
+              <tr>
+                <th>Tên sản phẩm:</th>
+                <td><span id="bd-product-name" class="detail-highlight">--</span></td>
+              </tr>
+              <tr>
+                <th>Khối lượng ban đầu:</th>
+                <td><span id="bd-initial-qty">--</span> <small id="bd-unit-1">kg</small></td>
+              </tr>
+              <tr>
+                <th>Khối lượng còn lại:</th>
+                <td>
+                  <strong id="bd-remaining-qty" class="detail-qty">--</strong> <small id="bd-unit-2">kg</small>
+                </td>
+              </tr>
+              <tr>
+                <th>Trạng thái lô:</th>
+                <td><span id="bd-status" class="badge badge--success">--</span></td>
+              </tr>
+              <tr>
+                <th>Ngày thu hoạch:</th>
+                <td><span id="bd-harvest-date">--</span></td>
+              </tr>
+            </table>
+          </div>
+
+          <!-- 2. NƠI GIỮ HIỆN TẠI -->
+          <div class="batch-detail-box">
+            <h3 class="box-title">🏢 2. Nơi giữ hiện tại</h3>
+            <table class="detail-info-table">
+              <tr>
+                <th>Tổ chức/Đơn vị quản lý:</th>
+                <td><strong id="bd-current-org">--</strong></td>
+              </tr>
+              <tr>
+                <th>Vùng trồng xuất xứ:</th>
+                <td><span id="bd-farm-name">--</span></td>
+              </tr>
+              <tr>
+                <th>Địa điểm canh tác:</th>
+                <td><span id="bd-farm-location">--</span></td>
+              </tr>
+            </table>
+          </div>
+        </div>
+
+        <!-- 3. LÔ MẸ TRỰC TIẾP -->
+        <div class="batch-detail-box margin-top">
+          <h3 class="box-title">🌱 3. Lô mẹ trực tiếp</h3>
+          <div id="bd-parent-container">
+            <!-- Hiển thị lô mẹ hoặc "Không có lô mẹ" -->
+          </div>
+        </div>
+
+        <!-- 4. LÔ CON TRỰC TIẾP -->
+        <div class="batch-detail-box margin-top">
+          <h3 class="box-title">🌿 4. Danh sách lô con trực tiếp</h3>
+          <div id="bd-children-container">
+            <!-- Hiển thị danh sách lô con hoặc "Không có lô con" -->
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- ==================== TÀI KHOẢN (chỉ admin) ==================== -->
     <section id="users-card" class="card" hidden>
       <header class="card__header">
