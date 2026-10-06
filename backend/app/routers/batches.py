@@ -28,7 +28,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from app.audit import record_action
+from app.audit import record_action, record_batch_event, verify_batch_chain
 from app.database import get_db
 from app.models import (
     ACTION_CREATE,
@@ -36,6 +36,7 @@ from app.models import (
     ACTION_UPDATE,
     ENTITY_BATCH,
     Batch,
+    BatchEvent,
     Farm,
     User,
 )
@@ -115,6 +116,10 @@ def create_batch(
         db.flush()
         # Sprint 7: ghi lịch sử "ai đã tạo lô nông sản nào" (chưa commit vội).
         record_action(db, current_user, ACTION_CREATE, ENTITY_BATCH, batch.id)
+        
+        # S-10: Ghi sự kiện vào Hash Chain của lô.
+        record_batch_event(db, batch.id, "CREATED", payload.model_dump(mode="json"))
+        
         db.commit()
     except SQLAlchemyError as exc:
         db.rollback()
@@ -259,6 +264,10 @@ def update_batch(
     try:
         # Sprint 7: ghi lịch sử "ai đã sửa lô nông sản nào" trong cùng transaction.
         record_action(db, current_user, ACTION_UPDATE, ENTITY_BATCH, batch_id)
+        
+        # S-10: Ghi sự kiện vào Hash Chain của lô.
+        record_batch_event(db, batch.id, "UPDATED", payload.model_dump(mode="json"))
+        
         db.commit()
     except SQLAlchemyError as exc:
         db.rollback()
@@ -345,3 +354,48 @@ def delete_batch(
         # Xoá lô không kéo theo bản ghi nào khác -> null.
         deleted_batches=None,
     )
+
+
+@router.get(
+    "/{batch_id}/events",
+    status_code=status.HTTP_200_OK,
+    summary="Xem lịch sử sự kiện của lô nông sản (Event Sourcing)",
+    description="Trả về danh sách sự kiện Hash Chain của lô nông sản kèm kết quả xác thực toàn vẹn dữ liệu.",
+)
+def get_batch_events(
+    batch_id: int = Path(..., ge=1, description="ID lô nông sản cần xem."),
+    db: Session = Depends(get_db),
+):
+    batch = db.get(Batch, batch_id)
+    if batch is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Không tìm thấy lô nông sản có id={batch_id}.",
+        )
+    
+    events = db.scalars(
+        select(BatchEvent)
+        .where(BatchEvent.batch_id == batch_id)
+        .order_by(BatchEvent.id.asc())
+    ).all()
+
+    errors = verify_batch_chain(db, batch_id)
+    is_valid = len(errors) == 0
+
+    return {
+        "batch_id": batch_id,
+        "is_valid": is_valid,
+        "errors": errors,
+        "events": [
+            {
+                "id": ev.id,
+                "event_type": ev.event_type,
+                "payload": ev.payload,
+                "previous_hash": ev.previous_hash,
+                "current_hash": ev.current_hash,
+                "timestamp": ev.timestamp,
+            }
+            for ev in events
+        ]
+    }
+

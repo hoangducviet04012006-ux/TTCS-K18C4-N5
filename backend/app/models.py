@@ -161,9 +161,41 @@ class Batch(Base):
     harvest_date: Mapped[date] = mapped_column(Date, nullable=False)
 
     farm: Mapped["Farm"] = relationship(back_populates="batches")
+    events: Mapped[list["BatchEvent"]] = relationship(
+        back_populates="batch",
+        cascade="all, delete-orphan",
+    )
 
     def __repr__(self) -> str:  # pragma: no cover
         return f"<Batch id={self.id} farm_id={self.farm_id} product_name={self.product_name!r}>"
+
+
+# ------------------------------------- Lịch sử lô nông sản (Event Sourcing) ---
+class BatchEvent(Base):
+    """Sự kiện thay đổi của lô nông sản - bảng ``batch_events``."""
+
+    __tablename__ = "batch_events"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    batch_id: Mapped[int] = mapped_column(
+        ForeignKey("batches.id"),
+        nullable=False,
+        index=True,
+    )
+    event_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    payload: Mapped[str] = mapped_column(String(2000), nullable=False)
+    previous_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    current_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    timestamp: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        default=_naive_utcnow,
+    )
+
+    batch: Mapped["Batch"] = relationship(back_populates="events")
+
+    def __repr__(self) -> str:  # pragma: no cover
+        return f"<BatchEvent id={self.id} batch_id={self.batch_id} type={self.event_type!r}>"
 
 
 # ------------------------------------- Lịch sử thao tác (audit log) ---
@@ -221,6 +253,7 @@ __all__ = [
     "AuditLog",
     "Base",
     "Batch",
+    "BatchEvent",
     "ENTITIES",
     "ENTITY_BATCH",
     "ENTITY_FARM",

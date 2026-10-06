@@ -156,6 +156,58 @@ def verify_hash_chain(db: Session) -> list[dict]:
     return errors
 
 
+from app.models import BatchEvent
+
+def record_batch_event(db: Session, batch_id: int, event_type: str, payload: dict) -> BatchEvent:
+    """Ghi nhận một sự kiện thay đổi của lô nông sản (Event Sourcing)."""
+    last_event = db.scalars(
+        select(BatchEvent)
+        .where(BatchEvent.batch_id == batch_id)
+        .order_by(BatchEvent.id.desc())
+        .limit(1)
+    ).first()
+    previous_hash = last_event.current_hash if last_event else "0" * 64
+
+    payload_str = json.dumps(payload, separators=(',', ':'), sort_keys=True)
+    current_hash = calculate_hash(previous_hash, payload)
+
+    event = BatchEvent(
+        batch_id=batch_id,
+        event_type=event_type,
+        payload=payload_str,
+        previous_hash=previous_hash,
+        current_hash=current_hash,
+    )
+    db.add(event)
+    return event
+
+def verify_batch_chain(db: Session, batch_id: int) -> list[dict]:
+    """Kiểm tra tính toàn vẹn chuỗi sự kiện của một lô cụ thể."""
+    events = db.scalars(
+        select(BatchEvent)
+        .where(BatchEvent.batch_id == batch_id)
+        .order_by(BatchEvent.id.asc())
+    ).all()
+    previous_hash = "0" * 64
+    errors = []
+
+    for event in events:
+        payload = json.loads(event.payload)
+        expected_hash = calculate_hash(previous_hash, payload)
+
+        if event.previous_hash != previous_hash or event.current_hash != expected_hash:
+            errors.append({
+                "id": event.id,
+                "error": "Hash mismatch",
+                "expected_prev": previous_hash,
+                "actual_prev": event.previous_hash,
+                "expected_hash": expected_hash,
+                "actual_hash": event.current_hash
+            })
+        previous_hash = event.current_hash
+    return errors
+
+
 __all__ = [
     "DEFAULT_AUDIT_LOG_LIMIT",
     "MAX_AUDIT_LOG_LIMIT",
@@ -163,4 +215,6 @@ __all__ = [
     "fetch_audit_logs",
     "record_action",
     "verify_hash_chain",
+    "record_batch_event",
+    "verify_batch_chain",
 ]
