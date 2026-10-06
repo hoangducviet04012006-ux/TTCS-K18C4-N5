@@ -88,6 +88,14 @@
         <strong class="stat-card__value"><span id="stat-yield">0</span> <small class="unit">kg</small></strong>
         <span class="stat-card__hint">Tổng khối lượng toàn hệ thống</span>
       </article>
+      <!-- Thẻ đếm lô chờ xác nhận bàn giao -->
+      <article id="stat-pending-card" class="stat-card">
+        <span class="stat-card__label">Lô chờ xác nhận</span>
+        <strong id="stat-pending-handovers" class="stat-card__value">0</strong>
+        <span class="stat-card__hint">
+          Chờ tiếp nhận · <a href="#pending-handovers-card">Xem chi tiết ↓</a>
+        </span>
+      </article>
       <!-- Thẻ đếm lịch sử thao tác - chỉ admin thấy -->
       <article id="stat-audit-card" class="stat-card" hidden>
         <span class="stat-card__label">Nhật ký hoạt động</span>
@@ -183,6 +191,42 @@
       <p id="farm-empty" class="empty" hidden>Hợp tác xã chưa có thửa đất nào được khai báo. Vui lòng thêm thửa đất mới ở biểu mẫu phía trên.</p>
     </section>
 
+    <!-- ==================== LÔ CHỜ TIẾP NHẬN BÀN GIAO ==================== -->
+    <section id="pending-handovers-card" class="card card--highlight">
+      <header class="card__header">
+        <div class="card__header-flex">
+          <div>
+            <h2 class="card__title">
+              📥 Lô hàng chờ xác nhận bàn giao
+              <span id="badge-pending-count" class="badge badge--warning">0 lô</span>
+            </h2>
+            <p class="card__desc">
+              Danh sách các lô nông sản được tổ chức khác bàn giao đến tổ chức của bạn. Vui lòng xác nhận tiếp nhận hoặc từ chối.
+            </p>
+          </div>
+          <button id="btn-refresh-pending" class="btn btn--light btn--sm" type="button">🔄 Làm mới</button>
+        </div>
+      </header>
+
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Mã lô</th>
+              <th>Tên sản phẩm</th>
+              <th class="is-right">Khối lượng (kg)</th>
+              <th>Tổ chức gửi</th>
+              <th>Thời gian gửi</th>
+              <th>Ghi chú bàn giao</th>
+              <th class="is-center">Thao tác tiếp nhận</th>
+            </tr>
+          </thead>
+          <tbody id="pending-handovers-table-body"></tbody>
+        </table>
+      </div>
+      <p id="pending-handovers-empty" class="empty">Hiện không có lô hàng nào đang chờ tổ chức của bạn xác nhận.</p>
+    </section>
+
     <!-- ======================== QUẢN LÝ LÔ NÔNG SẢN ======================== -->
     <section class="card">
       <header class="card__header">
@@ -237,6 +281,8 @@
               <th>Tên sản phẩm</th>
               <th class="is-right">Khối lượng (kg)</th>
               <th>Ngày thu hoạch</th>
+              <th>Đơn vị nắm giữ</th>
+              <th>Trạng thái</th>
               <th class="is-center">Thao tác</th>
             </tr>
           </thead>
@@ -333,10 +379,68 @@
   <!-- Vùng hiển thị thông báo thêm thành công / thất bại -->
   <div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="true"></div>
 
+  <!-- ==================== POPUP / MODAL BÀN GIAO LÔ HÀNG ==================== -->
+  <div id="modal-handover" class="modal-backdrop" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-handover-title">
+      <header class="modal__header">
+        <h3 id="modal-handover-title" class="modal__title">🚚 Bàn giao lô nông sản</h3>
+        <button id="btn-close-handover-modal" class="modal__close" type="button" aria-label="Đóng">&times;</button>
+      </header>
+      <div class="modal__body">
+        <div id="modal-handover-summary" class="handover-batch-summary"></div>
+        <form id="handover-form" class="form">
+          <input id="handover-batch-id" type="hidden" />
+          <label class="field">
+            <span class="field__label">Tổ chức / Hợp tác xã tiếp nhận <em>*</em></span>
+            <select id="handover-to-org" required>
+              <option value="">— Chọn tổ chức tiếp nhận —</option>
+            </select>
+            <span class="field__hint">Chọn đơn vị đối tác nhận lô hàng này</span>
+          </label>
+          <label class="field">
+            <span class="field__label">Ghi chú bàn giao (tùy chọn)</span>
+            <textarea id="handover-note" rows="3" maxlength="500" placeholder="VD: Bàn giao lô xoài phục vụ kiểm nghiệm và đóng gói xuất khẩu..."></textarea>
+          </label>
+          <div class="modal__actions">
+            <button id="btn-cancel-handover" class="btn btn--ghost" type="button">Hủy bỏ</button>
+            <button id="btn-submit-handover" class="btn btn--primary" type="submit">Xác nhận gửi bàn giao</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== POPUP / MODAL TỪ CHỐI TIẾP NHẬN ==================== -->
+  <div id="modal-reject" class="modal-backdrop" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-reject-title">
+      <header class="modal__header">
+        <h3 id="modal-reject-title" class="modal__title">❌ Từ chối tiếp nhận lô hàng</h3>
+        <button id="btn-close-reject-modal" class="modal__close" type="button" aria-label="Đóng">&times;</button>
+      </header>
+      <div class="modal__body">
+        <p class="modal__desc">
+          Vui lòng nhập lý do từ chối để thông báo cho bên gửi và lưu trữ trong lịch sử sự kiện truy xuất nguồn gốc (tối thiểu 10 ký tự).
+        </p>
+        <form id="reject-form" class="form">
+          <input id="reject-handover-id" type="hidden" />
+          <label class="field">
+            <span class="field__label">Lý do từ chối <em>*</em></span>
+            <textarea id="reject-reason" rows="3" minlength="10" maxlength="500" required placeholder="Nhập lý do cụ thể (tối thiểu 10 ký tự, VD: Nông sản không đạt độ ngọt yêu cầu hoặc bị dập nát trong vận chuyển...)"></textarea>
+            <span id="reject-reason-counter" class="field__hint">Đã nhập: 0 / tối thiểu 10 ký tự</span>
+          </label>
+          <div class="modal__actions">
+            <button id="btn-cancel-reject" class="btn btn--ghost" type="button">Hủy bỏ</button>
+            <button id="btn-submit-reject" class="btn btn--danger" type="submit">Xác nhận từ chối</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
   <noscript>
     <p class="noscript">Trang này cần JavaScript để gọi API backend. Hãy bật JavaScript và tải lại trang.</p>
   </noscript>
 
-  <script src="js/app.js?v=8"></script>
+  <script src="js/app.js?v=9"></script>
 </body>
 </html>

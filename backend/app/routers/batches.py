@@ -107,7 +107,7 @@ def create_batch(
         )
 
     # Bước 2: lưu lô nông sản.
-    batch = Batch(**payload.model_dump())
+    batch = Batch(**payload.model_dump(), current_org_id=farm.organization_id)
     db.add(batch)
 
     try:
@@ -233,7 +233,11 @@ def update_batch(
         )
 
     current_farm = db.get(Farm, batch.farm_id)
-    if current_farm and current_user.organization_id is not None and current_farm.organization_id != current_user.organization_id:
+    if (
+        current_farm
+        and current_user.organization_id is not None
+        and current_farm.organization_id != current_user.organization_id
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Bạn không có quyền sửa lô nông sản của tổ chức khác.",
@@ -318,7 +322,11 @@ def delete_batch(
         )
 
     current_farm = db.get(Farm, batch.farm_id)
-    if current_farm and current_user.organization_id is not None and current_farm.organization_id != current_user.organization_id:
+    if (
+        current_farm
+        and current_user.organization_id is not None
+        and current_farm.organization_id != current_user.organization_id
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Bạn không có quyền xoá lô nông sản của tổ chức khác.",

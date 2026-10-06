@@ -7,7 +7,7 @@ Tách riêng schemas (Pydantic) khỏi models (SQLAlchemy) giúp:
 
 from datetime import date, datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class HealthResponse(BaseModel):
@@ -15,17 +15,22 @@ class HealthResponse(BaseModel):
 
     Ví dụ::
 
-        {"status": "running"}
+        {"status": "ok", "database": "connected"}
     """
 
     model_config = ConfigDict(
-        json_schema_extra={"example": {"status": "running"}},
+        json_schema_extra={"example": {"status": "ok", "database": "connected"}},
     )
 
     status: str = Field(
         ...,
         description="Trạng thái hoạt động của API.",
-        examples=["running"],
+        examples=["ok"],
+    )
+    database: str = Field(
+        default="connected",
+        description="Trạng thái kết nối cơ sở dữ liệu.",
+        examples=["connected", "disconnected"],
     )
 
 
@@ -354,6 +359,8 @@ class BatchResponse(BaseModel):
     product_name: str = Field(..., description="Tên sản phẩm của lô.")
     quantity: float = Field(..., description="Số lượng / khối lượng (kg).")
     harvest_date: date = Field(..., description="Ngày thu hoạch.")
+    current_org_id: int | None = Field(default=None, description="ID tổ chức đang nắm giữ lô hàng.")
+    current_org_name: str | None = Field(default=None, description="Tên tổ chức đang nắm giữ lô hàng.")
 
 
 # ----------------------------------------------------------------- Chung ---
@@ -466,3 +473,88 @@ class AuditLogResponse(BaseModel):
         description="Thời điểm ghi log (UTC, ISO 8601).",
         examples=["2026-01-20T03:15:42.123456"],
     )
+
+
+# ------------------------------------------------------------- Handover ---
+class HandoverCreate(BaseModel):
+    """Dữ liệu gửi lên khi tạo yêu cầu bàn giao lô nông sản (POST /batches/{id}/handover)."""
+
+    to_org_id: int = Field(
+        ...,
+        gt=0,
+        description="ID tổ chức tiếp nhận lô hàng (phải khác tổ chức hiện tại).",
+        examples=[2],
+    )
+    note: str | None = Field(
+        default=None,
+        max_length=500,
+        description="Ghi chú kèm theo khi bàn giao (tùy chọn).",
+        examples=["Bàn giao đợt 1 để sơ chế và đóng gói xuất khẩu"],
+    )
+
+
+class HandoverRespond(BaseModel):
+    """Dữ liệu phản hồi yêu cầu bàn giao (POST /handovers/{id}/respond)."""
+
+    action: str = Field(
+        ...,
+        description="Hành động xử lý: 'ACCEPT' (nhận lô) hoặc 'REJECT' (từ chối).",
+        examples=["ACCEPT", "REJECT"],
+    )
+    reject_reason: str | None = Field(
+        default=None,
+        max_length=500,
+        description="Lý do từ chối (bắt buộc khi action='REJECT', tối thiểu 10 ký tự).",
+        examples=["Nông sản không đạt độ chín theo tiêu chuẩn quy định"],
+    )
+
+    @field_validator("action")
+    @classmethod
+    def validate_action(cls, v: str) -> str:
+        upper = v.strip().upper()
+        if upper not in ("ACCEPT", "REJECT"):
+            raise ValueError("Hành động phải là 'ACCEPT' hoặc 'REJECT'.")
+        return upper
+
+    @model_validator(mode="after")
+    def validate_reject_reason(self) -> "HandoverRespond":
+        if self.action == "REJECT":
+            if not self.reject_reason or len(self.reject_reason.strip()) < 10:
+                raise ValueError("Lý do từ chối là bắt buộc và phải có tối thiểu 10 ký tự.")
+        return self
+
+
+class HandoverOut(BaseModel):
+    """Dữ liệu trả về cho một yêu cầu bàn giao."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int = Field(..., description="Mã định danh bàn giao.")
+    batch_id: int = Field(..., description="Mã lô nông sản.")
+    from_org_id: int = Field(..., description="ID tổ chức gửi.")
+    to_org_id: int = Field(..., description="ID tổ chức nhận.")
+    status: str = Field(..., description="Trạng thái: PENDING, ACCEPTED, REJECTED.")
+    reject_reason: str | None = Field(default=None, description="Lý do từ chối (nếu có).")
+    created_at: datetime = Field(..., description="Thời điểm gửi yêu cầu.")
+    updated_at: datetime = Field(..., description="Thời điểm cập nhật mới nhất.")
+
+    # Thông tin mở rộng hỗ trợ frontend
+    batch_product_name: str | None = Field(default=None, description="Tên sản phẩm của lô.")
+    batch_quantity: float | None = Field(default=None, description="Khối lượng của lô (kg).")
+    from_org_name: str | None = Field(default=None, description="Tên tổ chức gửi.")
+    to_org_name: str | None = Field(default=None, description="Tên tổ chức nhận.")
+
+
+class BatchEventOut(BaseModel):
+    """Dữ liệu trả về cho một sự kiện vòng đời lô nông sản."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int = Field(..., description="Mã định danh sự kiện.")
+    batch_id: int = Field(..., description="Mã lô nông sản.")
+    event_type: str = Field(..., description="Loại sự kiện (HANDOVER_PENDING, HANDOVER_ACCEPTED, HANDOVER_REJECTED,...).")
+    user_id: int | None = Field(default=None, description="ID tài khoản thực hiện.")
+    from_org_id: int | None = Field(default=None, description="ID tổ chức gửi (nếu có).")
+    to_org_id: int | None = Field(default=None, description="ID tổ chức nhận (nếu có).")
+    notes: str | None = Field(default=None, description="Ghi chú chi tiết sự kiện.")
+    created_at: datetime = Field(..., description="Thời điểm ghi nhận sự kiện.")

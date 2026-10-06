@@ -166,10 +166,44 @@ def migrate_user_security_columns() -> None:
                     connection.exec_driver_sql(f"ALTER TABLE farms ADD COLUMN {col_name} {col_type}")
 
 
+def migrate_handover_and_batch_columns() -> None:
+    """Thêm cột current_org_id cho bảng batches và tạo index unique cho handovers nếu thiếu."""
+    with engine.begin() as connection:
+        existing_batches = {
+            row[1] for row in connection.exec_driver_sql("PRAGMA table_info(batches)")
+        }
+        if existing_batches:
+            if "current_org_id" not in existing_batches:
+                connection.exec_driver_sql(
+                    "ALTER TABLE batches ADD COLUMN current_org_id INTEGER REFERENCES organizations(id)"
+                )
+            try:
+                connection.exec_driver_sql(
+                    "UPDATE batches SET current_org_id = ("
+                    "    SELECT farms.organization_id FROM farms WHERE farms.id = batches.farm_id"
+                    ") WHERE current_org_id IS NULL"
+                )
+            except Exception:
+                pass
+
+        existing_handovers = {
+            row[1] for row in connection.exec_driver_sql("PRAGMA table_info(handovers)")
+        }
+        if existing_handovers:
+            try:
+                connection.exec_driver_sql(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS uq_batch_pending_handover "
+                    "ON handovers (batch_id) WHERE status = 'PENDING'"
+                )
+            except Exception:
+                pass
+
+
 def init_db() -> None:
     """Tạo bảng và chạy migration khi ứng dụng khởi động."""
     from app import models  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
     migrate_user_security_columns()
+    migrate_handover_and_batch_columns()
     seed_default_users()
