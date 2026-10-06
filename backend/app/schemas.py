@@ -258,8 +258,11 @@ class FarmResponse(BaseModel):
 
 
 # ----------------------------------------------------------------- Batch ---
+MAX_BATCH_QUANTITY: float = 1_000_000.0
+
 _BATCH_EXAMPLE: dict = {
     "id": 1,
+    "batch_code": "LOT-20260115-A1B2C3",
     "farm_id": 1,
     "product_name": "Xoài cát Chu",
     "quantity": 120.5,
@@ -272,6 +275,7 @@ class BatchCreate(BaseModel):
 
     ``farm_id`` phải trỏ tới một vùng trồng **đã tồn tại** — router sẽ trả
     ``404 Not Found`` nếu không tìm thấy.
+    Client có thể gửi kèm ``batch_code`` nhưng backend sẽ tự bỏ qua và tự sinh mã lô độc nhất.
     """
 
     model_config = ConfigDict(
@@ -285,6 +289,10 @@ class BatchCreate(BaseModel):
         },
     )
 
+    batch_code: str | None = Field(
+        default=None,
+        description="Mã lô nông sản (client gửi kèm sẽ bị bỏ qua, backend tự sinh mã).",
+    )
     farm_id: int = Field(
         ...,
         gt=0,
@@ -293,14 +301,11 @@ class BatchCreate(BaseModel):
     )
     product_name: str = Field(
         ...,
-        min_length=1,
-        max_length=255,
         description="Tên sản phẩm của lô.",
         examples=["Xoài cát Chu"],
     )
     quantity: float = Field(
         ...,
-        gt=0,
         description="Số lượng / khối lượng của lô, đơn vị kg. Phải lớn hơn 0.",
         examples=[120.5],
     )
@@ -309,6 +314,37 @@ class BatchCreate(BaseModel):
         description="Ngày thu hoạch, định dạng yyyy-MM-dd.",
         examples=["2026-01-15"],
     )
+
+    @field_validator("product_name")
+    @classmethod
+    def validate_product_name(cls, v: str) -> str:
+        if v is None:
+            raise ValueError("Tên sản phẩm không được rỗng.")
+        stripped = v.strip()
+        if not stripped:
+            raise ValueError("Tên sản phẩm không được rỗng hoặc chỉ chứa khoảng trắng.")
+        if len(stripped) > 255:
+            raise ValueError("Tên sản phẩm không được vượt quá 255 ký tự.")
+        return stripped
+
+    @field_validator("quantity")
+    @classmethod
+    def validate_quantity(cls, v: float) -> float:
+        import math
+        if math.isnan(v) or math.isinf(v):
+            raise ValueError("Số lượng phải là số hợp lệ.")
+        if v <= 0:
+            raise ValueError("Số lượng phải lớn hơn 0.")
+        if v > MAX_BATCH_QUANTITY:
+            raise ValueError(f"Số lượng vượt quá ngưỡng tối đa cho phép ({MAX_BATCH_QUANTITY} kg).")
+        return v
+
+    @field_validator("harvest_date")
+    @classmethod
+    def validate_harvest_date(cls, v: date) -> date:
+        if v > date.today():
+            raise ValueError("Ngày thu hoạch không được nằm trong tương lai.")
+        return v
 
 
 class BatchUpdate(BatchCreate):
@@ -319,6 +355,7 @@ class BatchUpdate(BatchCreate):
     trả ``404`` nếu lô hoặc ``farm_id`` mới không tồn tại.
 
     Lưu ý: đổi ``farm_id`` = chuyển lô sang vùng trồng khác (vẫn phải tồn tại).
+    Client không được phép sửa mã lô (giữ nguyên mã lô tự sinh ban đầu).
 
     Ví dụ::
 
@@ -339,7 +376,7 @@ class BatchUpdate(BatchCreate):
 
 
 class BatchResponse(BaseModel):
-    """Dữ liệu API trả về cho một lô nông sản (kèm ``id``).
+    """Dữ liệu API trả về cho một lô nông sản (kèm ``id`` và ``batch_code``).
 
     ``harvest_date`` được serialize thành chuỗi ``yyyy-MM-dd``.
     """
@@ -350,10 +387,12 @@ class BatchResponse(BaseModel):
     )
 
     id: int = Field(..., description="Mã định danh lô nông sản.", examples=[1])
+    batch_code: str = Field(..., description="Mã lô nông sản tự sinh.", examples=["LOT-20260115-A1B2C3"])
     farm_id: int = Field(..., description="ID vùng trồng xuất xứ.", examples=[1])
     product_name: str = Field(..., description="Tên sản phẩm của lô.")
     quantity: float = Field(..., description="Số lượng / khối lượng (kg).")
     harvest_date: date = Field(..., description="Ngày thu hoạch.")
+
 
 
 # ----------------------------------------------------------------- Chung ---
