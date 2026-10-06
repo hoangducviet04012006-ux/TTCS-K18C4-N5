@@ -151,6 +151,12 @@ class Batch(Base):
     __tablename__ = "batches"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    batch_code: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+        unique=True,
+        index=True,
+    )
     farm_id: Mapped[int] = mapped_column(
         ForeignKey("farms.id"),
         nullable=False,
@@ -163,7 +169,8 @@ class Batch(Base):
     farm: Mapped["Farm"] = relationship(back_populates="batches")
 
     def __repr__(self) -> str:  # pragma: no cover
-        return f"<Batch id={self.id} farm_id={self.farm_id} product_name={self.product_name!r}>"
+        return f"<Batch id={self.id} batch_code={self.batch_code!r} farm_id={self.farm_id} product_name={self.product_name!r}>"
+
 
 
 # ------------------------------------- Lịch sử thao tác (audit log) ---

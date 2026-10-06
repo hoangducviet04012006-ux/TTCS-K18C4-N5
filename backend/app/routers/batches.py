@@ -1,35 +1,10 @@
-"""Router quản lý lô nông sản (Batch).
-
-Quan hệ: ``Farm 1 ---- N Batch``.
-
-Cung cấp **đầy đủ CRUD** (hoàn thiện ở Sprint 5):
-
-- ``POST   /batches``            : tạo lô nông sản (kiểm tra ``farm_id`` tồn tại).
-- ``GET    /batches``            : lấy danh sách lô.
-- ``GET    /batches/{batch_id}`` : xem chi tiết một lô.
-- ``PUT    /batches/{batch_id}`` : cập nhật lô (có thể đổi sang vùng trồng khác).
-- ``DELETE /batches/{batch_id}`` : xoá lô (chỉ admin).
-
-**Phân quyền (Sprint 4):** ``POST``/``PUT`` dùng dependency ``require_farmer``
--> đăng nhập bằng role ``farmer`` hoặc ``admin`` (401 nếu chưa đăng nhập,
-403 nếu sai vai trò); ``DELETE`` dùng ``require_admin`` -> chỉ admin. Hai endpoint
-``GET`` giữ nguyên như trước (không yêu cầu đăng nhập) vì phục vụ tra cứu nguồn
-gốc công khai.
-
-**Lịch sử thao tác (Sprint 7):** mỗi lần ``POST``/``PUT``/``DELETE`` thành công,
-router ghi thêm 1 dòng vào bảng ``audit_logs`` (``entity=batch``) thông qua
-``record_action()`` - xem ``app/audit.py`` và endpoint ``GET /audit-logs``.
-Log nằm trong cùng transaction với thao tác nên thao tác thất bại
-(404/403/500) không để lại log.
-"""
-
-from fastapi import APIRouter, Depends, HTTPException, Path, status
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
+from sqlalchemy import func, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.audit import record_action
-from app.database import get_db
+from app.database import generate_unique_batch_code, get_db
 from app.models import (
     ACTION_CREATE,
     ACTION_DELETE,
@@ -55,6 +30,7 @@ router = APIRouter(
     summary="Tạo lô nông sản",
     description=(
         "Tạo một lô nông sản thuộc về một vùng trồng. "
+        "Mã lô (`batch_code`) được hệ thống tự động sinh ngẫu nhiên/tuần tự an toàn. "
         "Nếu `farm_id` không tồn tại, API trả về `404 Not Found`.\n\n"
         "**Phân quyền:** đăng nhập với role `farmer` hoặc `admin` (yêu cầu header "
         "`Authorization: Basic ...`)."
@@ -69,6 +45,9 @@ router = APIRouter(
         status.HTTP_404_NOT_FOUND: {
             "description": "Vùng trồng (farm_id) không tồn tại.",
         },
+        status.HTTP_422_UNPROCESSABLE_ENTITY: {
+            "description": "Dữ liệu thu hoạch không hợp lệ.",
+        },
     },
 )
 def create_batch(
@@ -76,20 +55,20 @@ def create_batch(
     current_user: User = Depends(require_farmer),
     db: Session = Depends(get_db),
 ) -> Batch:
-    """Tạo lô nông sản mới.
+    """Tạo lô nông sản mới với mã lô sinh tự động.
 
     Args:
         payload: Dữ liệu lô đã được Pydantic validate.
-        current_user: Tài khoản đã đăng nhập (farmer hoặc admin) - cũng là người
-            được ghi vào lịch sử thao tác.
+        current_user: Tài khoản đã đăng nhập (farmer hoặc admin).
         db: Session SQLAlchemy từ dependency ``get_db``.
 
     Returns:
-        Batch: Bản ghi lô vừa tạo (HTTP 201).
+        Batch: Bản ghi lô vừa tạo kèm mã lô tự sinh (HTTP 201).
 
     Raises:
         HTTPException: 401/403 nếu chưa đăng nhập hoặc sai vai trò;
             404 nếu ``farm_id`` không tồn tại;
+            422 nếu dữ liệu thu hoạch sai quy tắc;
             500 nếu ghi database thất bại (đã rollback).
     """
     # Bước 1: kiểm tra toàn vẹn tham chiếu - vùng trồng phải tồn tại.
@@ -106,8 +85,12 @@ def create_batch(
             detail="Bạn không có quyền tạo lô nông sản cho vùng trồng của tổ chức khác.",
         )
 
-    # Bước 2: lưu lô nông sản.
-    batch = Batch(**payload.model_dump())
+    # Bước 2: Tự động sinh mã lô độc nhất (LOT-YYYYMMDD-XXXXXX)
+    code = generate_unique_batch_code(db, payload.harvest_date)
+
+    # Bỏ qua batch_code nếu client gửi lên
+    batch_data = payload.model_dump(exclude={"batch_code"})
+    batch = Batch(**batch_data, batch_code=code)
     db.add(batch)
 
     try:
@@ -131,19 +114,53 @@ def create_batch(
     "",
     response_model=list[BatchResponse],
     status_code=status.HTTP_200_OK,
-    summary="Lấy danh sách lô nông sản",
-    description="Trả về toàn bộ lô nông sản, sắp xếp theo `id` tăng dần.",
+    summary="Lấy danh sách lô nông sản của tổ chức",
+    description=(
+        "Trả về các lô nông sản thuộc quyền quản lý của tổ chức người dùng. "
+        "Hỗ trợ tìm kiếm gần đúng theo mã lô (`?code=`), phân trang (`?limit=`, `?offset=`)."
+    ),
 )
-def list_batches(db: Session = Depends(get_db)) -> list[Batch]:
-    """Lấy danh sách lô nông sản.
+def list_batches(
+    code: str | None = Query(default=None, description="Tìm theo mã lô (gần đúng, không phân biệt hoa thường)."),
+    limit: int | None = Query(default=None, ge=1, le=500, description="Số lượng lô tối đa trả về."),
+    offset: int | None = Query(default=0, ge=0, description="Vị trí bắt đầu truy vấn."),
+    current_user: User = Depends(require_farmer),
+    db: Session = Depends(get_db),
+) -> list[Batch]:
+    """Lấy danh sách lô nông sản thuộc tổ chức hiện tại của người dùng.
+
+    Ghi chú kiến trúc: lọc lô theo `organization_id` của thửa đất xuất xứ (khái niệm
+    tổ chức đang giữ / sở hữu hiện tại), chuẩn bị để kết nối với luồng bàn giao lô ở Sprint sau.
 
     Args:
-        db: Session SQLAlchemy từ dependency ``get_db``.
+        code: Từ khoá tìm kiếm mã lô (gần đúng).
+        limit: Số bản ghi tối đa.
+        offset: Vị trí bắt đầu.
+        current_user: Tài khoản đã đăng nhập.
+        db: Session SQLAlchemy.
 
     Returns:
-        list[Batch]: Danh sách lô (rỗng nếu chưa có dữ liệu).
+        list[Batch]: Danh sách lô nông sản của tổ chức.
     """
-    return list(db.scalars(select(Batch).order_by(Batch.id)).all())
+    query = select(Batch).join(Farm, Batch.farm_id == Farm.id)
+
+    # Cô lập tổ chức: chỉ xem lô thuộc tổ chức của mình
+    if current_user.organization_id is not None:
+        query = query.where(Farm.organization_id == current_user.organization_id)
+
+    # Tìm kiếm theo mã lô (không phân biệt hoa thường)
+    if code is not None and code.strip():
+        search_pattern = f"%{code.strip().lower()}%"
+        query = query.where(func.lower(Batch.batch_code).like(search_pattern))
+
+    query = query.order_by(Batch.id.asc())
+
+    if offset:
+        query = query.offset(offset)
+    if limit:
+        query = query.limit(limit)
+
+    return list(db.scalars(query).all())
 
 
 @router.get(
@@ -160,19 +177,21 @@ def list_batches(db: Session = Depends(get_db)) -> list[Batch]:
 )
 def get_batch(
     batch_id: int = Path(..., ge=1, description="ID lô nông sản cần xem."),
+    current_user: User = Depends(require_farmer),
     db: Session = Depends(get_db),
 ) -> Batch:
     """Lấy chi tiết một lô nông sản theo ``id``.
 
     Args:
         batch_id: ID của lô cần tìm.
+        current_user: Tài khoản đã đăng nhập.
         db: Session SQLAlchemy từ dependency ``get_db``.
 
     Returns:
         Batch: Bản ghi lô tương ứng (HTTP 200).
 
     Raises:
-        HTTPException: 404 nếu không tìm thấy lô.
+        HTTPException: 404 nếu không tìm thấy lô; 403 nếu thuộc tổ chức khác.
     """
     batch = db.get(Batch, batch_id)
     if batch is None:
@@ -180,6 +199,14 @@ def get_batch(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Không tìm thấy lô nông sản có id={batch_id}.",
         )
+
+    current_farm = db.get(Farm, batch.farm_id)
+    if current_farm and current_user.organization_id is not None and current_farm.organization_id != current_user.organization_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Bạn không có quyền xem lô nông sản của tổ chức khác.",
+        )
+
     return batch
 
 
@@ -190,8 +217,7 @@ def get_batch(
     summary="Cập nhật lô nông sản",
     description=(
         "Cập nhật (thay thế) thông tin lô theo `id`. Client gửi đầy đủ các trường "
-        "như khi tạo mới; `farm_id` mới cũng phải tồn tại. Trả `404` nếu lô "
-        "**hoặc** vùng trồng không tồn tại.\n\n"
+        "như khi tạo mới; `farm_id` mới cũng phải tồn tại. Mã lô (`batch_code`) không được phép sửa.\n\n"
         "**Phân quyền:** đăng nhập với role `farmer` hoặc `admin`."
     ),
     responses={
@@ -199,6 +225,9 @@ def get_batch(
         status.HTTP_403_FORBIDDEN: {"description": "Vai trò không được phép."},
         status.HTTP_404_NOT_FOUND: {
             "description": "Không tìm thấy lô nông sản hoặc vùng trồng (farm_id).",
+        },
+        status.HTTP_422_UNPROCESSABLE_ENTITY: {
+            "description": "Dữ liệu thu hoạch không hợp lệ.",
         },
     },
 )
@@ -210,11 +239,12 @@ def update_batch(
 ) -> Batch:
     """Cập nhật thông tin lô nông sản theo ``id``.
 
+    Mã lô (batch_code) được giữ nguyên tuyệt đối, không cho phép client sửa hay ghi đè.
+
     Args:
-        payload: Dữ liệu mới đã được Pydantic validate (đủ 4 trường).
+        payload: Dữ liệu mới đã được Pydantic validate.
         batch_id: ID lô cần sửa.
-        current_user: Tài khoản đã đăng nhập (farmer hoặc admin) - cũng là người
-            được ghi vào lịch sử thao tác.
+        current_user: Tài khoản đã đăng nhập (farmer hoặc admin).
         db: Session SQLAlchemy từ dependency ``get_db``.
 
     Returns:
@@ -223,6 +253,7 @@ def update_batch(
     Raises:
         HTTPException: 401/403 nếu chưa đăng nhập hoặc sai vai trò;
             404 nếu không tìm thấy lô hoặc ``farm_id`` mới;
+            422 nếu dữ liệu thu hoạch không hợp lệ;
             500 nếu ghi database thất bại (đã rollback).
     """
     batch = db.get(Batch, batch_id)
@@ -253,7 +284,9 @@ def update_batch(
             detail="Bạn không có quyền chuyển lô nông sản sang vùng trồng của tổ chức khác.",
         )
 
-    for field, value in payload.model_dump().items():
+    # Cập nhật các trường, KHÔNG ĐỔI batch_code
+    update_data = payload.model_dump(exclude={"batch_code"})
+    for field, value in update_data.items():
         setattr(batch, field, value)
 
     try:
