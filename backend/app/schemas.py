@@ -558,3 +558,76 @@ class BatchEventOut(BaseModel):
     to_org_id: int | None = Field(default=None, description="ID tổ chức nhận (nếu có).")
     notes: str | None = Field(default=None, description="Ghi chú chi tiết sự kiện.")
     created_at: datetime = Field(..., description="Thời điểm ghi nhận sự kiện.")
+
+
+class BatchEventCreate(BaseModel):
+    """Dữ liệu client gửi lên khi tạo sự kiện mới cho lô (``POST /batches/{batch_id}/events``)."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "event_type": "HARVEST",
+                "event_data": "Thu hoạch xoài cát Chu đợt 1, nhiệt độ bảo quản 15°C.",
+            }
+        }
+    )
+
+    event_type: str = Field(
+        ...,
+        min_length=1,
+        max_length=100,
+        description="Loại sự kiện (VD: BATCH_CREATED, HARVEST, PROCESSING, TEMP_CHECK, TRANSPORT, QUALITY_INSPECTION...).",
+        examples=["HARVEST"],
+    )
+    event_data: str | None = Field(
+        default=None,
+        max_length=2000,
+        description="Dữ liệu / thông tin mô tả chi tiết của sự kiện.",
+        examples=["Thu hoạch xoài cát Chu đợt 1, nhiệt độ bảo quản 15°C."],
+    )
+
+
+class BatchEventResponse(BaseModel):
+    """Dữ liệu trả về cho một sự kiện lô nông sản (append-only log)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int = Field(..., description="ID sự kiện.", examples=[1])
+    batch_id: int = Field(..., description="ID lô nông sản.", examples=[1])
+    event_type: str = Field(..., description="Loại sự kiện.", examples=["HARVEST"])
+    event_data: str | None = Field(default=None, description="Thông tin dữ liệu sự kiện.")
+    user_id: int | None = Field(default=None, description="ID người thực hiện.")
+    from_org_id: int | None = Field(default=None, description="ID tổ chức từ.")
+    to_org_id: int | None = Field(default=None, description="ID tổ chức đến.")
+    notes: str | None = Field(default=None, description="Ghi chú.")
+    created_at: datetime = Field(..., description="Thời điểm ghi nhận sự kiện (UTC).")
+    prev_hash: str = Field(..., description="Hash SHA-256 của sự kiện liền trước của lô.")
+    record_hash: str = Field(..., description="Hash SHA-256 của bản ghi hiện tại.")
+
+
+class BatchIntegrityResponse(BaseModel):
+    """Kết quả kiểm tra toàn vẹn chuỗi sự kiện của một lô nông sản (Sprint S-12)."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "valid": True,
+                "batch_id": 1,
+                "total_events": 3,
+                "message": "Toàn bộ 3 sự kiện của lô #1 đều hợp lệ và đảm bảo tính toàn vẹn dữ liệu.",
+            }
+        }
+    )
+
+    valid: bool = Field(..., description="`true` nếu chuỗi sự kiện toàn vẹn, `false` nếu bị đứt mạch/sai băm.")
+    batch_id: int = Field(..., description="ID lô nông sản.")
+    total_events: int | None = Field(default=None, description="Tổng số sự kiện (khi valid = true).")
+    event_id: int | None = Field(default=None, description="ID của sự kiện bị lỗi/đứt mạch đầu tiên (khi valid = false).")
+    index: int | None = Field(default=None, description="Vị trí (index 0-based) của sự kiện bị lỗi trong chuỗi.")
+    error_type: str | None = Field(
+        default=None,
+        description="Loại lỗi phát hiện (`PREV_HASH_MISMATCH`, `RECORD_HASH_MISMATCH`).",
+    )
+    expected_hash: str | None = Field(default=None, description="Mã băm kỳ vọng theo công thức hash chain.")
+    actual_hash: str | None = Field(default=None, description="Mã băm thực tế ghi trong cơ sở dữ liệu / prev_hash.")
+    message: str | None = Field(default=None, description="Thông báo chi tiết giải thích vị trí đứt mạch.")

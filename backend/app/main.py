@@ -32,7 +32,16 @@ from sqlalchemy.orm import Session
 
 from app import __version__
 from app.database import get_db, init_db
-from app.routers import audit, auth, batches, farms, handovers, health, users
+from app.routers import (
+    audit,
+    auth,
+    batches,
+    events,
+    farms,
+    handovers,
+    health,
+    users,
+)
 from app.schemas import HealthResponse
 
 
@@ -120,6 +129,7 @@ app.include_router(health.router)
 app.include_router(auth.router)
 app.include_router(farms.router)
 app.include_router(batches.router)
+app.include_router(events.router)
 app.include_router(users.router)
 app.include_router(audit.router)
 app.include_router(handovers.router)

@@ -129,16 +129,17 @@ def create_handover(
     db.add(handover)
     db.flush()
 
-    event = BatchEvent(
+    from app.events import record_batch_event
+    record_batch_event(
+        db=db,
         batch_id=batch_id,
         event_type=EVENT_HANDOVER_PENDING,
-        user_id=current_user.id,
+        user=current_user,
         from_org_id=holder_org_id,
         to_org_id=payload.to_org_id,
         notes=payload.note,
-        created_at=now,
+        event_data=payload.note,
     )
-    db.add(event)
 
     try:
         db.commit()
@@ -247,22 +248,24 @@ def respond_handover(
         )
 
     now = _naive_utcnow()
+    from app.events import record_batch_event
     handover.updated_at = now
+
     action = payload.action.strip().upper()
 
     if action == "ACCEPT":
         handover.status = HANDOVER_ACCEPTED
         batch.current_org_id = handover.to_org_id
-        event = BatchEvent(
+        record_batch_event(
+            db=db,
             batch_id=batch.id,
             event_type=EVENT_HANDOVER_ACCEPTED,
-            user_id=current_user.id,
+            user=current_user,
             from_org_id=handover.from_org_id,
             to_org_id=handover.to_org_id,
             notes="Đã tiếp nhận bàn giao lô hàng thành công.",
-            created_at=now,
+            event_data="Đã tiếp nhận bàn giao lô hàng thành công.",
         )
-        db.add(event)
     elif action == "REJECT":
         if not payload.reject_reason or len(payload.reject_reason.strip()) < 10:
             raise HTTPException(
@@ -271,16 +274,17 @@ def respond_handover(
             )
         handover.status = HANDOVER_REJECTED
         handover.reject_reason = payload.reject_reason.strip()
-        event = BatchEvent(
+        record_batch_event(
+            db=db,
             batch_id=batch.id,
             event_type=EVENT_HANDOVER_REJECTED,
-            user_id=current_user.id,
+            user=current_user,
             from_org_id=handover.from_org_id,
             to_org_id=handover.to_org_id,
             notes=payload.reject_reason.strip(),
-            created_at=now,
+            event_data=payload.reject_reason.strip(),
         )
-        db.add(event)
+
     else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
