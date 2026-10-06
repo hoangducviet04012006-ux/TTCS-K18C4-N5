@@ -28,7 +28,11 @@ from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from app.batch_tree import build_batch_tree_response, get_batch_with_direct_relations
+from app.batch_tree import (
+    build_batch_tree_response,
+    get_batch_ancestors,
+    get_batch_with_direct_relations,
+)
 from app.audit import record_action
 from app.events import record_batch_event
 from app.database import get_db
@@ -42,6 +46,7 @@ from app.models import (
     User,
 )
 from app.schemas import (
+    BatchAncestorsResponse,
     BatchCreate,
     BatchDetailResponse,
     BatchResponse,
@@ -286,6 +291,51 @@ def get_batch_tree(
         )
 
     return build_batch_tree_response(batch)
+
+
+@router.get(
+    "/{batch_id}/ancestors",
+    response_model=BatchAncestorsResponse,
+    status_code=status.HTTP_200_OK,
+    summary="[T-59] Lấy danh sách các lô tổ tiên của một lô nông sản",
+    description=(
+        "API truy vết ngược từ `parent_id` của lô hiện tại lên các thế hệ trước "
+        "(Mẹ -> Bà -> Cố -> Lô gốc). Trả `404` nếu lô không tồn tại."
+    ),
+    responses={
+        status.HTTP_404_NOT_FOUND: {
+            "description": "Không tìm thấy lô nông sản.",
+        },
+    },
+)
+def get_batch_ancestors_route(
+    batch_id: int = Path(..., ge=1, description="ID lô nông sản cần truy vết tổ tiên."),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Lấy danh sách tổ tiên của một lô nông sản theo quan hệ database (T-59).
+
+    Args:
+        batch_id: ID của lô cần xem danh sách tổ tiên.
+        db: Session SQLAlchemy từ dependency ``get_db``.
+
+    Returns:
+        dict: Cấu trúc JSON chứa batch_id và danh sách ancestors.
+
+    Raises:
+        HTTPException: 404 nếu không tìm thấy lô.
+    """
+    batch = db.get(Batch, batch_id)
+    if batch is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Không tìm thấy lô nông sản có id={batch_id}.",
+        )
+
+    ancestors = get_batch_ancestors(db, batch_id)
+    return {
+        "batch_id": batch_id,
+        "ancestors": ancestors,
+    }
 
 
 @router.put(

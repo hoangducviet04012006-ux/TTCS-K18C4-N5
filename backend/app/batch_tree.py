@@ -109,3 +109,58 @@ def build_batch_tree_response(batch: Batch) -> dict[str, Any]:
         "parent": parent_info,
         "children": children_info,
     }
+
+
+def get_batch_ancestors(db: Session, batch_id: int) -> list[dict[str, Any]]:
+    """Truy vấn danh sách tổ tiên (ancestors) của một lô nông sản theo đúng quan hệ database (T-59).
+
+    Truy vết ngược từ ``parent_id`` của lô hiện tại lên các thế hệ trước (Mẹ -> Bà -> Cố -> Lô Gốc).
+    Bảo vệ chống vòng lặp vô tận bằng tập hợp ``visited``.
+
+    Args:
+        db: Session SQLAlchemy.
+        batch_id: ID lô nông sản xuất phát.
+
+    Returns:
+        list[dict]: Danh sách các lô tổ tiên sắp xếp theo thứ tự từ Lô mẹ trực tiếp -> Lô gốc.
+    """
+    ancestors: list[dict[str, Any]] = []
+    current_batch = db.get(Batch, batch_id)
+
+    if current_batch is None or current_batch.parent_id is None:
+        return ancestors
+
+    visited = {batch_id}
+    curr_parent_id = current_batch.parent_id
+    generation = 1  # 1 = Lô mẹ trực tiếp, 2 = Lô bà...
+
+    while curr_parent_id is not None and curr_parent_id not in visited and generation <= 50:
+        visited.add(curr_parent_id)
+        stmt = (
+            select(Batch)
+            .options(joinedload(Batch.farm), joinedload(Batch.current_org))
+            .where(Batch.id == curr_parent_id)
+        )
+        parent_batch = db.scalars(stmt).first()
+
+        if parent_batch is None:
+            break
+
+        ancestors.append(
+            {
+                "id": parent_batch.id,
+                "product": parent_batch.product_name,
+                "product_name": parent_batch.product_name,
+                "quantity": parent_batch.quantity,
+                "remaining_quantity": parent_batch.remaining_qty,
+                "unit": parent_batch.batch_unit,
+                "status": parent_batch.batch_status,
+                "current_org_name": parent_batch.current_org_name or "Tổ chức chưa xác định",
+                "generation": generation,
+            }
+        )
+
+        curr_parent_id = parent_batch.parent_id
+        generation += 1
+
+    return ancestors

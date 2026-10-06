@@ -1143,4 +1143,172 @@ a {
   font-size: 0.95rem;
 }
 
+/* ------------------------------------------- [T-59] Header Actions & Nav Bar --- */
+.card__header-flex {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+}
 
+.card__header-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.batch-detail-nav {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-border);
+  flex-wrap: wrap;
+}
+
+/* Button variants for T-59 */
+.btn--outline-info {
+  background: transparent;
+  color: #0284c7;
+  border: 1.5px solid #0284c7;
+}
+
+.btn--outline-info:hover {
+  background: #0284c7;
+  color: #fff;
+}
+
+.btn--outline-warning {
+  background: transparent;
+  color: #b45309;
+  border: 1.5px solid #d97706;
+}
+
+.btn--outline-warning:hover {
+  background: #d97706;
+  color: #fff;
+}
+
+.btn--info {
+  background: #0284c7;
+  color: #fff;
+  border: none;
+}
+
+.btn--info:hover {
+  background: #0369a1;
+}
+
+.btn--warning {
+  background: #d97706;
+  color: #fff;
+  border: none;
+}
+
+.btn--warning:hover {
+  background: #b45309;
+}
+
+/* Wide modal for timeline/ancestors */
+.modal--wide {
+  max-width: 680px;
+  width: 95%;
+}
+
+/* Timeline event item card */
+.timeline-item {
+  display: flex;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.timeline-item:last-child {
+  border-bottom: none;
+}
+
+.timeline-item__dot {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.timeline-item__body {
+  flex: 1;
+}
+
+.timeline-item__type {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--color-primary);
+}
+
+.timeline-item__data {
+  font-size: 0.88rem;
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+
+.timeline-item__time {
+  font-size: 0.82rem;
+  color: #94a3b8;
+  margin-top: 4px;
+}
+
+/* Ancestor chain item card */
+.ancestor-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: #f8faf9;
+  border-left: 4px solid #d97706;
+  border-radius: var(--radius-sm);
+  margin-bottom: 8px;
+  transition: all 0.2s ease;
+}
+
+.ancestor-item:hover {
+  border-color: #b45309;
+  background: #fefce8;
+}
+
+.ancestor-item__gen {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #b45309;
+  background: #fef3c7;
+  border-radius: 4px;
+  padding: 2px 6px;
+  white-space: nowrap;
+}
+
+.ancestor-item__info {
+  flex: 1;
+}
+
+.ancestor-item__name {
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.ancestor-item__meta {
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+
+.ancestor-item__action {
+  flex-shrink: 0;
+}

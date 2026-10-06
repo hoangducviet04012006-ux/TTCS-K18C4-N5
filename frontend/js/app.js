@@ -211,6 +211,9 @@ let editingBatchId = null;
 // `Authorization: Basic ...` trong mỗi request.
 let session = null;
 
+// [T-59] ID của lô đang được hiển thị trong chi tiết (dùng cho nút Timeline / Ancestors).
+let currentBatchId = null;
+
 /* --------------------------------------------------------- 5. Đăng nhập --- */
 /**
  * Mã hoá chuỗi "username:password" sang Base64 theo chuẩn HTTP Basic.
@@ -1131,6 +1134,54 @@ function bindEvents() {
   // Nút đóng trang chi tiết lô S-25
   const btnCloseDetail = $("btn-close-batch-detail");
   if (btnCloseDetail) btnCloseDetail.addEventListener("click", closeBatchDetail);
+
+  // [T-59] Header buttons: xem timeline / ancestors
+  const btnHeaderTimeline = $("btn-view-batch-timeline");
+  if (btnHeaderTimeline) {
+    btnHeaderTimeline.addEventListener("click", () => {
+      if (currentBatchId !== null) openBatchTimelineModal(currentBatchId);
+    });
+  }
+  const btnHeaderAncestors = $("btn-view-batch-ancestors");
+  if (btnHeaderAncestors) {
+    btnHeaderAncestors.addEventListener("click", () => {
+      if (currentBatchId !== null) openBatchAncestorsModal(currentBatchId);
+    });
+  }
+
+  // [T-59] Nav bar buttons (inside batch-detail-body)
+  const btnNavTimeline = $("btn-detail-nav-timeline");
+  if (btnNavTimeline) {
+    btnNavTimeline.addEventListener("click", () => {
+      if (currentBatchId !== null) openBatchTimelineModal(currentBatchId);
+    });
+  }
+  const btnNavAncestors = $("btn-detail-nav-ancestors");
+  if (btnNavAncestors) {
+    btnNavAncestors.addEventListener("click", () => {
+      if (currentBatchId !== null) openBatchAncestorsModal(currentBatchId);
+    });
+  }
+
+  // [T-59] Modal timeline: đóng bằng nút × và click backdrop
+  const btnCloseTimeline = $("btn-close-timeline-modal");
+  if (btnCloseTimeline) btnCloseTimeline.addEventListener("click", closeBatchTimelineModal);
+  const modalTimeline = $("modal-batch-timeline");
+  if (modalTimeline) {
+    modalTimeline.addEventListener("click", (e) => {
+      if (e.target === modalTimeline) closeBatchTimelineModal();
+    });
+  }
+
+  // [T-59] Modal ancestors: đóng bằng nút × và click backdrop
+  const btnCloseAncestors = $("btn-close-ancestors-modal");
+  if (btnCloseAncestors) btnCloseAncestors.addEventListener("click", closeBatchAncestorsModal);
+  const modalAncestors = $("modal-batch-ancestors");
+  if (modalAncestors) {
+    modalAncestors.addEventListener("click", (e) => {
+      if (e.target === modalAncestors) closeBatchAncestorsModal();
+    });
+  }
 }
 
 /* ------------------------------------------- 11. Bàn giao lô hàng (SCRUM-27/28) --- */
@@ -1392,6 +1443,9 @@ async function openBatchDetail(batchId) {
 
   if (!card) return;
 
+  // [T-59] Lưu lại batch ID đang xem để header buttons dùng đúng batch.
+  currentBatchId = batchId;
+
   card.hidden = false;
   loading.hidden = false;
   notFound.hidden = true;
@@ -1478,6 +1532,138 @@ async function openBatchDetail(batchId) {
 function closeBatchDetail() {
   const card = $("batch-detail-card");
   if (card) card.hidden = true;
+}
+
+/* ------------------------------------------- [T-59] Dòng thời gian & Tổ tiên --- */
+
+/** Mở modal xem dòng thời gian (timeline events) của một lô. */
+async function openBatchTimelineModal(batchId) {
+  const modal = $("modal-batch-timeline");
+  const loadingEl = $("modal-timeline-loading");
+  const errorEl = $("modal-timeline-error");
+  const emptyEl = $("modal-timeline-empty");
+  const listEl = $("modal-timeline-list");
+  const labelEl = $("modal-timeline-batch-label");
+
+  if (!modal) return;
+  modal.hidden = false;
+
+  loadingEl.hidden = false;
+  errorEl.hidden = true;
+  emptyEl.hidden = true;
+  listEl.hidden = true;
+  listEl.innerHTML = "";
+  if (labelEl) labelEl.textContent = `Lô nông sản #${batchId}`;
+
+  try {
+    const events = await apiRequest(`/batches/${batchId}/events`);
+    loadingEl.hidden = true;
+
+    if (!Array.isArray(events) || events.length === 0) {
+      emptyEl.hidden = false;
+      return;
+    }
+
+    listEl.innerHTML = events.map((ev, idx) => `
+      <div class="timeline-item">
+        <div class="timeline-item__dot">${idx + 1}</div>
+        <div class="timeline-item__body">
+          <div class="timeline-item__type">${escapeHtml(ev.event_type || "EVENT")}</div>
+          <div class="timeline-item__data">${escapeHtml(ev.event_data || "")}</div>
+          <div class="timeline-item__time">
+            ${ev.timestamp ? formatDate(ev.timestamp) : ""}
+            ${ev.user_id ? ` · Người ghi: #${ev.user_id}` : ""}
+          </div>
+        </div>
+      </div>
+    `).join("");
+    listEl.hidden = false;
+  } catch (err) {
+    loadingEl.hidden = true;
+    errorEl.hidden = false;
+    errorEl.textContent = `⚠️ Không thể tải dòng thời gian: ${err.message}`;
+  }
+}
+
+/** Đóng modal dòng thời gian. */
+function closeBatchTimelineModal() {
+  const modal = $("modal-batch-timeline");
+  if (modal) modal.hidden = true;
+}
+
+/** Mở modal xem danh sách tổ tiên (ancestors) của một lô. */
+async function openBatchAncestorsModal(batchId) {
+  const modal = $("modal-batch-ancestors");
+  const loadingEl = $("modal-ancestors-loading");
+  const errorEl = $("modal-ancestors-error");
+  const emptyEl = $("modal-ancestors-empty");
+  const listEl = $("modal-ancestors-list");
+  const labelEl = $("modal-ancestors-batch-label");
+
+  if (!modal) return;
+  modal.hidden = false;
+
+  loadingEl.hidden = false;
+  errorEl.hidden = true;
+  emptyEl.hidden = true;
+  listEl.hidden = true;
+  listEl.innerHTML = "";
+  if (labelEl) labelEl.textContent = `Lô nông sản #${batchId}`;
+
+  try {
+    const data = await apiRequest(`/batches/${batchId}/ancestors`);
+    loadingEl.hidden = true;
+
+    const ancestors = Array.isArray(data.ancestors) ? data.ancestors : [];
+
+    if (ancestors.length === 0) {
+      emptyEl.hidden = false;
+      return;
+    }
+
+    const genLabel = (gen) => {
+      if (gen === 1) return "Lô mẹ trực tiếp";
+      if (gen === 2) return "Lô bà";
+      if (gen === 3) return "Lô cố";
+      return `Thế hệ ${gen}`;
+    };
+
+    listEl.innerHTML = ancestors.map((anc) => `
+      <div class="ancestor-item">
+        <span class="ancestor-item__gen">${genLabel(anc.generation || 1)}</span>
+        <div class="ancestor-item__info">
+          <div class="ancestor-item__name">
+            #${escapeHtml(String(anc.id))} · ${escapeHtml(anc.product_name || anc.product || "")}
+          </div>
+          <div class="ancestor-item__meta">
+            KL còn lại: ${formatNumber(anc.remaining_quantity)} / ${formatNumber(anc.quantity)} ${escapeHtml(anc.unit || "kg")}
+            · ${escapeHtml(anc.current_org_name || "N/A")}
+          </div>
+        </div>
+        <div class="ancestor-item__action">
+          <button class="btn btn--outline-primary btn--sm" type="button" onclick="openBatchDetail(${anc.id})">
+            👁️ Xem #${anc.id}
+          </button>
+        </div>
+      </div>
+    `).join("");
+    listEl.hidden = false;
+  } catch (err) {
+    loadingEl.hidden = true;
+    if (err.message && err.message.includes("404")) {
+      errorEl.hidden = false;
+      errorEl.textContent = "❌ Không tìm thấy lô nông sản này.";
+    } else {
+      errorEl.hidden = false;
+      errorEl.textContent = `⚠️ Không thể tải danh sách tổ tiên: ${err.message}`;
+    }
+  }
+}
+
+/** Đóng modal danh sách tổ tiên. */
+function closeBatchAncestorsModal() {
+  const modal = $("modal-batch-ancestors");
+  if (modal) modal.hidden = true;
 }
 
 /**

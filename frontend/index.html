@@ -303,7 +303,11 @@
             Hiển thị đầy đủ thông tin sản phẩm, khối lượng còn lại, đơn vị nắm giữ và quan hệ cây lô mẹ – lô con trực tiếp.
           </p>
         </div>
-        <button id="btn-close-batch-detail" class="btn btn--light btn--sm" type="button">✖️ Đóng chi tiết</button>
+        <div class="card__header-actions">
+          <button id="btn-view-batch-timeline" class="btn btn--outline-info btn--sm" type="button">⏱️ Xem dòng thời gian</button>
+          <button id="btn-view-batch-ancestors" class="btn btn--outline-warning btn--sm" type="button">🌳 Xem danh sách tổ tiên</button>
+          <button id="btn-close-batch-detail" class="btn btn--light btn--sm" type="button">✖️ Đóng chi tiết</button>
+        </div>
       </header>
 
       <!-- Trạng thái Loading -->
@@ -391,6 +395,12 @@
           <div id="bd-children-container">
             <!-- Hiển thị danh sách lô con hoặc "Không có lô con" -->
           </div>
+        </div>
+
+        <!-- [T-59] Thanh điều hướng nhanh sang Timeline / Ancestors -->
+        <div class="batch-detail-nav" id="batch-detail-nav">
+          <button id="btn-detail-nav-timeline" class="btn btn--info btn--sm" type="button">⏱️ Xem dòng thời gian</button>
+          <button id="btn-detail-nav-ancestors" class="btn btn--warning btn--sm" type="button">🌳 Xem danh sách tổ tiên</button>
         </div>
       </div>
     </section>
@@ -540,10 +550,44 @@
     </div>
   </div>
 
+  <!-- ==================== [T-59] MODAL DÒNG THỜI GIAN ==================== -->
+  <div id="modal-batch-timeline" class="modal-backdrop" hidden>
+    <div class="modal modal--wide" role="dialog" aria-modal="true" aria-labelledby="modal-timeline-title">
+      <header class="modal__header">
+        <h3 id="modal-timeline-title" class="modal__title">⏱️ Dòng thời gian lô nông sản</h3>
+        <button id="btn-close-timeline-modal" class="modal__close" type="button" aria-label="Đóng">&times;</button>
+      </header>
+      <div class="modal__body">
+        <p id="modal-timeline-batch-label" class="modal__desc"></p>
+        <div id="modal-timeline-loading" class="empty">⌛ Đang tải dòng thời gian...</div>
+        <div id="modal-timeline-error" class="empty empty--error" hidden></div>
+        <div id="modal-timeline-empty" class="empty" hidden>Chưa có sự kiện nào được ghi nhận cho lô này.</div>
+        <div id="modal-timeline-list" hidden></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== [T-59] MODAL DANH SÁCH TỔ TIÊN ==================== -->
+  <div id="modal-batch-ancestors" class="modal-backdrop" hidden>
+    <div class="modal modal--wide" role="dialog" aria-modal="true" aria-labelledby="modal-ancestors-title">
+      <header class="modal__header">
+        <h3 id="modal-ancestors-title" class="modal__title">🌳 Danh sách tổ tiên lô nông sản</h3>
+        <button id="btn-close-ancestors-modal" class="modal__close" type="button" aria-label="Đóng">&times;</button>
+      </header>
+      <div class="modal__body">
+        <p id="modal-ancestors-batch-label" class="modal__desc"></p>
+        <div id="modal-ancestors-loading" class="empty">⌛ Đang tải danh sách tổ tiên...</div>
+        <div id="modal-ancestors-error" class="empty empty--error" hidden></div>
+        <div id="modal-ancestors-empty" class="empty" hidden>Lô này là lô gốc, không có tổ tiên phía trên.</div>
+        <div id="modal-ancestors-list" hidden></div>
+      </div>
+    </div>
+  </div>
+
   <noscript>
     <p class="noscript">Trang này cần JavaScript để gọi API backend. Hãy bật JavaScript và tải lại trang.</p>
   </noscript>
 
-  <script src="js/app.js?v=9"></script>
+  <script src="js/app.js?v=10"></script>
 </body>
 </html>

@@ -314,6 +314,12 @@ class BatchCreate(BaseModel):
         description="Ngày thu hoạch, định dạng yyyy-MM-dd.",
         examples=["2026-01-15"],
     )
+    parent_id: int | None = Field(
+        default=None,
+        gt=0,
+        description="ID lô mẹ trực tiếp (nếu đây là lô con được tách ra từ lô khác).",
+        examples=[None],
+    )
 
 
 class BatchUpdate(BatchCreate):
@@ -447,6 +453,34 @@ class BatchTreeDetailResponse(BaseModel):
     children: list[BatchTreeNodeResponse] = Field(
         default_factory=list,
         description="Danh sách các lô con trực tiếp (mảng rỗng [] nếu không có).",
+    )
+
+
+class BatchAncestorNodeResponse(BaseModel):
+    """Thông tin một lô tổ tiên trong danh sách tổ tiên (T-59)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int = Field(..., description="Mã định danh lô tổ tiên.")
+    product: str = Field(..., description="Tên sản phẩm.")
+    product_name: str | None = Field(default=None, description="Tên sản phẩm.")
+    quantity: float = Field(..., description="Khối lượng ban đầu (kg).")
+    remaining_quantity: float = Field(..., description="Khối lượng còn lại (kg).")
+    unit: str = Field(default="kg", description="Đơn vị khối lượng.")
+    status: str = Field(default="Đang lưu kho", description="Trạng thái lô.")
+    current_org_name: str | None = Field(default=None, description="Tên tổ chức đang nắm giữ.")
+    generation: int = Field(..., description="Cấp thế hệ ngược (1 = Lô mẹ trực tiếp, 2 = Lô bà...).")
+
+
+class BatchAncestorsResponse(BaseModel):
+    """Danh sách các lô tổ tiên của một lô nông sản (T-59)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    batch_id: int = Field(..., description="ID lô nông sản được truy vấn.")
+    ancestors: list[BatchAncestorNodeResponse] = Field(
+        default_factory=list,
+        description="Danh sách các lô tổ tiên theo thứ tự từ Lô mẹ trực tiếp tới Lô gốc.",
     )
 
 
