@@ -403,6 +403,53 @@ class BatchDetailResponse(BaseModel):
     children: list[BatchSummaryResponse] = Field(default_factory=list, description="Danh sách các lô con trực tiếp.")
 
 
+class BatchTreeNodeResponse(BaseModel):
+    """Thông tin lô nút (lô mẹ hoặc lô con trực tiếp) cho T-58."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int = Field(..., description="Mã định danh lô.")
+    product: str = Field(..., description="Tên sản phẩm của lô.")
+    product_name: str | None = Field(default=None, description="Tên sản phẩm của lô.")
+    quantity: float = Field(..., description="Khối lượng ban đầu (kg).")
+    remaining_quantity: float = Field(..., description="Khối lượng còn lại (kg).")
+    unit: str = Field(default="kg", description="Đơn vị khối lượng.")
+    status: str = Field(default="Đang lưu kho", description="Trạng thái lô.")
+    current_org_name: str | None = Field(default=None, description="Tên tổ chức đang nắm giữ.")
+
+
+class BatchTreeMainInfo(BaseModel):
+    """Thông tin chi tiết lô chính cho T-58."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int = Field(..., description="Mã định danh lô.")
+    product: str = Field(..., description="Tên sản phẩm của lô.")
+    product_name: str | None = Field(default=None, description="Tên sản phẩm của lô.")
+    quantity: float = Field(..., description="Khối lượng ban đầu (kg).")
+    remaining_quantity: float = Field(..., description="Khối lượng còn lại (kg).")
+    unit: str = Field(default="kg", description="Đơn vị khối lượng.")
+    location: str | None = Field(default=None, description="Vị trí / địa điểm vùng trồng hoặc đơn vị nắm giữ.")
+    status: str = Field(default="Đang lưu kho", description="Trạng thái lô.")
+    current_org_name: str | None = Field(default=None, description="Tên tổ chức đang nắm giữ.")
+    harvest_date: date = Field(..., description="Ngày thu hoạch.")
+    farm_id: int | None = Field(default=None, description="ID vùng trồng xuất xứ.")
+    farm_name: str | None = Field(default=None, description="Tên vùng trồng xuất xứ.")
+
+
+class BatchTreeDetailResponse(BaseModel):
+    """Cấu trúc response chuẩn của T-58: chi tiết lô kèm lô mẹ và các lô con trực tiếp."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    batch: BatchTreeMainInfo = Field(..., description="Thông tin chi tiết của lô được truy vấn.")
+    parent: BatchTreeNodeResponse | None = Field(default=None, description="Lô mẹ trực tiếp (null nếu không có).")
+    children: list[BatchTreeNodeResponse] = Field(
+        default_factory=list,
+        description="Danh sách các lô con trực tiếp (mảng rỗng [] nếu không có).",
+    )
+
+
 # ----------------------------------------------------------------- Chung ---
 class DeleteResponse(BaseModel):
     """Kết quả một lần xoá thành công (``DELETE /farms/{id}``, ``DELETE /batches/{id}``).

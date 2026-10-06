@@ -28,6 +28,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
+from app.batch_tree import build_batch_tree_response, get_batch_with_direct_relations
 from app.audit import record_action
 from app.events import record_batch_event
 from app.database import get_db
@@ -45,6 +46,7 @@ from app.schemas import (
     BatchDetailResponse,
     BatchResponse,
     BatchSummaryResponse,
+    BatchTreeDetailResponse,
     BatchUpdate,
     DeleteResponse,
 )
@@ -193,7 +195,7 @@ def get_batch(
     Raises:
         HTTPException: 404 nếu không tìm thấy lô.
     """
-    batch = db.get(Batch, batch_id)
+    batch = get_batch_with_direct_relations(db, batch_id)
     if batch is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -242,6 +244,48 @@ def get_batch(
         parent=parent_summary,
         children=children_summary,
     )
+
+
+@router.get(
+    "/{batch_id}/tree",
+    response_model=BatchTreeDetailResponse,
+    status_code=status.HTTP_200_OK,
+    summary="[T-58] Truy vấn tổng hợp chi tiết lô kèm lô mẹ và lô con trực tiếp",
+    description=(
+        "API nhận `batch_id` và trả về thông tin chi tiết của lô, kèm duy nhất lô mẹ trực tiếp "
+        "(parent = null nếu không có) và danh sách các lô con trực tiếp (children = [] nếu không có). "
+        "Không lấy toàn bộ tổ tiên/hậu duệ và tối ưu SQL tránh N+1 query."
+    ),
+    responses={
+        status.HTTP_404_NOT_FOUND: {
+            "description": "Không tìm thấy lô nông sản.",
+        },
+    },
+)
+def get_batch_tree(
+    batch_id: int = Path(..., ge=1, description="ID lô nông sản cần xem cây quan hệ."),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Truy vấn tổng hợp chi tiết lô kèm lô mẹ và các lô con trực tiếp (T-58).
+
+    Args:
+        batch_id: ID của lô cần xem.
+        db: Session SQLAlchemy từ dependency ``get_db``.
+
+    Returns:
+        dict: Cấu trúc JSON chuẩn T-58 gồm 3 khối {batch, parent, children}.
+
+    Raises:
+        HTTPException: 404 nếu không tìm thấy lô.
+    """
+    batch = get_batch_with_direct_relations(db, batch_id)
+    if batch is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Không tìm thấy lô nông sản có id={batch_id}.",
+        )
+
+    return build_batch_tree_response(batch)
 
 
 @router.put(
