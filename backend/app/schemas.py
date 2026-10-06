@@ -631,4 +631,3 @@ class BatchIntegrityResponse(BaseModel):
     expected_hash: str | None = Field(default=None, description="Mã băm kỳ vọng theo công thức hash chain.")
     actual_hash: str | None = Field(default=None, description="Mã băm thực tế ghi trong cơ sở dữ liệu / prev_hash.")
     message: str | None = Field(default=None, description="Thông báo chi tiết giải thích vị trí đứt mạch.")
-

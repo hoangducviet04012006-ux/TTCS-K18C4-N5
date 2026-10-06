@@ -141,7 +141,6 @@ def create_handover(
         event_data=payload.note,
     )
 
-
     try:
         db.commit()
     except SQLAlchemyError as exc:

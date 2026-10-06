@@ -232,4 +232,3 @@ def init_db() -> None:
     migrate_handover_and_batch_columns()
     create_event_immutability_triggers()
     seed_default_users()
-

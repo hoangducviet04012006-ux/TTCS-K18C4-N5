@@ -176,7 +176,8 @@ def verify_batch_events_integrity(db: Session, batch_id: int) -> dict:
                 "actual_hash": event.record_hash,
                 "message": (
                     f"Dữ liệu sự kiện tại vị trí index {idx} (Event ID #{event.id}) đã bị chỉnh sửa hoặc giả mạo. "
-                    f"Mã băm tính toán lại ({computed_hash[:12]}...) không khớp với record_hash lưu trong cơ sở dữ liệu ({event.record_hash[:12]}...)."
+                    f"Mã băm tính toán lại ({computed_hash[:12]}...) "
+                    f"không khớp với record_hash lưu trong cơ sở dữ liệu ({event.record_hash[:12]}...)."
                 ),
             }
 
@@ -186,5 +187,3 @@ def verify_batch_events_integrity(db: Session, batch_id: int) -> dict:
         "total_events": len(events),
         "message": f"Toàn bộ {len(events)} sự kiện của lô #{batch_id} đều hợp lệ và đảm bảo tính toàn vẹn dữ liệu.",
     }
-
-

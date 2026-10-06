@@ -46,7 +46,9 @@ def _create_sample_farm_and_batch(client: TestClient) -> tuple[int, int]:
 
 
 def test_bang_batch_events_co_du_cac_cot(engine) -> None:
-    """Kiểm tra bảng `batch_events` có đủ 7 cột yêu cầu: id, batch_id, event_type, event_data, created_at, prev_hash, record_hash."""
+    """Kiểm tra bảng `batch_events` có đủ 7 cột yêu cầu:
+    id, batch_id, event_type, event_data, created_at, prev_hash, record_hash.
+    """
     inspector = inspect(engine)
     columns = {col["name"] for col in inspector.get_columns("batch_events")}
     expected_columns = {

@@ -173,4 +173,3 @@ def check_batch_integrity(
         )
 
     return verify_batch_events_integrity(db, batch_id=batch_id)
-

@@ -1,12 +1,12 @@
-"""Bộ kiểm thử cho Sprint S-12: Kiểm tra toàn vẹn chuỗi sự kiện của một lô và chỉ ra chính xác chỗ đứt mạch (Cryptographic Hash Chain)."""
+"""Bộ kiểm thử cho Sprint S-12: Kiểm tra toàn vẹn chuỗi sự kiện của một lô
+và chỉ ra chính xác chỗ đứt mạch (Cryptographic Hash Chain).
+"""
 
-import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import text
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.events import verify_batch_events_integrity
-from app.models import BatchEvent
 from tests.conftest import TEST_PASSWORD, TEST_USERNAME_FARMER
 
 
@@ -77,7 +77,9 @@ def test_1_chuoi_su_kien_hop_le(client: TestClient, session_factory: sessionmake
 
 
 def test_2_event_bi_sua_du_lieu(client: TestClient, session_factory: sessionmaker[Session]) -> None:
-    """Test 2 – Event bị sửa: Thay đổi dữ liệu một event trong môi trường test, phải phát hiện đúng event bị sửa (RECORD_HASH_MISMATCH)."""
+    """Test 2 – Event bị sửa: Thay đổi dữ liệu một event trong môi trường test,
+    phải phát hiện đúng event bị sửa (RECORD_HASH_MISMATCH).
+    """
     batch_id = _create_sample_batch(client)
     headers = _get_farmer_auth_headers()
 
@@ -130,7 +132,9 @@ def test_2_event_bi_sua_du_lieu(client: TestClient, session_factory: sessionmake
 
 
 def test_3_event_bi_xoa(client: TestClient, session_factory: sessionmaker[Session]) -> None:
-    """Test 3 – Event bị xóa: Xóa một event trong môi trường test, phải phát hiện chính xác vị trí chuỗi bị đứt thông qua prev_hash (PREV_HASH_MISMATCH)."""
+    """Test 3 – Event bị xóa: Xóa một event trong môi trường test,
+    phải phát hiện chính xác vị trí chuỗi bị đứt thông qua prev_hash (PREV_HASH_MISMATCH).
+    """
     batch_id = _create_sample_batch(client)
     headers = _get_farmer_auth_headers()
 
@@ -192,7 +196,7 @@ def test_prev_hash_bi_thay_doi(client: TestClient, session_factory: sessionmaker
     batch_id = _create_sample_batch(client)
     headers = _get_farmer_auth_headers()
 
-    res1 = client.post(
+    client.post(
         f"/batches/{batch_id}/events",
         json={"event_type": "STEP1", "event_data": "Bước 1"},
         headers=headers,
@@ -205,11 +209,12 @@ def test_prev_hash_bi_thay_doi(client: TestClient, session_factory: sessionmaker
     e2_id = res2.json()["id"]
 
     # Giả lập sửa prev_hash của STEP2
+    fake_hash = "f" * 64
     with session_factory() as session:
         session.execute(text("DROP TRIGGER IF EXISTS prevent_batch_events_update"))
         session.execute(
-            text("UPDATE batch_events SET prev_hash = 'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff' WHERE id = :id"),
-            {"id": e2_id},
+            text("UPDATE batch_events SET prev_hash = :fake_hash WHERE id = :id"),
+            {"fake_hash": fake_hash, "id": e2_id},
         )
         session.commit()
         session.execute(

@@ -361,7 +361,6 @@ def _prevent_batch_event_delete(mapper, connection, target):
     raise PermissionError("S-11: Batch events are append-only and cannot be deleted.")
 
 
-
 # ------------------------------------- Lịch sử thao tác (audit log) ---
 ACTION_CREATE: str = "create"
 ACTION_UPDATE: str = "update"
