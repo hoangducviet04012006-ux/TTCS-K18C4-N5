@@ -193,6 +193,7 @@ class Batch(Base):
     events: Mapped[list["BatchEvent"]] = relationship(
         back_populates="batch",
         cascade="all, delete-orphan",
+        passive_deletes=True,
         order_by="BatchEvent.created_at.desc()",
     )
 
@@ -307,7 +308,7 @@ class BatchEvent(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     batch_id: Mapped[int] = mapped_column(
-        ForeignKey("batches.id"),
+        ForeignKey("batches.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
@@ -326,11 +327,14 @@ class BatchEvent(Base):
         nullable=True,
     )
     notes: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    event_data: Mapped[str | None] = mapped_column(String(2000), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
         default=_naive_utcnow,
     )
+    prev_hash: Mapped[str] = mapped_column(String(64), nullable=False, default="0" * 64, server_default="0" * 64)
+    record_hash: Mapped[str] = mapped_column(String(64), nullable=False, default="", server_default="")
 
     batch: Mapped["Batch"] = relationship(back_populates="events")
     user: Mapped["User | None"] = relationship()
@@ -342,6 +346,20 @@ class BatchEvent(Base):
             f"<BatchEvent id={self.id} batch_id={self.batch_id} "
             f"event_type={self.event_type!r}>"
         )
+
+
+from sqlalchemy import event  # noqa: E402
+
+
+@event.listens_for(BatchEvent, "before_update")
+def _prevent_batch_event_update(mapper, connection, target):
+    raise PermissionError("S-11: Batch events are append-only and cannot be updated.")
+
+
+@event.listens_for(BatchEvent, "before_delete")
+def _prevent_batch_event_delete(mapper, connection, target):
+    raise PermissionError("S-11: Batch events are append-only and cannot be deleted.")
+
 
 
 # ------------------------------------- Lịch sử thao tác (audit log) ---

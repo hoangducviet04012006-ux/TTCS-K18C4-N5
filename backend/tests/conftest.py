@@ -39,6 +39,8 @@ def engine() -> Generator[Engine, None, None]:
         poolclass=StaticPool,
     )
     Base.metadata.create_all(bind=test_engine)
+    from app.database import create_event_immutability_triggers
+    create_event_immutability_triggers(test_engine)
     try:
         yield test_engine
     finally:

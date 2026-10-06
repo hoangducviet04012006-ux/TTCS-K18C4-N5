@@ -114,12 +114,25 @@ def health_check(db: Session = Depends(get_db)) -> HealthResponse:
     return HealthResponse(status="ok", database=db_status)
 
 
+from app.routers import (
+    audit,
+    auth,
+    batches,
+    events,
+    farms,
+    handovers,
+    health,
+    users,
+)
+
 # --------------------------------------------------------- Đăng ký các router ---
 # Mỗi module nghiệp vụ là 1 router; thêm module mới = thêm 1 dòng ở đây.
 app.include_router(health.router)
 app.include_router(auth.router)
 app.include_router(farms.router)
 app.include_router(batches.router)
+app.include_router(events.router)
 app.include_router(users.router)
 app.include_router(audit.router)
 app.include_router(handovers.router)
+

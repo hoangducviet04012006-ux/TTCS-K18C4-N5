@@ -29,6 +29,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.audit import record_action
+from app.events import record_batch_event
 from app.database import get_db
 from app.models import (
     ACTION_CREATE,
@@ -115,6 +116,14 @@ def create_batch(
         db.flush()
         # Sprint 7: ghi lịch sử "ai đã tạo lô nông sản nào" (chưa commit vội).
         record_action(db, current_user, ACTION_CREATE, ENTITY_BATCH, batch.id)
+        # S-11 & S-12: Tự động ghi event khởi tạo lô vào batch_events (append-only hash chain)
+        record_batch_event(
+            db=db,
+            batch_id=batch.id,
+            event_type="BATCH_CREATED",
+            event_data=f"Khởi tạo lô nông sản: {batch.product_name}",
+            user_id=current_user.id,
+        )
         db.commit()
     except SQLAlchemyError as exc:
         db.rollback()

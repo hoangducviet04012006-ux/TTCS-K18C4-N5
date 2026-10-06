@@ -199,6 +199,30 @@ def migrate_handover_and_batch_columns() -> None:
                 pass
 
 
+def create_event_immutability_triggers(target_engine=None) -> None:
+    """Tạo DB Triggers để ngăn UPDATE và DELETE trên bảng batch_events (S-11) ở tầng database."""
+    eng = target_engine if target_engine is not None else engine
+    triggers_sql = [
+        """
+        CREATE TRIGGER IF NOT EXISTS prevent_batch_events_update
+        BEFORE UPDATE ON batch_events
+        BEGIN
+            SELECT RAISE(ABORT, 'S-11: Updates to batch_events table are strictly prohibited (append-only log).');
+        END;
+        """,
+        """
+        CREATE TRIGGER IF NOT EXISTS prevent_batch_events_delete
+        BEFORE DELETE ON batch_events
+        BEGIN
+            SELECT RAISE(ABORT, 'S-11: Deletions from batch_events table are strictly prohibited (append-only log).');
+        END;
+        """,
+    ]
+    with eng.begin() as connection:
+        for sql in triggers_sql:
+            connection.exec_driver_sql(sql)
+
+
 def init_db() -> None:
     """Tạo bảng và chạy migration khi ứng dụng khởi động."""
     from app import models  # noqa: F401
@@ -206,4 +230,6 @@ def init_db() -> None:
     Base.metadata.create_all(bind=engine)
     migrate_user_security_columns()
     migrate_handover_and_batch_columns()
+    create_event_immutability_triggers()
     seed_default_users()
+
