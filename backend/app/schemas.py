@@ -260,6 +260,8 @@ class FarmResponse(BaseModel):
     area: float = Field(..., description="Diện tích canh tác (ha).")
     coordinates: str | None = Field(default=None, description="Tọa độ GPS của thửa đất.")
     owner: str = Field(..., description="Chủ sở hữu vùng trồng.")
+
+
 class ProductCreate(BaseModel):
     name: str = Field(
         ...,
@@ -317,6 +319,8 @@ class UnitResponse(UnitCreate):
     organization_id: int
 
 # ----------------------------------------------------------------- Batch ---
+
+
 _BATCH_EXAMPLE: dict = {
     "id": 1,
     "farm_id": 1,

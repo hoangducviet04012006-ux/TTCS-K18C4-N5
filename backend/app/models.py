@@ -97,6 +97,8 @@ class Organization(Base):
 
     def __repr__(self) -> str:  # pragma: no cover
         return f"<Organization id={self.id} code={self.code!r} name={self.name!r}>"
+
+
 class User(Base):
     """Tài khoản đăng nhập của hệ thống - bảng ``users``.
 
@@ -169,6 +171,8 @@ class Farm(Base):
 
     def __repr__(self) -> str:  # pragma: no cover
         return f"<Farm id={self.id} name={self.name!r} area={self.area}ha>"
+
+
 class Product(Base):
     """Danh mục sản phẩm nông sản - bảng ``products``."""
 
@@ -259,6 +263,7 @@ class Unit(Base):
 
     def __repr__(self) -> str:  # pragma: no cover
         return f"<Unit id={self.id} name={self.name!r} symbol={self.symbol!r}>"
+
 
 class Batch(Base):
     """Lô nông sản thu hoạch từ một vùng trồng - bảng ``batches``."""
