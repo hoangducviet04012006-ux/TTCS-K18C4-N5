@@ -17,6 +17,7 @@ Quan hệ giữa các bảng:
 from datetime import date, datetime, timezone
 
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     Date,
     DateTime,
@@ -78,15 +79,24 @@ class Organization(Base):
     users: Mapped[list["User"]] = relationship(
         back_populates="organization",
     )
+
     farms: Mapped[list["Farm"]] = relationship(
+        back_populates="organization",
+        cascade="all, delete-orphan",
+    )
+
+    products: Mapped[list["Product"]] = relationship(
+        back_populates="organization",
+        cascade="all, delete-orphan",
+    )
+
+    units: Mapped[list["Unit"]] = relationship(
         back_populates="organization",
         cascade="all, delete-orphan",
     )
 
     def __repr__(self) -> str:  # pragma: no cover
         return f"<Organization id={self.id} code={self.code!r} name={self.name!r}>"
-
-
 class User(Base):
     """Tài khoản đăng nhập của hệ thống - bảng ``users``.
 
@@ -159,7 +169,96 @@ class Farm(Base):
 
     def __repr__(self) -> str:  # pragma: no cover
         return f"<Farm id={self.id} name={self.name!r} area={self.area}ha>"
+class Product(Base):
+    """Danh mục sản phẩm nông sản - bảng ``products``."""
 
+    __tablename__ = "products"
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        autoincrement=True,
+    )
+
+    organization_id: Mapped[int] = mapped_column(
+        ForeignKey("organizations.id"),
+        nullable=False,
+        index=True,
+    )
+
+    name: Mapped[str] = mapped_column(
+        String(255),
+        nullable=False,
+    )
+
+    code: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+    )
+
+    active: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=True,
+        server_default="1",
+    )
+
+    organization: Mapped["Organization"] = relationship(
+        back_populates="products",
+    )
+
+    batches: Mapped[list["Batch"]] = relationship(
+        back_populates="product",
+    )
+
+    def __repr__(self) -> str:  # pragma: no cover
+        return f"<Product id={self.id} name={self.name!r} code={self.code!r}>"
+
+
+class Unit(Base):
+    """Danh mục đơn vị tính - bảng ``units``."""
+
+    __tablename__ = "units"
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        autoincrement=True,
+    )
+
+    organization_id: Mapped[int] = mapped_column(
+        ForeignKey("organizations.id"),
+        nullable=False,
+        index=True,
+    )
+
+    name: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+    )
+
+    symbol: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+    )
+
+    active: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=True,
+        server_default="1",
+    )
+
+    organization: Mapped["Organization"] = relationship(
+        back_populates="units",
+    )
+
+    batches: Mapped[list["Batch"]] = relationship(
+        back_populates="unit_ref",
+    )
+
+    def __repr__(self) -> str:  # pragma: no cover
+        return f"<Unit id={self.id} name={self.name!r} symbol={self.symbol!r}>"
 
 class Batch(Base):
     """Lô nông sản thu hoạch từ một vùng trồng - bảng ``batches``."""
@@ -173,6 +272,26 @@ class Batch(Base):
         index=True,
     )
     product_name: Mapped[str] = mapped_column(String(255), nullable=False)
+
+    batch_code: Mapped[str | None] = mapped_column(
+        String(8),
+        nullable=True,
+        unique=True,
+        index=True,
+    )
+
+    product_id: Mapped[int | None] = mapped_column(
+        ForeignKey("products.id"),
+        nullable=True,
+        index=True,
+    )
+
+    unit_id: Mapped[int | None] = mapped_column(
+        ForeignKey("units.id"),
+        nullable=True,
+        index=True,
+    )
+
     quantity: Mapped[float] = mapped_column(Float, nullable=False)
     harvest_date: Mapped[date] = mapped_column(Date, nullable=False)
 
@@ -194,7 +313,17 @@ class Batch(Base):
     unit: Mapped[str | None] = mapped_column(String(20), nullable=True, default="kg")
 
     farm: Mapped["Farm"] = relationship(back_populates="batches")
-    current_org: Mapped["Organization | None"] = relationship(foreign_keys=[current_org_id])
+    current_org: Mapped["Organization | None"] = relationship(
+        foreign_keys=[current_org_id]
+    )
+
+    product: Mapped["Product | None"] = relationship(
+        back_populates="batches",
+    )
+
+    unit_ref: Mapped["Unit | None"] = relationship(
+        back_populates="batches",
+    )
     parent: Mapped["Batch | None"] = relationship(
         "Batch",
         remote_side=[id],
@@ -405,7 +534,15 @@ ACTIONS: tuple[str, ...] = (ACTION_CREATE, ACTION_UPDATE, ACTION_DELETE)
 
 ENTITY_FARM: str = "farm"
 ENTITY_BATCH: str = "batch"
-ENTITIES: tuple[str, ...] = (ENTITY_FARM, ENTITY_BATCH)
+ENTITY_PRODUCT: str = "product"
+ENTITY_UNIT: str = "unit"
+
+ENTITIES: tuple[str, ...] = (
+    ENTITY_FARM,
+    ENTITY_BATCH,
+    ENTITY_PRODUCT,
+    ENTITY_UNIT,
+)
 
 
 class AuditLog(Base):
@@ -454,6 +591,8 @@ __all__ = [
     "ENTITIES",
     "ENTITY_BATCH",
     "ENTITY_FARM",
+    "ENTITY_PRODUCT",
+    "ENTITY_UNIT",
     "EVENT_HANDOVER_ACCEPTED",
     "EVENT_HANDOVER_PENDING",
     "EVENT_HANDOVER_REJECTED",

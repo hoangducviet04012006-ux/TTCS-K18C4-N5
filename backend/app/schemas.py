@@ -260,7 +260,61 @@ class FarmResponse(BaseModel):
     area: float = Field(..., description="Diện tích canh tác (ha).")
     coordinates: str | None = Field(default=None, description="Tọa độ GPS của thửa đất.")
     owner: str = Field(..., description="Chủ sở hữu vùng trồng.")
+class ProductCreate(BaseModel):
+    name: str = Field(
+        ...,
+        min_length=1,
+        max_length=255,
+        description="Tên sản phẩm.",
+    )
+    code: str = Field(
+        ...,
+        min_length=1,
+        max_length=50,
+        description="Mã sản phẩm.",
+    )
+    active: bool = Field(
+        default=True,
+        description="Sản phẩm còn được phép chọn hay không.",
+    )
 
+
+class ProductUpdate(ProductCreate):
+    pass
+
+
+class ProductResponse(ProductCreate):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    organization_id: int
+
+
+class UnitCreate(BaseModel):
+    name: str = Field(
+        ...,
+        min_length=1,
+        max_length=50,
+        description="Tên đơn vị tính.",
+    )
+    symbol: str = Field(
+        ...,
+        min_length=1,
+        max_length=20,
+        description="Ký hiệu đơn vị tính, ví dụ kg, tấn.",
+    )
+    active: bool = Field(default=True)
+
+
+class UnitUpdate(UnitCreate):
+    pass
+
+
+class UnitResponse(UnitCreate):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    organization_id: int
 
 # ----------------------------------------------------------------- Batch ---
 _BATCH_EXAMPLE: dict = {
