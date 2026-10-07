@@ -1,48 +1,48 @@
-/* =====================================================================
-   Frontend demo - Truy xuất nguồn gốc và giám sát chuỗi lạnh nông sản
-   JavaScript thuần (không framework, không thư viện ngoài).
-   Cấu trúc: cấu hình -> tiện ích -> gọi API -> trạng thái -> render -> sự kiện.
+﻿/* =====================================================================
+   Frontend demo - Truy xuáº¥t nguá»“n gá»‘c vÃ  giÃ¡m sÃ¡t chuá»—i láº¡nh nÃ´ng sáº£n
+   JavaScript thuáº§n (khÃ´ng framework, khÃ´ng thÆ° viá»‡n ngoÃ i).
+   Cáº¥u trÃºc: cáº¥u hÃ¬nh -> tiá»‡n Ã­ch -> gá»i API -> tráº¡ng thÃ¡i -> render -> sá»± kiá»‡n.
    ===================================================================== */
 
 "use strict";
 
-/* ---------------------------------------------------------- 1. Cấu hình --- */
-// Địa chỉ backend FastAPI (đổi ở đây nếu chạy cổng khác).
+/* ---------------------------------------------------------- 1. Cáº¥u hÃ¬nh --- */
+// Äá»‹a chá»‰ backend FastAPI (Ä‘á»•i á»Ÿ Ä‘Ã¢y náº¿u cháº¡y cá»•ng khÃ¡c).
 const API_BASE_URL = "http://127.0.0.1:8000";
 
-// Khoá lưu phiên đăng nhập trong sessionStorage (tự mất khi đóng tab).
+// KhoÃ¡ lÆ°u phiÃªn Ä‘Äƒng nháº­p trong sessionStorage (tá»± máº¥t khi Ä‘Ã³ng tab).
 const SESSION_STORAGE_KEY = "ttcs.session";
 
-// Tên vai trò admin do backend quy định (dùng để phân quyền ở giao diện).
+// TÃªn vai trÃ² admin do backend quy Ä‘á»‹nh (dÃ¹ng Ä‘á»ƒ phÃ¢n quyá»n á»Ÿ giao diá»‡n).
 const ROLE_ADMIN = "admin";
 
-/* ---------------------------------------------------------- 2. Tiện ích --- */
-/** Lấy element theo id cho ngắn gọn. */
+/* ---------------------------------------------------------- 2. Tiá»‡n Ã­ch --- */
+/** Láº¥y element theo id cho ngáº¯n gá»n. */
 const $ = (id) => document.getElementById(id);
 
 /**
- * Bật/tắt hiển thị của phần tử theo id (dùng trong `applySessionToUi`).
+ * Báº­t/táº¯t hiá»ƒn thá»‹ cá»§a pháº§n tá»­ theo id (dÃ¹ng trong `applySessionToUi`).
  *
- * Vì sao không viết thẳng `$(id).hidden = ...`: nếu index.html thiếu id đó -
- * thường do trình duyệt còn cache bản `app.js` cũ hoặc bản HTML cũ, tức HTML
- * và app.js lệch phiên bản - thì `$(id)` là null và câu lệnh sẽ ném lỗi làm
- * `applySessionToUi` dừng giữa đường: các mục phía sau (trong đó có
- * "3. Lịch sử thao tác") không bao giờ được bật mà cũng không thấy báo lỗi.
- * Hàm này chỉ cảnh báo trong Console rồi bỏ qua để giao diện còn lại vẫn chạy.
+ * VÃ¬ sao khÃ´ng viáº¿t tháº³ng `$(id).hidden = ...`: náº¿u index.html thiáº¿u id Ä‘Ã³ -
+ * thÆ°á»ng do trÃ¬nh duyá»‡t cÃ²n cache báº£n `app.js` cÅ© hoáº·c báº£n HTML cÅ©, tá»©c HTML
+ * vÃ  app.js lá»‡ch phiÃªn báº£n - thÃ¬ `$(id)` lÃ  null vÃ  cÃ¢u lá»‡nh sáº½ nÃ©m lá»—i lÃ m
+ * `applySessionToUi` dá»«ng giá»¯a Ä‘Æ°á»ng: cÃ¡c má»¥c phÃ­a sau (trong Ä‘Ã³ cÃ³
+ * "3. Lá»‹ch sá»­ thao tÃ¡c") khÃ´ng bao giá» Ä‘Æ°á»£c báº­t mÃ  cÅ©ng khÃ´ng tháº¥y bÃ¡o lá»—i.
+ * HÃ m nÃ y chá»‰ cáº£nh bÃ¡o trong Console rá»“i bá» qua Ä‘á»ƒ giao diá»‡n cÃ²n láº¡i váº«n cháº¡y.
  */
 function setHidden(id, hidden) {
   const element = $(id);
   if (element === null) {
     console.warn(
-      `[frontend] Không tìm thấy #${id} trong index.html — HTML và app.js có thể ` +
-      "lệch phiên bản (nhấn Ctrl+F5 để tải lại bản mới)."
+      `[frontend] KhÃ´ng tÃ¬m tháº¥y #${id} trong index.html â€” HTML vÃ  app.js cÃ³ thá»ƒ ` +
+      "lá»‡ch phiÃªn báº£n (nháº¥n Ctrl+F5 Ä‘á»ƒ táº£i láº¡i báº£n má»›i)."
     );
     return;
   }
   element.hidden = hidden;
 }
 
-/** Chống XSS: escape dữ liệu do người dùng nhập trước khi chèn vào HTML. */
+/** Chá»‘ng XSS: escape dá»¯ liá»‡u do ngÆ°á»i dÃ¹ng nháº­p trÆ°á»›c khi chÃ¨n vÃ o HTML. */
 function escapeHtml(value) {
   return String(value ?? "")
     .replaceAll("&", "&amp;")
@@ -52,29 +52,29 @@ function escapeHtml(value) {
     .replaceAll("'", "&#39;");
 }
 
-/** 120.5 -> "120,5" (định dạng số kiểu Việt Nam). */
+/** 120.5 -> "120,5" (Ä‘á»‹nh dáº¡ng sá»‘ kiá»ƒu Viá»‡t Nam). */
 function formatNumber(value) {
   const number = Number(value);
-  return Number.isFinite(number) ? new Intl.NumberFormat("vi-VN").format(number) : "—";
+  return Number.isFinite(number) ? new Intl.NumberFormat("vi-VN").format(number) : "â€”";
 }
 
-/** "2026-01-15" (từ input type=date / API) -> "15/01/2026". */
+/** "2026-01-15" (tá»« input type=date / API) -> "15/01/2026". */
 function formatDate(value) {
-  if (!value) return "—";
+  if (!value) return "â€”";
   const parts = String(value).split("-");
   return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : String(value);
 }
 
 /**
- * "2026-09-30T14:20:05.123456" (backend lưu UTC, **không** kèm múi giờ) ->
- * "30/09/2026 21:20:05" (giờ của máy người dùng, Sprint 7).
+ * "2026-09-30T14:20:05.123456" (backend lÆ°u UTC, **khÃ´ng** kÃ¨m mÃºi giá») ->
+ * "30/09/2026 21:20:05" (giá» cá»§a mÃ¡y ngÆ°á»i dÃ¹ng, Sprint 7).
  *
- * Cách làm: đọc các thành phần ngày/giờ của chuỗi bằng regex (tránh việc mỗi
- * trình duyệt parse phần giây lẻ `.123456` một kiểu), dựng `Date` theo **UTC**
- * rồi lấy các thành phần theo giờ địa phương. Chuỗi lạ -> trả về nguyên bản.
+ * CÃ¡ch lÃ m: Ä‘á»c cÃ¡c thÃ nh pháº§n ngÃ y/giá» cá»§a chuá»—i báº±ng regex (trÃ¡nh viá»‡c má»—i
+ * trÃ¬nh duyá»‡t parse pháº§n giÃ¢y láº» `.123456` má»™t kiá»ƒu), dá»±ng `Date` theo **UTC**
+ * rá»“i láº¥y cÃ¡c thÃ nh pháº§n theo giá» Ä‘á»‹a phÆ°Æ¡ng. Chuá»—i láº¡ -> tráº£ vá» nguyÃªn báº£n.
  */
 function formatDateTime(value) {
-  if (!value) return "—";
+  if (!value) return "â€”";
 
   const text = String(value);
   const match = text.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?/);
@@ -100,7 +100,7 @@ function formatDateTime(value) {
 
 const TOAST_DURATION_MS = 4500;
 
-/** Hiển thị thông báo ở góc phải trên: type = "success" | "error" | "info". */
+/** Hiá»ƒn thá»‹ thÃ´ng bÃ¡o á»Ÿ gÃ³c pháº£i trÃªn: type = "success" | "error" | "info". */
 function toast(message, type = "info") {
   const container = $("toast-container");
   const element = document.createElement("div");
@@ -111,18 +111,18 @@ function toast(message, type = "info") {
   window.setTimeout(() => element.remove(), TOAST_DURATION_MS);
 }
 
-/** Bật/tắt trạng thái "đang gửi" của nút submit (tránh bấm 2 lần). */
+/** Báº­t/táº¯t tráº¡ng thÃ¡i "Ä‘ang gá»­i" cá»§a nÃºt submit (trÃ¡nh báº¥m 2 láº§n). */
 function setButtonLoading(button, isLoading, loadingText, idleText) {
   button.disabled = isLoading;
   button.textContent = isLoading ? loadingText : idleText;
 }
 
-/* -------------------------------------------------------- 3. Gọi API --- */
+/* -------------------------------------------------------- 3. Gá»i API --- */
 /**
- * Gọi API backend và trả về dữ liệu JSON.
- * Mặc định gửi kèm tài khoản đang đăng nhập (xác thực HTTP Basic);
- * truyền `auth: false` cho request không cần xác thực (VD: đăng nhập).
- * Ném Error với thông điệp tiếng Việt dễ đọc nếu request thất bại.
+ * Gá»i API backend vÃ  tráº£ vá» dá»¯ liá»‡u JSON.
+ * Máº·c Ä‘á»‹nh gá»­i kÃ¨m tÃ i khoáº£n Ä‘ang Ä‘Äƒng nháº­p (xÃ¡c thá»±c HTTP Basic);
+ * truyá»n `auth: false` cho request khÃ´ng cáº§n xÃ¡c thá»±c (VD: Ä‘Äƒng nháº­p).
+ * NÃ©m Error vá»›i thÃ´ng Ä‘iá»‡p tiáº¿ng Viá»‡t dá»… Ä‘á»c náº¿u request tháº¥t báº¡i.
  */
 async function apiRequest(path, { method = "GET", body, auth = true, headers: extraHeaders = {} } = {}) {
   const headers = {};
@@ -142,9 +142,9 @@ async function apiRequest(path, { method = "GET", body, auth = true, headers: ex
       body: body ? JSON.stringify(body) : undefined,
     });
   } catch (error) {
-    // `status = 0`: không có phản hồi HTTP (backend chưa chạy hoặc sai cổng).
+    // `status = 0`: khÃ´ng cÃ³ pháº£n há»“i HTTP (backend chÆ°a cháº¡y hoáº·c sai cá»•ng).
     const offline = new Error(
-      `Không kết nối được backend (${API_BASE_URL}). Hãy chắc chắn uvicorn đang chạy.`
+      `KhÃ´ng káº¿t ná»‘i Ä‘Æ°á»£c backend (${API_BASE_URL}). HÃ£y cháº¯c cháº¯n uvicorn Ä‘ang cháº¡y.`
     );
     offline.status = 0;
     throw offline;
@@ -152,9 +152,9 @@ async function apiRequest(path, { method = "GET", body, auth = true, headers: ex
 
   const data = await readJson(response);
   if (!response.ok) {
-    // Sprint 7: gắn mã HTTP vào Error để nơi gọi xử lý riêng 401/403 (xem
-    // `loadAuditLogs`). Các đoạn `catch` cũ chỉ đọc `error.message` nên không
-    // bị ảnh hưởng.
+    // Sprint 7: gáº¯n mÃ£ HTTP vÃ o Error Ä‘á»ƒ nÆ¡i gá»i xá»­ lÃ½ riÃªng 401/403 (xem
+    // `loadAuditLogs`). CÃ¡c Ä‘oáº¡n `catch` cÅ© chá»‰ Ä‘á»c `error.message` nÃªn khÃ´ng
+    // bá»‹ áº£nh hÆ°á»Ÿng.
     const error = new Error(describeError(data, response.status));
     error.status = response.status;
     throw error;
@@ -162,7 +162,7 @@ async function apiRequest(path, { method = "GET", body, auth = true, headers: ex
   return data;
 }
 
-/** Đọc JSON an toàn (response lỗi có thể không phải JSON). */
+/** Äá»c JSON an toÃ n (response lá»—i cÃ³ thá»ƒ khÃ´ng pháº£i JSON). */
 async function readJson(response) {
   try {
     return await response.json();
@@ -171,54 +171,60 @@ async function readJson(response) {
   }
 }
 
-/** Chuyển lỗi của FastAPI (`detail`) thành câu thông báo dễ hiểu. */
+/** Chuyá»ƒn lá»—i cá»§a FastAPI (`detail`) thÃ nh cÃ¢u thÃ´ng bÃ¡o dá»… hiá»ƒu. */
 function describeError(data, status) {
   const detail = data ? data.detail : null;
 
-  // Lỗi nghiệp vụ: 404 farm không tồn tại, 500 lỗi database...
+  // Lá»—i nghiá»‡p vá»¥: 404 farm khÃ´ng tá»“n táº¡i, 500 lá»—i database...
   if (typeof detail === "string") {
     return detail;
   }
 
-  // Lỗi validate của Pydantic (422): detail là mảng các lỗi.
+  // Lá»—i validate cá»§a Pydantic (422): detail lÃ  máº£ng cÃ¡c lá»—i.
   if (Array.isArray(detail)) {
     return detail
       .map((item) => `${(item.loc || []).join(".")}: ${item.msg}`)
       .join(" | ");
   }
 
-  return `Yêu cầu thất bại (HTTP ${status}).`;
+  return `YÃªu cáº§u tháº¥t báº¡i (HTTP ${status}).`;
 }
 
-/* ------------------------------------------------------- 4. Trạng thái --- */
-// Dữ liệu đang hiển thị trên giao diện.
+/* ------------------------------------------------------- 4. Tráº¡ng thÃ¡i --- */
+// Dá»¯ liá»‡u Ä‘ang hiá»ƒn thá»‹ trÃªn giao diá»‡n.
 let farms = [];
 let batches = [];
 let users = [];
-// Sprint 7: lịch sử thao tác (chỉ admin tải được - xem `loadAuditLogs`).
+// Sprint 7: lá»‹ch sá»­ thao tÃ¡c (chá»‰ admin táº£i Ä‘Æ°á»£c - xem `loadAuditLogs`).
 let auditLogs = [];
-// SCRUM-27/28: Danh sách tổ chức và các bàn giao đang chờ duyệt
+// SCRUM-27/28: Danh sÃ¡ch tá»• chá»©c vÃ  cÃ¡c bÃ n giao Ä‘ang chá» duyá»‡t
 let organizations = [];
 let pendingHandovers = [];
 
-// ID bản ghi đang được SỬA trên form (null = form đang ở chế độ "thêm mới").
-// Sprint 5: bấm nút "Sửa" ở bảng -> form phía trên đổ sẵn dữ liệu và nút submit
-// gọi PUT thay vì POST.
+// [S-07] Danh mục sản phẩm và đơn vị tính
+let products = [];
+let units = [];
+let editingProductId = null;
+let editingUnitId = null;
+
+// ID báº£n ghi Ä‘ang Ä‘Æ°á»£c Sá»¬A trÃªn form (null = form Ä‘ang á»Ÿ cháº¿ Ä‘á»™ "thÃªm má»›i").
+// Sprint 5: báº¥m nÃºt "Sá»­a" á»Ÿ báº£ng -> form phÃ­a trÃªn Ä‘á»• sáºµn dá»¯ liá»‡u vÃ  nÃºt submit
+// gá»i PUT thay vÃ¬ POST.
 let editingFarmId = null;
 let editingBatchId = null;
 
-// Phiên đăng nhập hiện tại: { username, role, password } hoặc null (chưa đăng nhập).
-// Sprint 4 không dùng JWT: client giữ lại thông tin đăng nhập để gửi kèm header
-// `Authorization: Basic ...` trong mỗi request.
+// PhiÃªn Ä‘Äƒng nháº­p hiá»‡n táº¡i: { username, role, password } hoáº·c null (chÆ°a Ä‘Äƒng nháº­p).
+// Sprint 4 khÃ´ng dÃ¹ng JWT: client giá»¯ láº¡i thÃ´ng tin Ä‘Äƒng nháº­p Ä‘á»ƒ gá»­i kÃ¨m header
+// `Authorization: Basic ...` trong má»—i request.
 let session = null;
 
-// [T-59] ID của lô đang được hiển thị trong chi tiết (dùng cho nút Timeline / Ancestors).
+// [T-59] ID cá»§a lÃ´ Ä‘ang Ä‘Æ°á»£c hiá»ƒn thá»‹ trong chi tiáº¿t (dÃ¹ng cho nÃºt Timeline / Ancestors).
 let currentBatchId = null;
 
-/* --------------------------------------------------------- 5. Đăng nhập --- */
+/* --------------------------------------------------------- 5. ÄÄƒng nháº­p --- */
 /**
- * Mã hoá chuỗi "username:password" sang Base64 theo chuẩn HTTP Basic.
- * Dùng TextEncoder để hỗ trợ tiếng Việt (btoa chỉ nhận ký tự Latin-1).
+ * MÃ£ hoÃ¡ chuá»—i "username:password" sang Base64 theo chuáº©n HTTP Basic.
+ * DÃ¹ng TextEncoder Ä‘á»ƒ há»— trá»£ tiáº¿ng Viá»‡t (btoa chá»‰ nháº­n kÃ½ tá»± Latin-1).
  */
 function encodeBase64(text) {
   const bytes = new TextEncoder().encode(text);
@@ -229,7 +235,7 @@ function encodeBase64(text) {
   return btoa(binary);
 }
 
-/** Header xác thực của tài khoản đang đăng nhập (rỗng nếu chưa đăng nhập). */
+/** Header xÃ¡c thá»±c cá»§a tÃ i khoáº£n Ä‘ang Ä‘Äƒng nháº­p (rá»—ng náº¿u chÆ°a Ä‘Äƒng nháº­p). */
 function authHeader() {
   if (session === null) {
     return {};
@@ -238,16 +244,16 @@ function authHeader() {
   return { Authorization: `Basic ${token}` };
 }
 
-/** POST /auth/login - kiểm tra tài khoản; ném Error nếu sai (backend trả 401). */
+/** POST /auth/login - kiá»ƒm tra tÃ i khoáº£n; nÃ©m Error náº¿u sai (backend tráº£ 401). */
 function requestLogin(username, password) {
   return apiRequest("/auth/login", {
     method: "POST",
     body: { username, password },
-    auth: false, // request đăng nhập không gửi kèm header của phiên cũ
+    auth: false, // request Ä‘Äƒng nháº­p khÃ´ng gá»­i kÃ¨m header cá»§a phiÃªn cÅ©
   });
 }
 
-/** Lưu phiên đăng nhập vào bộ nhớ + sessionStorage (giữ được khi F5 trong tab). */
+/** LÆ°u phiÃªn Ä‘Äƒng nháº­p vÃ o bá»™ nhá»› + sessionStorage (giá»¯ Ä‘Æ°á»£c khi F5 trong tab). */
 function startSession({ username, role, password, organization_id, organization_name }) {
   session = { username, role, password, organization_id, organization_name };
   window.sessionStorage.setItem(
@@ -257,7 +263,7 @@ function startSession({ username, role, password, organization_id, organization_
   applySessionToUi();
 }
 
-/** Đọc phiên đăng nhập đã lưu trong tab; trả null nếu chưa có hoặc dữ liệu hỏng. */
+/** Äá»c phiÃªn Ä‘Äƒng nháº­p Ä‘Ã£ lÆ°u trong tab; tráº£ null náº¿u chÆ°a cÃ³ hoáº·c dá»¯ liá»‡u há»ng. */
 function restoreSession() {
   try {
     const raw = window.sessionStorage.getItem(SESSION_STORAGE_KEY);
@@ -266,23 +272,23 @@ function restoreSession() {
       return saved;
     }
   } catch (error) {
-    // Dữ liệu lưu không hợp lệ -> coi như chưa đăng nhập.
+    // Dá»¯ liá»‡u lÆ°u khÃ´ng há»£p lá»‡ -> coi nhÆ° chÆ°a Ä‘Äƒng nháº­p.
   }
   return null;
 }
 
-/** Xoá phiên đăng nhập khỏi bộ nhớ và sessionStorage. */
+/** XoÃ¡ phiÃªn Ä‘Äƒng nháº­p khá»i bá»™ nhá»› vÃ  sessionStorage. */
 function clearSession() {
   session = null;
   window.sessionStorage.removeItem(SESSION_STORAGE_KEY);
 }
 
 /**
- * Cập nhật giao diện theo trạng thái đăng nhập, vai trò (role) và tổ chức:
- * - chưa đăng nhập: chỉ hiện màn hình login;
- * - farmer: hiện chức năng quản lý nông sản (thửa đất, lô nông sản) của tổ chức mình;
- * - admin: hiện toàn bộ, thêm mục quản trị tài khoản;
- * - hiển thị logo/tên tổ chức của user đang hoạt động.
+ * Cáº­p nháº­t giao diá»‡n theo tráº¡ng thÃ¡i Ä‘Äƒng nháº­p, vai trÃ² (role) vÃ  tá»• chá»©c:
+ * - chÆ°a Ä‘Äƒng nháº­p: chá»‰ hiá»‡n mÃ n hÃ¬nh login;
+ * - farmer: hiá»‡n chá»©c nÄƒng quáº£n lÃ½ nÃ´ng sáº£n (thá»­a Ä‘áº¥t, lÃ´ nÃ´ng sáº£n) cá»§a tá»• chá»©c mÃ¬nh;
+ * - admin: hiá»‡n toÃ n bá»™, thÃªm má»¥c quáº£n trá»‹ tÃ i khoáº£n;
+ * - hiá»ƒn thá»‹ logo/tÃªn tá»• chá»©c cá»§a user Ä‘ang hoáº¡t Ä‘á»™ng.
  */
 function applySessionToUi() {
   const isLoggedIn = session !== null;
@@ -297,19 +303,19 @@ function applySessionToUi() {
 
   const orgBadge = $("org-badge");
   if (orgBadge !== null && isLoggedIn && session?.organization_name) {
-    orgBadge.textContent = `🏢 ${session.organization_name}`;
+    orgBadge.textContent = `ðŸ¢ ${session.organization_name}`;
   }
 
   const badge = $("user-badge");
   if (badge !== null && isLoggedIn) {
-    const roleText = adminUser ? "Quản trị viên" : "Chủ nông hộ / Nông dân";
-    badge.textContent = `👤 ${session.username} (${roleText})`;
+    const roleText = adminUser ? "Quáº£n trá»‹ viÃªn" : "Chá»§ nÃ´ng há»™ / NÃ´ng dÃ¢n";
+    badge.textContent = `ðŸ‘¤ ${session.username} (${roleText})`;
     badge.className = adminUser ? "badge badge--ok" : "badge badge--muted";
   }
 
   const orgContext = $("farm-org-context");
   if (orgContext !== null && isLoggedIn) {
-    orgContext.textContent = `Các thửa đất thuộc: ${session.organization_name || "Tổ chức của bạn"}`;
+    orgContext.textContent = `CÃ¡c thá»­a Ä‘áº¥t thuá»™c: ${session.organization_name || "Tá»• chá»©c cá»§a báº¡n"}`;
   }
 
   setHidden("users-card", !adminUser);
@@ -317,21 +323,21 @@ function applySessionToUi() {
   setHidden("stat-audit-card", !adminUser);
 }
 
-/** Phiên hiện tại có phải tài khoản **admin** không (dùng cho chức năng chỉ admin). */
+/** PhiÃªn hiá»‡n táº¡i cÃ³ pháº£i tÃ i khoáº£n **admin** khÃ´ng (dÃ¹ng cho chá»©c nÄƒng chá»‰ admin). */
 function isAdmin() {
   return session !== null && session.role === ROLE_ADMIN;
 }
 
 /**
- * Quyền xoá dữ liệu ở giao diện: **chỉ admin** (Sprint 5).
- * Farmer dùng giao diện sẽ không thấy nút Xoá; nếu cố gọi API xoá thì backend
- * trả `403 Forbidden` (`require_admin`) - đây chỉ là lớp bảo vệ ở UI.
+ * Quyá»n xoÃ¡ dá»¯ liá»‡u á»Ÿ giao diá»‡n: **chá»‰ admin** (Sprint 5).
+ * Farmer dÃ¹ng giao diá»‡n sáº½ khÃ´ng tháº¥y nÃºt XoÃ¡; náº¿u cá»‘ gá»i API xoÃ¡ thÃ¬ backend
+ * tráº£ `403 Forbidden` (`require_admin`) - Ä‘Ã¢y chá»‰ lÃ  lá»›p báº£o vá»‡ á»Ÿ UI.
  */
 function canDelete() {
   return isAdmin();
 }
 
-/** Xử lý submit form đăng nhập -> POST /auth/login. */
+/** Xá»­ lÃ½ submit form Ä‘Äƒng nháº­p -> POST /auth/login. */
 async function handleLoginSubmit(event) {
   event.preventDefault();
 
@@ -341,10 +347,10 @@ async function handleLoginSubmit(event) {
   }
 
   const username = $("login-username").value.trim();
-  const password = $("login-password").value; // không trim mật khẩu
+  const password = $("login-password").value; // khÃ´ng trim máº­t kháº©u
 
   const button = $("login-submit");
-  setButtonLoading(button, true, "Đang kiểm tra…", "Đăng nhập");
+  setButtonLoading(button, true, "Äang kiá»ƒm traâ€¦", "ÄÄƒng nháº­p");
 
   try {
     const data = await requestLogin(username, password);
@@ -356,22 +362,22 @@ async function handleLoginSubmit(event) {
       organization_name: data.organization_name,
     });
     form.reset();
-    const orgGreeting = data.organization_name ? ` · ${data.organization_name}` : "";
-    toast(`Đăng nhập thành công! Xin chào ${data.username}${orgGreeting}.`, "success");
+    const orgGreeting = data.organization_name ? ` Â· ${data.organization_name}` : "";
+    toast(`ÄÄƒng nháº­p thÃ nh cÃ´ng! Xin chÃ o ${data.username}${orgGreeting}.`, "success");
     await reloadAll({ silent: true });
   } catch (error) {
     if (error.status === 401) {
-      toast("Sai tên đăng nhập hoặc mật khẩu. Vui lòng kiểm tra lại!", "error");
+      toast("Sai tÃªn Ä‘Äƒng nháº­p hoáº·c máº­t kháº©u. Vui lÃ²ng kiá»ƒm tra láº¡i!", "error");
     } else {
       toast(error.message, "error");
     }
     $("login-password").select();
   } finally {
-    setButtonLoading(button, false, "Đang kiểm tra…", "Đăng nhập");
+    setButtonLoading(button, false, "Äang kiá»ƒm traâ€¦", "ÄÄƒng nháº­p");
   }
 }
 
-/** Đăng xuất: xoá phiên, xoá dữ liệu đang hiển thị và quay về màn hình login. */
+/** ÄÄƒng xuáº¥t: xoÃ¡ phiÃªn, xoÃ¡ dá»¯ liá»‡u Ä‘ang hiá»ƒn thá»‹ vÃ  quay vá» mÃ n hÃ¬nh login. */
 function handleLogout() {
   const username = session ? session.username : "";
   clearSession();
@@ -392,26 +398,26 @@ function handleLogout() {
   renderPendingHandovers();
 
   applySessionToUi();
-  toast(username ? `Đã đăng xuất tài khoản ${username}.` : "Đã đăng xuất.", "info");
+  toast(username ? `ÄÃ£ Ä‘Äƒng xuáº¥t tÃ i khoáº£n ${username}.` : "ÄÃ£ Ä‘Äƒng xuáº¥t.", "info");
   $("login-username").focus();
 }
 
-/* ------------------------------------------- 6. Kiểm tra backend sống --- */
+/* ------------------------------------------- 6. Kiá»ƒm tra backend sá»‘ng --- */
 async function checkHealth() {
   const badge = $("health-badge");
   try {
     const data = await apiRequest("/health");
-    badge.textContent = "Hệ thống trực tuyến";
+    badge.textContent = "Há»‡ thá»‘ng trá»±c tuyáº¿n";
     badge.className = "badge badge--ok";
   } catch (error) {
-    badge.textContent = "Mất kết nối máy chủ";
+    badge.textContent = "Máº¥t káº¿t ná»‘i mÃ¡y chá»§";
     badge.className = "badge badge--error";
-    toast("Không kết nối được tới máy chủ API: " + error.message, "error");
+    toast("KhÃ´ng káº¿t ná»‘i Ä‘Æ°á»£c tá»›i mÃ¡y chá»§ API: " + error.message, "error");
   }
 }
 
-/* ------------------------------------------------------- 7. Vùng trồng --- */
-/** GET /farms -> cập nhật bảng danh sách + select vùng trồng của form lô. */
+/* ------------------------------------------------------- 7. VÃ¹ng trá»“ng --- */
+/** GET /farms -> cáº­p nháº­t báº£ng danh sÃ¡ch + select vÃ¹ng trá»“ng cá»§a form lÃ´. */
 async function loadFarms() {
   try {
     const data = await apiRequest("/farms");
@@ -419,13 +425,13 @@ async function loadFarms() {
     renderFarms();
     renderFarmOptions();
   } catch (error) {
-    toast(`Không tải được danh sách vùng trồng: ${error.message}`, "error");
+    toast(`KhÃ´ng táº£i Ä‘Æ°á»£c danh sÃ¡ch vÃ¹ng trá»“ng: ${error.message}`, "error");
   }
 }
 
 let farmViewMode = "cards"; // "cards" | "table"
 
-/** Chuyển đổi giữa chế độ xem Dạng Thẻ và Dạng Bảng */
+/** Chuyá»ƒn Ä‘á»•i giá»¯a cháº¿ Ä‘á»™ xem Dáº¡ng Tháº» vÃ  Dáº¡ng Báº£ng */
 function setFarmViewMode(mode) {
   farmViewMode = mode;
   const isCards = mode === "cards";
@@ -441,12 +447,12 @@ function setFarmViewMode(mode) {
   setHidden("farm-table-wrap", isCards);
 }
 
-/** Vẽ danh sách thửa đất (cả dạng thẻ trực quan và dạng bảng chi tiết). */
+/** Váº½ danh sÃ¡ch thá»­a Ä‘áº¥t (cáº£ dáº¡ng tháº» trá»±c quan vÃ  dáº¡ng báº£ng chi tiáº¿t). */
 function renderFarms() {
   const cardsContainer = $("farm-cards-container");
   const tableBody = $("farm-table-body");
 
-  // 1. Dạng Thẻ (Cards) - trực quan, tối ưu cho nông dân
+  // 1. Dáº¡ng Tháº» (Cards) - trá»±c quan, tá»‘i Æ°u cho nÃ´ng dÃ¢n
   if (cardsContainer) {
     cardsContainer.innerHTML = farms
       .map(
@@ -454,34 +460,34 @@ function renderFarms() {
         <article class="farm-card ${farm.id === editingFarmId ? "is-editing" : ""}">
           <div class="farm-card__header">
             <div class="farm-card__title-group">
-              <span class="farm-card__icon">🌾</span>
+              <span class="farm-card__icon">ðŸŒ¾</span>
               <h4 class="farm-card__name">${escapeHtml(farm.name)}</h4>
             </div>
             <span class="farm-card__area-badge">${formatNumber(farm.area)} ha</span>
           </div>
           <div class="farm-card__body">
             <div class="farm-card__meta">
-              <span class="meta-label">📍 Vị trí:</span>
+              <span class="meta-label">ðŸ“ Vá»‹ trÃ­:</span>
               <span class="meta-value">${escapeHtml(farm.location)}</span>
             </div>
             <div class="farm-card__meta">
-              <span class="meta-label">🌐 Tọa độ GPS:</span>
-              <span class="meta-value">${farm.coordinates ? escapeHtml(farm.coordinates) : '<em style="color:#9ca3af">Chưa cập nhật</em>'}</span>
+              <span class="meta-label">ðŸŒ Tá»a Ä‘á»™ GPS:</span>
+              <span class="meta-value">${farm.coordinates ? escapeHtml(farm.coordinates) : '<em style="color:#9ca3af">ChÆ°a cáº­p nháº­t</em>'}</span>
             </div>
             <div class="farm-card__meta">
-              <span class="meta-label">👤 Nông hộ phụ trách:</span>
+              <span class="meta-label">ðŸ‘¤ NÃ´ng há»™ phá»¥ trÃ¡ch:</span>
               <span class="meta-value">${escapeHtml(farm.owner)}</span>
             </div>
           </div>
           <div class="farm-card__footer">
             <button class="btn btn--primary btn--sm" type="button"
                     data-action="edit" data-entity="farm"
-                    data-id="${escapeHtml(farm.id)}">✏️ Sửa</button>
+                    data-id="${escapeHtml(farm.id)}">âœï¸ Sá»­a</button>
             ${
               canDelete()
                 ? `<button class="btn btn--danger btn--sm" type="button"
                     data-action="delete" data-entity="farm"
-                    data-id="${escapeHtml(farm.id)}">🗑️ Xoá</button>`
+                    data-id="${escapeHtml(farm.id)}">ðŸ—‘ï¸ XoÃ¡</button>`
                 : ""
             }
           </div>
@@ -490,7 +496,7 @@ function renderFarms() {
       .join("");
   }
 
-  // 2. Dạng Bảng (Table)
+  // 2. Dáº¡ng Báº£ng (Table)
   if (tableBody) {
     tableBody.innerHTML = farms
       .map(
@@ -498,19 +504,19 @@ function renderFarms() {
         <tr class="${farm.id === editingFarmId ? "is-editing" : ""}">
           <td><strong>${escapeHtml(farm.name)}</strong></td>
           <td>${escapeHtml(farm.location)}</td>
-          <td>${farm.coordinates ? escapeHtml(farm.coordinates) : '<em style="color:#9ca3af">—</em>'}</td>
+          <td>${farm.coordinates ? escapeHtml(farm.coordinates) : '<em style="color:#9ca3af">â€”</em>'}</td>
           <td class="is-right">${formatNumber(farm.area)}</td>
           <td>${escapeHtml(farm.owner)}</td>
           <td>
             <div class="table__actions">
               <button class="btn btn--primary btn--sm" type="button"
                       data-action="edit" data-entity="farm"
-                      data-id="${escapeHtml(farm.id)}">Sửa</button>
+                      data-id="${escapeHtml(farm.id)}">Sá»­a</button>
               ${
                 canDelete()
                   ? `<button class="btn btn--danger btn--sm" type="button"
                       data-action="delete" data-entity="farm"
-                      data-id="${escapeHtml(farm.id)}">Xoá</button>`
+                      data-id="${escapeHtml(farm.id)}">XoÃ¡</button>`
                   : ""
               }
             </div>
@@ -525,13 +531,13 @@ function renderFarms() {
   renderStats();
 }
 
-/** Đổ danh sách vùng trồng vào select `farm_id` của form tạo lô. */
+/** Äá»• danh sÃ¡ch vÃ¹ng trá»“ng vÃ o select `farm_id` cá»§a form táº¡o lÃ´. */
 function renderFarmOptions() {
   const select = $("batch-farm-id");
   const selected = select.value;
 
   if (farms.length === 0) {
-    select.innerHTML = '<option value="">— Chưa có thửa đất nào, hãy thêm thửa đất trước —</option>';
+    select.innerHTML = '<option value="">â€” ChÆ°a cÃ³ thá»­a Ä‘áº¥t nÃ o, hÃ£y thÃªm thá»­a Ä‘áº¥t trÆ°á»›c â€”</option>';
     select.disabled = true;
     return;
   }
@@ -544,21 +550,21 @@ function renderFarmOptions() {
     )
     .join("");
 
-  // Giữ lại lựa chọn cũ nếu vùng trồng đó vẫn còn.
+  // Giá»¯ láº¡i lá»±a chá»n cÅ© náº¿u vÃ¹ng trá»“ng Ä‘Ã³ váº«n cÃ²n.
   if (selected && farms.some((farm) => String(farm.id) === selected)) {
     select.value = selected;
   }
 }
 
-/** Nhãn nút submit form vùng trồng theo chế độ hiện tại (thêm mới / sửa). */
+/** NhÃ£n nÃºt submit form vÃ¹ng trá»“ng theo cháº¿ Ä‘á»™ hiá»‡n táº¡i (thÃªm má»›i / sá»­a). */
 function farmSubmitLabel() {
-  return editingFarmId === null ? "Thêm thửa đất" : "Cập nhật thửa đất";
+  return editingFarmId === null ? "ThÃªm thá»­a Ä‘áº¥t" : "Cáº­p nháº­t thá»­a Ä‘áº¥t";
 }
 
 /**
- * Xử lý submit form vùng trồng:
- * - chế độ thêm mới (`editingFarmId === null`) -> POST /farms;
- * - chế độ sửa (đã bấm nút "Sửa" ở bảng)       -> PUT /farms/{id}.
+ * Xá»­ lÃ½ submit form vÃ¹ng trá»“ng:
+ * - cháº¿ Ä‘á»™ thÃªm má»›i (`editingFarmId === null`) -> POST /farms;
+ * - cháº¿ Ä‘á»™ sá»­a (Ä‘Ã£ báº¥m nÃºt "Sá»­a" á»Ÿ báº£ng)       -> PUT /farms/{id}.
  */
 async function handleFarmSubmit(event) {
   event.preventDefault();
@@ -570,7 +576,7 @@ async function handleFarmSubmit(event) {
 
   const area = Number($("farm-area").value);
   if (isNaN(area) || area <= 0) {
-    toast("Diện tích thửa đất bắt buộc phải lớn hơn 0 ha!", "error");
+    toast("Diá»‡n tÃ­ch thá»­a Ä‘áº¥t báº¯t buá»™c pháº£i lá»›n hÆ¡n 0 ha!", "error");
     $("farm-area").focus();
     return;
   }
@@ -585,29 +591,29 @@ async function handleFarmSubmit(event) {
 
   const isEditing = editingFarmId !== null;
   const button = $("farm-submit");
-  setButtonLoading(button, true, "Đang lưu…", farmSubmitLabel());
+  setButtonLoading(button, true, "Äang lÆ°uâ€¦", farmSubmitLabel());
 
   try {
     if (isEditing) {
       const updated = await apiRequest(`/farms/${editingFarmId}`, { method: "PUT", body: payload });
-      toast(`Đã cập nhật thửa đất: ${updated.name}`, "success");
+      toast(`ÄÃ£ cáº­p nháº­t thá»­a Ä‘áº¥t: ${updated.name}`, "success");
     } else {
       const created = await apiRequest("/farms", { method: "POST", body: payload });
-      toast(`Thêm thành công thửa đất: ${created.name}`, "success");
+      toast(`ThÃªm thÃ nh cÃ´ng thá»­a Ä‘áº¥t: ${created.name}`, "success");
     }
-    resetFarmForm(); // về lại chế độ "thêm mới"
-    await loadFarms(); // cập nhật danh sách thửa đất và select lô nông sản
+    resetFarmForm(); // vá» láº¡i cháº¿ Ä‘á»™ "thÃªm má»›i"
+    await loadFarms(); // cáº­p nháº­t danh sÃ¡ch thá»­a Ä‘áº¥t vÃ  select lÃ´ nÃ´ng sáº£n
     await loadBatches();
     await refreshAuditLogsIfAdmin();
     $("farm-name").focus();
   } catch (error) {
-    toast(`${isEditing ? "Cập nhật" : "Thêm"} thửa đất thất bại: ${error.message}`, "error");
+    toast(`${isEditing ? "Cáº­p nháº­t" : "ThÃªm"} thá»­a Ä‘áº¥t tháº¥t báº¡i: ${error.message}`, "error");
   } finally {
-    setButtonLoading(button, false, "Đang lưu…", farmSubmitLabel());
+    setButtonLoading(button, false, "Äang lÆ°uâ€¦", farmSubmitLabel());
   }
 }
 
-/** Đưa form vùng trồng về chế độ "thêm mới" (bỏ dữ liệu đang sửa). */
+/** ÄÆ°a form vÃ¹ng trá»“ng vá» cháº¿ Ä‘á»™ "thÃªm má»›i" (bá» dá»¯ liá»‡u Ä‘ang sá»­a). */
 function resetFarmForm() {
   editingFarmId = null;
   $("farm-form").reset();
@@ -617,12 +623,12 @@ function resetFarmForm() {
 }
 
 /**
- * Bấm nút "Sửa" ở bảng/thẻ -> đổ dữ liệu vùng trồng lên form và chuyển sang chế độ sửa.
+ * Báº¥m nÃºt "Sá»­a" á»Ÿ báº£ng/tháº» -> Ä‘á»• dá»¯ liá»‡u vÃ¹ng trá»“ng lÃªn form vÃ  chuyá»ƒn sang cháº¿ Ä‘á»™ sá»­a.
  */
 function startEditFarm(farmId) {
   const farm = farms.find((item) => item.id === farmId);
   if (!farm) {
-    toast(`Không tìm thấy thửa đất #${farmId} trong dữ liệu đang hiển thị.`, "error");
+    toast(`KhÃ´ng tÃ¬m tháº¥y thá»­a Ä‘áº¥t #${farmId} trong dá»¯ liá»‡u Ä‘ang hiá»ƒn thá»‹.`, "error");
     return;
   }
 
@@ -634,78 +640,78 @@ function startEditFarm(farmId) {
   $("farm-owner").value = farm.owner;
 
   const mode = $("farm-form-mode");
-  mode.textContent = `Đang sửa thửa đất: ${farm.name}. Bấm "Cập nhật thửa đất" để lưu.`;
+  mode.textContent = `Äang sá»­a thá»­a Ä‘áº¥t: ${farm.name}. Báº¥m "Cáº­p nháº­t thá»­a Ä‘áº¥t" Ä‘á»ƒ lÆ°u.`;
   mode.hidden = false;
   $("farm-cancel").hidden = false;
   $("farm-submit").textContent = farmSubmitLabel();
 
-  renderFarms(); // tô viền card/dòng đang sửa
+  renderFarms(); // tÃ´ viá»n card/dÃ²ng Ä‘ang sá»­a
   $("farm-form").scrollIntoView({ behavior: "smooth", block: "start" });
   $("farm-name").focus();
 }
 
 /**
- * Xoá vùng trồng (chỉ admin) -> ``DELETE /farms/{id}``.
- * Backend xoá kèm mọi lô nông sản của vùng đó nên giao diện phải tải lại cả
- * hai bảng; số lô bị xoá kèm được backend trả về trong ``deleted_batches``.
+ * XoÃ¡ vÃ¹ng trá»“ng (chá»‰ admin) -> ``DELETE /farms/{id}``.
+ * Backend xoÃ¡ kÃ¨m má»i lÃ´ nÃ´ng sáº£n cá»§a vÃ¹ng Ä‘Ã³ nÃªn giao diá»‡n pháº£i táº£i láº¡i cáº£
+ * hai báº£ng; sá»‘ lÃ´ bá»‹ xoÃ¡ kÃ¨m Ä‘Æ°á»£c backend tráº£ vá» trong ``deleted_batches``.
  */
 async function deleteFarm(farmId) {
   const farm = farms.find((item) => item.id === farmId);
-  const label = farm ? `#${farm.id} — ${farm.name}` : `#${farmId}`;
+  const label = farm ? `#${farm.id} â€” ${farm.name}` : `#${farmId}`;
   const childCount = batches.filter((batch) => batch.farm_id === farmId).length;
 
   const question =
-    `Bạn có chắc chắn muốn xoá vùng trồng ${label}?` +
-    (childCount > 0 ? `\nLưu ý: Toàn bộ ${childCount} lô nông sản trực thuộc vùng này cũng sẽ bị xoá theo.` : "") +
-    "\nHành động này không thể hoàn tác.";
+    `Báº¡n cÃ³ cháº¯c cháº¯n muá»‘n xoÃ¡ vÃ¹ng trá»“ng ${label}?` +
+    (childCount > 0 ? `\nLÆ°u Ã½: ToÃ n bá»™ ${childCount} lÃ´ nÃ´ng sáº£n trá»±c thuá»™c vÃ¹ng nÃ y cÅ©ng sáº½ bá»‹ xoÃ¡ theo.` : "") +
+    "\nHÃ nh Ä‘á»™ng nÃ y khÃ´ng thá»ƒ hoÃ n tÃ¡c.";
   if (!window.confirm(question)) {
     return;
   }
 
   try {
     const result = await apiRequest(`/farms/${farmId}`, { method: "DELETE" });
-    toast(result && result.message ? result.message : `Đã xoá vùng trồng #${farmId}.`, "success");
+    toast(result && result.message ? result.message : `ÄÃ£ xoÃ¡ vÃ¹ng trá»“ng #${farmId}.`, "success");
 
     if (editingFarmId === farmId) {
-      resetFarmForm(); // vùng trồng đang sửa đã bị xoá -> form về chế độ thêm mới
+      resetFarmForm(); // vÃ¹ng trá»“ng Ä‘ang sá»­a Ä‘Ã£ bá»‹ xoÃ¡ -> form vá» cháº¿ Ä‘á»™ thÃªm má»›i
     }
     await loadFarms();
-    await loadBatches(); // các lô của vùng trồng vừa xoá cũng biến mất
-    await refreshAuditLogsIfAdmin(); // Sprint 7: vừa xoá -> cập nhật lịch sử
+    await loadBatches(); // cÃ¡c lÃ´ cá»§a vÃ¹ng trá»“ng vá»«a xoÃ¡ cÅ©ng biáº¿n máº¥t
+    await refreshAuditLogsIfAdmin(); // Sprint 7: vá»«a xoÃ¡ -> cáº­p nháº­t lá»‹ch sá»­
   } catch (error) {
-    toast(`Xoá vùng trồng thất bại: ${error.message}`, "error");
+    toast(`XoÃ¡ vÃ¹ng trá»“ng tháº¥t báº¡i: ${error.message}`, "error");
   }
 }
 
-/* ------------------------------------------------------ 8. Lô nông sản --- */
-/** GET /batches -> cập nhật bảng danh sách lô. */
+/* ------------------------------------------------------ 8. LÃ´ nÃ´ng sáº£n --- */
+/** GET /batches -> cáº­p nháº­t báº£ng danh sÃ¡ch lÃ´. */
 async function loadBatches() {
   try {
     const data = await apiRequest("/batches");
     batches = Array.isArray(data) ? data : [];
     renderBatches();
   } catch (error) {
-    toast(`Không tải được danh sách lô nông sản: ${error.message}`, "error");
+    toast(`KhÃ´ng táº£i Ä‘Æ°á»£c danh sÃ¡ch lÃ´ nÃ´ng sáº£n: ${error.message}`, "error");
   }
 }
 
-/** Nhãn vùng trồng cho bảng lô (dùng lại dữ liệu đã tải từ GET /farms). */
+/** NhÃ£n vÃ¹ng trá»“ng cho báº£ng lÃ´ (dÃ¹ng láº¡i dá»¯ liá»‡u Ä‘Ã£ táº£i tá»« GET /farms). */
 function farmLabel(farmId) {
   const farm = farms.find((item) => item.id === farmId);
-  return farm ? `#${farmId} — ${farm.name}` : `#${farmId}`;
+  return farm ? `#${farmId} â€” ${farm.name}` : `#${farmId}`;
 }
 
-/** Vẽ bảng danh sách lô nông sản (kèm cột Đơn vị nắm giữ, Trạng thái & Thao tác). */
+/** Váº½ báº£ng danh sÃ¡ch lÃ´ nÃ´ng sáº£n (kÃ¨m cá»™t ÄÆ¡n vá»‹ náº¯m giá»¯, Tráº¡ng thÃ¡i & Thao tÃ¡c). */
 function renderBatches() {
   $("batch-table-body").innerHTML = batches
     .map((batch) => {
       const holdingOrg = batch.current_org_name || (session?.organization_name || farmLabel(batch.farm_id));
       const isPending = (batch.pending_handover != null) || pendingHandovers.some((h) => h.batch_id === batch.id);
       const statusBadge = isPending
-        ? '<span class="badge badge--warning">⏳ Chờ bàn giao</span>'
-        : '<span class="badge badge--ok">Đang quản lý</span>';
+        ? '<span class="badge badge--warning">â³ Chá» bÃ n giao</span>'
+        : '<span class="badge badge--ok">Äang quáº£n lÃ½</span>';
 
-      // Kiểm tra người dùng có thuộc tổ chức đang nắm giữ lô không
+      // Kiá»ƒm tra ngÆ°á»i dÃ¹ng cÃ³ thuá»™c tá»• chá»©c Ä‘ang náº¯m giá»¯ lÃ´ khÃ´ng
       const isHolder = session && (
         batch.current_org_id == null ||
         session.organization_id == null ||
@@ -715,36 +721,36 @@ function renderBatches() {
       let handoverBtn = "";
       if (isHolder) {
         if (isPending) {
-          handoverBtn = `<button class="btn btn--light btn--sm" type="button" disabled title="Lô hàng đang có yêu cầu bàn giao chờ xác nhận">⏳ Chờ duyệt</button>`;
+          handoverBtn = `<button class="btn btn--light btn--sm" type="button" disabled title="LÃ´ hÃ ng Ä‘ang cÃ³ yÃªu cáº§u bÃ n giao chá» xÃ¡c nháº­n">â³ Chá» duyá»‡t</button>`;
         } else {
           handoverBtn = `<button class="btn btn--outline-primary btn--sm" type="button"
-                           data-action="open-handover" data-id="${escapeHtml(batch.id)}">🚚 Bàn giao</button>`;
+                           data-action="open-handover" data-id="${escapeHtml(batch.id)}">ðŸšš BÃ n giao</button>`;
         }
       }
 
       return `
       <tr class="${batch.id === editingBatchId ? "is-editing" : ""}">
-        <td class="id-cell"><a href="javascript:void(0)" onclick="openBatchDetail(${batch.id})" style="font-weight: bold; text-decoration: underline;" title="Xem chi tiết lô #${batch.id}">#${escapeHtml(batch.id)}</a></td>
+        <td class="id-cell"><a href="javascript:void(0)" onclick="openBatchDetail(${batch.id})" style="font-weight: bold; text-decoration: underline;" title="Xem chi tiáº¿t lÃ´ #${batch.id}">#${escapeHtml(batch.id)}</a></td>
         <td>${escapeHtml(farmLabel(batch.farm_id))}</td>
         <td><strong>${escapeHtml(batch.product_name)}</strong></td>
         <td class="is-right">${formatNumber(batch.quantity)}</td>
         <td>${escapeHtml(formatDate(batch.harvest_date))}</td>
-        <td><span class="badge badge--org">🏢 ${escapeHtml(holdingOrg)}</span></td>
+        <td><span class="badge badge--org">ðŸ¢ ${escapeHtml(holdingOrg)}</span></td>
         <td>${statusBadge}</td>
         <td>
           <div class="table__actions">
             <button class="btn btn--light btn--sm" type="button"
                     data-action="view-detail" data-entity="batch"
-                    data-id="${escapeHtml(batch.id)}">👁️ Chi tiết</button>
+                    data-id="${escapeHtml(batch.id)}">ðŸ‘ï¸ Chi tiáº¿t</button>
             <button class="btn btn--primary btn--sm" type="button"
                     data-action="edit" data-entity="batch"
-                    data-id="${escapeHtml(batch.id)}">Sửa</button>
+                    data-id="${escapeHtml(batch.id)}">Sá»­a</button>
             ${handoverBtn}
             ${
               canDelete()
                 ? `<button class="btn btn--danger btn--sm" type="button"
                     data-action="delete" data-entity="batch"
-                    data-id="${escapeHtml(batch.id)}">Xoá</button>`
+                    data-id="${escapeHtml(batch.id)}">XoÃ¡</button>`
                 : ""
             }
           </div>
@@ -757,15 +763,15 @@ function renderBatches() {
   renderStats();
 }
 
-/** Nhãn nút submit form lô nông sản theo chế độ hiện tại (tạo mới / sửa). */
+/** NhÃ£n nÃºt submit form lÃ´ nÃ´ng sáº£n theo cháº¿ Ä‘á»™ hiá»‡n táº¡i (táº¡o má»›i / sá»­a). */
 function batchSubmitLabel() {
-  return editingBatchId === null ? "Tạo lô nông sản" : "Cập nhật lô nông sản";
+  return editingBatchId === null ? "Táº¡o lÃ´ nÃ´ng sáº£n" : "Cáº­p nháº­t lÃ´ nÃ´ng sáº£n";
 }
 
 /**
- * Xử lý submit form lô nông sản:
- * - chế độ tạo mới (`editingBatchId === null`) -> POST /batches;
- * - chế độ sửa (đã bấm nút "Sửa" ở bảng)       -> PUT /batches/{id}.
+ * Xá»­ lÃ½ submit form lÃ´ nÃ´ng sáº£n:
+ * - cháº¿ Ä‘á»™ táº¡o má»›i (`editingBatchId === null`) -> POST /batches;
+ * - cháº¿ Ä‘á»™ sá»­a (Ä‘Ã£ báº¥m nÃºt "Sá»­a" á»Ÿ báº£ng)       -> PUT /batches/{id}.
  */
 async function handleBatchSubmit(event) {
   event.preventDefault();
@@ -777,7 +783,7 @@ async function handleBatchSubmit(event) {
 
   const farmSelect = $("batch-farm-id");
   if (!farmSelect.value) {
-    toast("Chưa có vùng trồng nào. Vui lòng thêm vùng trồng trước khi tạo lô nông sản.", "error");
+    toast("ChÆ°a cÃ³ vÃ¹ng trá»“ng nÃ o. Vui lÃ²ng thÃªm vÃ¹ng trá»“ng trÆ°á»›c khi táº¡o lÃ´ nÃ´ng sáº£n.", "error");
     return;
   }
 
@@ -790,12 +796,12 @@ async function handleBatchSubmit(event) {
 
   const isEditing = editingBatchId !== null;
   const button = $("batch-submit");
-  setButtonLoading(button, true, "Đang lưu…", batchSubmitLabel());
+  setButtonLoading(button, true, "Äang lÆ°uâ€¦", batchSubmitLabel());
 
   try {
     if (isEditing) {
       const updated = await apiRequest(`/batches/${editingBatchId}`, { method: "PUT", body: payload });
-      toast(`Đã cập nhật lô #${updated.id} "${updated.product_name}"`, "success");
+      toast(`ÄÃ£ cáº­p nháº­t lÃ´ #${updated.id} "${updated.product_name}"`, "success");
     } else {
       const idempotencyKey = (
         window.crypto?.randomUUID?.() ||
@@ -810,22 +816,22 @@ async function handleBatchSubmit(event) {
         },
       });
       toast(
-        `Tạo thành công lô #${created.id} "${created.product_name}" cho vùng trồng #${created.farm_id}`,
+        `Táº¡o thÃ nh cÃ´ng lÃ´ #${created.id} "${created.product_name}" cho vÃ¹ng trá»“ng #${created.farm_id}`,
         "success"
       );
     }
-    resetBatchForm(); // về lại chế độ "tạo mới"
-    farmSelect.value = String(payload.farm_id); // giữ lại vùng trồng vừa chọn
+    resetBatchForm(); // vá» láº¡i cháº¿ Ä‘á»™ "táº¡o má»›i"
+    farmSelect.value = String(payload.farm_id); // giá»¯ láº¡i vÃ¹ng trá»“ng vá»«a chá»n
     await loadBatches();
-    await refreshAuditLogsIfAdmin(); // Sprint 7: vừa ghi dữ liệu -> cập nhật lịch sử
+    await refreshAuditLogsIfAdmin(); // Sprint 7: vá»«a ghi dá»¯ liá»‡u -> cáº­p nháº­t lá»‹ch sá»­
   } catch (error) {
-    toast(`${isEditing ? "Cập nhật" : "Tạo"} lô nông sản thất bại: ${error.message}`, "error");
+    toast(`${isEditing ? "Cáº­p nháº­t" : "Táº¡o"} lÃ´ nÃ´ng sáº£n tháº¥t báº¡i: ${error.message}`, "error");
   } finally {
-    setButtonLoading(button, false, "Đang lưu…", batchSubmitLabel());
+    setButtonLoading(button, false, "Äang lÆ°uâ€¦", batchSubmitLabel());
   }
 }
 
-/** Đưa form lô nông sản về chế độ "tạo mới" (bỏ dữ liệu đang sửa). */
+/** ÄÆ°a form lÃ´ nÃ´ng sáº£n vá» cháº¿ Ä‘á»™ "táº¡o má»›i" (bá» dá»¯ liá»‡u Ä‘ang sá»­a). */
 function resetBatchForm() {
   editingBatchId = null;
   $("batch-form").reset();
@@ -835,67 +841,67 @@ function resetBatchForm() {
 }
 
 /**
- * Bấm nút "Sửa" ở bảng lô -> đổ dữ liệu lên form và chuyển sang chế độ sửa
- * (nút submit sẽ gọi ``PUT /batches/{id}``).
+ * Báº¥m nÃºt "Sá»­a" á»Ÿ báº£ng lÃ´ -> Ä‘á»• dá»¯ liá»‡u lÃªn form vÃ  chuyá»ƒn sang cháº¿ Ä‘á»™ sá»­a
+ * (nÃºt submit sáº½ gá»i ``PUT /batches/{id}``).
  */
 function startEditBatch(batchId) {
   const batch = batches.find((item) => item.id === batchId);
   if (!batch) {
-    toast(`Không tìm thấy lô nông sản #${batchId} trong dữ liệu đang hiển thị.`, "error");
+    toast(`KhÃ´ng tÃ¬m tháº¥y lÃ´ nÃ´ng sáº£n #${batchId} trong dá»¯ liá»‡u Ä‘ang hiá»ƒn thá»‹.`, "error");
     return;
   }
 
   editingBatchId = batch.id;
-  $("batch-farm-id").value = String(batch.farm_id); // select đã được đổ ở loadFarms()
+  $("batch-farm-id").value = String(batch.farm_id); // select Ä‘Ã£ Ä‘Æ°á»£c Ä‘á»• á»Ÿ loadFarms()
   $("batch-product-name").value = batch.product_name;
   $("batch-quantity").value = batch.quantity;
-  $("batch-harvest-date").value = batch.harvest_date; // API trả sẵn dạng yyyy-MM-dd
+  $("batch-harvest-date").value = batch.harvest_date; // API tráº£ sáºµn dáº¡ng yyyy-MM-dd
 
   const mode = $("batch-form-mode");
-  mode.textContent = `Đang sửa lô #${batch.id} — ${batch.product_name}. Bấm "Cập nhật lô nông sản" để lưu.`;
+  mode.textContent = `Äang sá»­a lÃ´ #${batch.id} â€” ${batch.product_name}. Báº¥m "Cáº­p nháº­t lÃ´ nÃ´ng sáº£n" Ä‘á»ƒ lÆ°u.`;
   mode.hidden = false;
   $("batch-cancel").hidden = false;
   $("batch-submit").textContent = batchSubmitLabel();
 
-  renderBatches(); // tô nền dòng đang sửa trong bảng
+  renderBatches(); // tÃ´ ná»n dÃ²ng Ä‘ang sá»­a trong báº£ng
   $("batch-form").scrollIntoView({ behavior: "smooth", block: "start" });
   $("batch-product-name").focus();
 }
 
-/** Xoá lô nông sản (chỉ admin) -> ``DELETE /batches/{id}``. */
+/** XoÃ¡ lÃ´ nÃ´ng sáº£n (chá»‰ admin) -> ``DELETE /batches/{id}``. */
 async function deleteBatch(batchId) {
   const batch = batches.find((item) => item.id === batchId);
-  const label = batch ? `#${batch.id} — ${batch.product_name}` : `#${batchId}`;
+  const label = batch ? `#${batch.id} â€” ${batch.product_name}` : `#${batchId}`;
 
-  if (!window.confirm(`Bạn có chắc chắn muốn xoá lô nông sản ${label}?\nHành động này không thể hoàn tác.`)) {
+  if (!window.confirm(`Báº¡n cÃ³ cháº¯c cháº¯n muá»‘n xoÃ¡ lÃ´ nÃ´ng sáº£n ${label}?\nHÃ nh Ä‘á»™ng nÃ y khÃ´ng thá»ƒ hoÃ n tÃ¡c.`)) {
     return;
   }
 
   try {
     const result = await apiRequest(`/batches/${batchId}`, { method: "DELETE" });
-    toast(result && result.message ? result.message : `Đã xoá lô nông sản #${batchId}.`, "success");
+    toast(result && result.message ? result.message : `ÄÃ£ xoÃ¡ lÃ´ nÃ´ng sáº£n #${batchId}.`, "success");
 
     if (editingBatchId === batchId) {
-      resetBatchForm(); // lô đang sửa đã bị xoá -> form về chế độ tạo mới
+      resetBatchForm(); // lÃ´ Ä‘ang sá»­a Ä‘Ã£ bá»‹ xoÃ¡ -> form vá» cháº¿ Ä‘á»™ táº¡o má»›i
     }
     await loadBatches();
-    await refreshAuditLogsIfAdmin(); // Sprint 7: vừa xoá -> cập nhật lịch sử
+    await refreshAuditLogsIfAdmin(); // Sprint 7: vá»«a xoÃ¡ -> cáº­p nháº­t lá»‹ch sá»­
   } catch (error) {
-    toast(`Xoá lô nông sản thất bại: ${error.message}`, "error");
+    toast(`XoÃ¡ lÃ´ nÃ´ng sáº£n tháº¥t báº¡i: ${error.message}`, "error");
   }
 }
 
-/* ------------------------------------------------------- 9. Thống kê --- */
+/* ------------------------------------------------------- 9. Thá»‘ng kÃª --- */
 /**
- * Cập nhật các thẻ thống kê trên dashboard từ dữ liệu đang hiển thị:
- * - **Tổng vùng trồng**: số phần tử của `farms` (nguồn: `GET /farms`);
- * - **Tổng lô nông sản**: số phần tử của `batches` (nguồn: `GET /batches`);
- * - **Tổng sản lượng (kg)**: cộng `quantity` của mọi lô (làm tròn 2 chữ số);
- * - **Lịch sử thao tác** (Sprint 7, chỉ admin thấy): số phần tử của `auditLogs`
- *   (nguồn: `GET /audit-logs`) - farmer không tải được nên thẻ này bị ẩn.
+ * Cáº­p nháº­t cÃ¡c tháº» thá»‘ng kÃª trÃªn dashboard tá»« dá»¯ liá»‡u Ä‘ang hiá»ƒn thá»‹:
+ * - **Tá»•ng vÃ¹ng trá»“ng**: sá»‘ pháº§n tá»­ cá»§a `farms` (nguá»“n: `GET /farms`);
+ * - **Tá»•ng lÃ´ nÃ´ng sáº£n**: sá»‘ pháº§n tá»­ cá»§a `batches` (nguá»“n: `GET /batches`);
+ * - **Tá»•ng sáº£n lÆ°á»£ng (kg)**: cá»™ng `quantity` cá»§a má»i lÃ´ (lÃ m trÃ²n 2 chá»¯ sá»‘);
+ * - **Lá»‹ch sá»­ thao tÃ¡c** (Sprint 7, chá»‰ admin tháº¥y): sá»‘ pháº§n tá»­ cá»§a `auditLogs`
+ *   (nguá»“n: `GET /audit-logs`) - farmer khÃ´ng táº£i Ä‘Æ°á»£c nÃªn tháº» nÃ y bá»‹ áº©n.
  *
- * Hàm được gọi lại mỗi khi vẽ xong bảng (`renderFarms` / `renderBatches` /
- * `renderAuditLogs`) nên số liệu luôn khớp với dữ liệu vừa tải.
+ * HÃ m Ä‘Æ°á»£c gá»i láº¡i má»—i khi váº½ xong báº£ng (`renderFarms` / `renderBatches` /
+ * `renderAuditLogs`) nÃªn sá»‘ liá»‡u luÃ´n khá»›p vá»›i dá»¯ liá»‡u vá»«a táº£i.
  */
 function renderStats() {
   const totalYield = batches.reduce((sum, batch) => sum + Number(batch.quantity || 0), 0);
@@ -910,8 +916,8 @@ function renderStats() {
   }
 }
 
-/* ------------------------------------------ 10. Tài khoản (chỉ admin) --- */
-/** GET /users (chỉ admin) -> cập nhật bảng tài khoản; farmer gọi sẽ nhận 403. */
+/* ------------------------------------------ 10. TÃ i khoáº£n (chá»‰ admin) --- */
+/** GET /users (chá»‰ admin) -> cáº­p nháº­t báº£ng tÃ i khoáº£n; farmer gá»i sáº½ nháº­n 403. */
 async function loadUsers() {
   try {
     const data = await apiRequest("/users");
@@ -920,16 +926,16 @@ async function loadUsers() {
   } catch (error) {
     users = [];
     renderUsers();
-    toast(`Không tải được danh sách tài khoản: ${error.message}`, "error");
+    toast(`KhÃ´ng táº£i Ä‘Æ°á»£c danh sÃ¡ch tÃ i khoáº£n: ${error.message}`, "error");
   }
 }
 
-/** Vẽ bảng tài khoản (hiển thị username + vai trò tiếng Việt dạng badge). */
+/** Váº½ báº£ng tÃ i khoáº£n (hiá»ƒn thá»‹ username + vai trÃ² tiáº¿ng Viá»‡t dáº¡ng badge). */
 function renderUsers() {
   $("user-table-body").innerHTML = users
     .map((user) => {
       const isAdminRole = user.role === ROLE_ADMIN;
-      const roleLabel = isAdminRole ? "Quản trị viên" : "Chủ nông hộ / HTX";
+      const roleLabel = isAdminRole ? "Quáº£n trá»‹ viÃªn" : "Chá»§ nÃ´ng há»™ / HTX";
       const roleClass = isAdminRole ? "role-badge role-badge--admin" : "role-badge role-badge--farmer";
       return `
       <tr>
@@ -943,21 +949,21 @@ function renderUsers() {
   $("user-empty").hidden = users.length > 0;
 }
 
-/* -------------------------------------- 11. Nhật ký hoạt động (chỉ admin) --- */
+/* -------------------------------------- 11. Nháº­t kÃ½ hoáº¡t Ä‘á»™ng (chá»‰ admin) --- */
 /**
- * GET /audit-logs (chỉ admin) -> vẽ bảng "Nhật ký hoạt động" và
- * cập nhật thẻ thống kê "Nhật ký hoạt động" trên dashboard.
+ * GET /audit-logs (chá»‰ admin) -> váº½ báº£ng "Nháº­t kÃ½ hoáº¡t Ä‘á»™ng" vÃ 
+ * cáº­p nháº­t tháº» thá»‘ng kÃª "Nháº­t kÃ½ hoáº¡t Ä‘á»™ng" trÃªn dashboard.
  */
 async function loadAuditLogs({ silent = false } = {}) {
   const button = $("btn-load-audit");
   const errorBox = $("audit-error");
 
-  // --- trạng thái đang tải ---
-  setButtonLoading(button, true, "Đang tải…", "Làm mới nhật ký");
+  // --- tráº¡ng thÃ¡i Ä‘ang táº£i ---
+  setButtonLoading(button, true, "Äang táº£iâ€¦", "LÃ m má»›i nháº­t kÃ½");
   errorBox.hidden = true;
   $("audit-empty").hidden = true;
   $("audit-table-body").innerHTML =
-    '<tr class="is-loading"><td class="is-center" colspan="6">Đang tải nhật ký hoạt động…</td></tr>';
+    '<tr class="is-loading"><td class="is-center" colspan="6">Äang táº£i nháº­t kÃ½ hoáº¡t Ä‘á»™ngâ€¦</td></tr>';
 
   try {
     const data = await apiRequest("/audit-logs");
@@ -967,8 +973,8 @@ async function loadAuditLogs({ silent = false } = {}) {
     if (!silent) {
       toast(
         auditLogs.length > 0
-          ? `Đã tải ${formatNumber(auditLogs.length)} bản ghi nhật ký hoạt động.`
-          : "Chưa có hoạt động nào được ghi nhận.",
+          ? `ÄÃ£ táº£i ${formatNumber(auditLogs.length)} báº£n ghi nháº­t kÃ½ hoáº¡t Ä‘á»™ng.`
+          : "ChÆ°a cÃ³ hoáº¡t Ä‘á»™ng nÃ o Ä‘Æ°á»£c ghi nháº­n.",
         auditLogs.length > 0 ? "success" : "info"
       );
     }
@@ -979,28 +985,28 @@ async function loadAuditLogs({ silent = false } = {}) {
 
     const denied = error.status === 401 || error.status === 403;
     errorBox.textContent = denied
-      ? `Không có quyền xem nhật ký hoạt động - mục này chỉ dành cho Quản trị viên (${error.message})`
-      : `Không tải được nhật ký hoạt động: ${error.message}`;
+      ? `KhÃ´ng cÃ³ quyá»n xem nháº­t kÃ½ hoáº¡t Ä‘á»™ng - má»¥c nÃ y chá»‰ dÃ nh cho Quáº£n trá»‹ viÃªn (${error.message})`
+      : `KhÃ´ng táº£i Ä‘Æ°á»£c nháº­t kÃ½ hoáº¡t Ä‘á»™ng: ${error.message}`;
     errorBox.hidden = false;
 
     if (!silent || denied) {
       toast(errorBox.textContent, "error");
     }
   } finally {
-    setButtonLoading(button, false, "Đang tải…", "Làm mới nhật ký");
+    setButtonLoading(button, false, "Äang táº£iâ€¦", "LÃ m má»›i nháº­t kÃ½");
   }
 }
 
-/** Vẽ bảng nhật ký hoạt động (mới nhất trước) + cập nhật thẻ thống kê. */
+/** Váº½ báº£ng nháº­t kÃ½ hoáº¡t Ä‘á»™ng (má»›i nháº¥t trÆ°á»›c) + cáº­p nháº­t tháº» thá»‘ng kÃª. */
 function renderAuditLogs() {
   const actionLabels = {
-    create: "Thêm mới",
-    update: "Cập nhật",
-    delete: "Xóa",
+    create: "ThÃªm má»›i",
+    update: "Cáº­p nháº­t",
+    delete: "XÃ³a",
   };
   const entityLabels = {
-    farm: "Vùng trồng",
-    batch: "Lô nông sản",
+    farm: "VÃ¹ng trá»“ng",
+    batch: "LÃ´ nÃ´ng sáº£n",
   };
 
   $("audit-table-body").innerHTML = auditLogs
@@ -1026,15 +1032,15 @@ function renderAuditLogs() {
   renderStats();
 }
 
-/** Nhãn người thực hiện: ưu tiên `username`, thiếu thì hiển thị `#user_id`. */
+/** NhÃ£n ngÆ°á»i thá»±c hiá»‡n: Æ°u tiÃªn `username`, thiáº¿u thÃ¬ hiá»ƒn thá»‹ `#user_id`. */
 function auditUserLabel(log) {
   return log.username ? log.username : `#${log.user_id}`;
 }
 
 /**
- * Sau mỗi thao tác ghi thành công (tạo/sửa/xoá vùng trồng hoặc lô nông sản),
- * admin thấy lịch sử mới ngay mà không cần bấm nút: gọi im lặng để bảng log và
- * thẻ thống kê không bị cũ. Farmer không gọi được `GET /audit-logs` nên bỏ qua.
+ * Sau má»—i thao tÃ¡c ghi thÃ nh cÃ´ng (táº¡o/sá»­a/xoÃ¡ vÃ¹ng trá»“ng hoáº·c lÃ´ nÃ´ng sáº£n),
+ * admin tháº¥y lá»‹ch sá»­ má»›i ngay mÃ  khÃ´ng cáº§n báº¥m nÃºt: gá»i im láº·ng Ä‘á»ƒ báº£ng log vÃ 
+ * tháº» thá»‘ng kÃª khÃ´ng bá»‹ cÅ©. Farmer khÃ´ng gá»i Ä‘Æ°á»£c `GET /audit-logs` nÃªn bá» qua.
  */
 async function refreshAuditLogsIfAdmin() {
   if (!isAdmin()) {
@@ -1043,7 +1049,7 @@ async function refreshAuditLogsIfAdmin() {
   await loadAuditLogs({ silent: true });
 }
 
-/* --------------------------------------------------------- 12. Sự kiện --- */
+/* --------------------------------------------------------- 12. Sá»± kiá»‡n --- */
 function bindEvents() {
   $("login-form").addEventListener("submit", handleLoginSubmit);
   $("btn-logout").addEventListener("click", handleLogout);
@@ -1054,7 +1060,7 @@ function bindEvents() {
   $("btn-reload").addEventListener("click", () => reloadAll());
   $("btn-load-audit").addEventListener("click", () => loadAuditLogs());
 
-  // Đăng nhập nhanh cho tài khoản demo (Quản trị viên & Chủ nông hộ)
+  // ÄÄƒng nháº­p nhanh cho tÃ i khoáº£n demo (Quáº£n trá»‹ viÃªn & Chá»§ nÃ´ng há»™)
   const quickAdmin = $("btn-quick-admin");
   if (quickAdmin) {
     quickAdmin.addEventListener("click", () => {
@@ -1080,7 +1086,7 @@ function bindEvents() {
     });
   }
 
-  // Chuyển đổi hiển thị Thẻ / Bảng cho Thửa đất
+  // Chuyá»ƒn Ä‘á»•i hiá»ƒn thá»‹ Tháº» / Báº£ng cho Thá»­a Ä‘áº¥t
   const btnViewCards = $("btn-view-cards");
   if (btnViewCards) {
     btnViewCards.addEventListener("click", () => setFarmViewMode("cards"));
@@ -1090,7 +1096,7 @@ function bindEvents() {
     btnViewTable.addEventListener("click", () => setFarmViewMode("table"));
   }
 
-  // Cột "Thao tác" (Sửa / Xoá) trên thẻ và bảng dùng event delegation
+  // Cá»™t "Thao tÃ¡c" (Sá»­a / XoÃ¡) trÃªn tháº» vÃ  báº£ng dÃ¹ng event delegation
   const cardsContainer = $("farm-cards-container");
   if (cardsContainer) {
     cardsContainer.addEventListener("click", handleTableAction);
@@ -1098,7 +1104,7 @@ function bindEvents() {
   $("farm-table-body").addEventListener("click", handleTableAction);
   $("batch-table-body").addEventListener("click", handleTableAction);
 
-  // Bảng và nút của Lô chờ xác nhận bàn giao
+  // Báº£ng vÃ  nÃºt cá»§a LÃ´ chá» xÃ¡c nháº­n bÃ n giao
   const pendingTbody = $("pending-handovers-table-body");
   if (pendingTbody) {
     pendingTbody.addEventListener("click", handleTableAction);
@@ -1107,11 +1113,11 @@ function bindEvents() {
   if (btnRefreshPending) {
     btnRefreshPending.addEventListener("click", async () => {
       await loadPendingHandovers();
-      toast("Đã làm mới danh sách lô chờ xác nhận.", "info");
+      toast("ÄÃ£ lÃ m má»›i danh sÃ¡ch lÃ´ chá» xÃ¡c nháº­n.", "info");
     });
   }
 
-  // Modal bàn giao sự kiện
+  // Modal bÃ n giao sá»± kiá»‡n
   const btnCloseHandover = $("btn-close-handover-modal");
   if (btnCloseHandover) btnCloseHandover.addEventListener("click", closeHandoverModal);
   const btnCancelHandover = $("btn-cancel-handover");
@@ -1119,7 +1125,7 @@ function bindEvents() {
   const handoverForm = $("handover-form");
   if (handoverForm) handoverForm.addEventListener("submit", handleHandoverSubmit);
 
-  // Modal từ chối sự kiện
+  // Modal tá»« chá»‘i sá»± kiá»‡n
   const btnCloseReject = $("btn-close-reject-modal");
   if (btnCloseReject) btnCloseReject.addEventListener("click", closeRejectModal);
   const btnCancelReject = $("btn-cancel-reject");
@@ -1129,7 +1135,7 @@ function bindEvents() {
   const rejectReasonInput = $("reject-reason");
   if (rejectReasonInput) rejectReasonInput.addEventListener("input", updateRejectCounter);
 
-  // Đóng modal khi bấm ra ngoài nền backdrop
+  // ÄÃ³ng modal khi báº¥m ra ngoÃ i ná»n backdrop
   const modalHandover = $("modal-handover");
   if (modalHandover) {
     modalHandover.addEventListener("click", (e) => {
@@ -1143,7 +1149,7 @@ function bindEvents() {
     });
   }
 
-  // Nút đóng trang chi tiết lô S-25
+  // NÃºt Ä‘Ã³ng trang chi tiáº¿t lÃ´ S-25
   const btnCloseDetail = $("btn-close-batch-detail");
   if (btnCloseDetail) btnCloseDetail.addEventListener("click", closeBatchDetail);
 
@@ -1175,7 +1181,7 @@ function bindEvents() {
     });
   }
 
-  // [T-59] Modal timeline: đóng bằng nút × và click backdrop
+  // [T-59] Modal timeline: Ä‘Ã³ng báº±ng nÃºt Ã— vÃ  click backdrop
   const btnCloseTimeline = $("btn-close-timeline-modal");
   if (btnCloseTimeline) btnCloseTimeline.addEventListener("click", closeBatchTimelineModal);
   const modalTimeline = $("modal-batch-timeline");
@@ -1185,7 +1191,7 @@ function bindEvents() {
     });
   }
 
-  // [T-59] Modal ancestors: đóng bằng nút × và click backdrop
+  // [T-59] Modal ancestors: Ä‘Ã³ng báº±ng nÃºt Ã— vÃ  click backdrop
   const btnCloseAncestors = $("btn-close-ancestors-modal");
   if (btnCloseAncestors) btnCloseAncestors.addEventListener("click", closeBatchAncestorsModal);
   const modalAncestors = $("modal-batch-ancestors");
@@ -1196,19 +1202,19 @@ function bindEvents() {
   }
 }
 
-/* ------------------------------------------- 11. Bàn giao lô hàng (SCRUM-27/28) --- */
-/** GET /organizations -> danh sách tổ chức để chọn bên nhận */
+/* ------------------------------------------- 11. BÃ n giao lÃ´ hÃ ng (SCRUM-27/28) --- */
+/** GET /organizations -> danh sÃ¡ch tá»• chá»©c Ä‘á»ƒ chá»n bÃªn nháº­n */
 async function loadOrganizations() {
   if (session === null) return;
   try {
     const data = await apiRequest("/organizations");
     organizations = Array.isArray(data) ? data : [];
   } catch (error) {
-    console.warn("Không tải được danh sách tổ chức:", error.message);
+    console.warn("KhÃ´ng táº£i Ä‘Æ°á»£c danh sÃ¡ch tá»• chá»©c:", error.message);
   }
 }
 
-/** GET /handovers/pending -> danh sách bàn giao gửi đến tổ chức của user */
+/** GET /handovers/pending -> danh sÃ¡ch bÃ n giao gá»­i Ä‘áº¿n tá»• chá»©c cá»§a user */
 async function loadPendingHandovers() {
   if (session === null) {
     pendingHandovers = [];
@@ -1220,39 +1226,39 @@ async function loadPendingHandovers() {
     pendingHandovers = Array.isArray(data) ? data : [];
     renderPendingHandovers();
   } catch (error) {
-    console.warn("Không tải được danh sách lô chờ xác nhận:", error.message);
+    console.warn("KhÃ´ng táº£i Ä‘Æ°á»£c danh sÃ¡ch lÃ´ chá» xÃ¡c nháº­n:", error.message);
     pendingHandovers = [];
     renderPendingHandovers();
   }
 }
 
-/** Vẽ danh sách các lô hàng đang chờ xác nhận bàn giao */
+/** Váº½ danh sÃ¡ch cÃ¡c lÃ´ hÃ ng Ä‘ang chá» xÃ¡c nháº­n bÃ n giao */
 function renderPendingHandovers() {
   const tbody = $("pending-handovers-table-body");
   if (!tbody) return;
 
   tbody.innerHTML = pendingHandovers
     .map((h) => {
-      const productName = h.batch_product_name || `Lô #${h.batch_id}`;
-      const fromOrg = h.from_org_name || `Tổ chức #${h.from_org_id}`;
-      const note = h.notes || h.note || "—";
+      const productName = h.batch_product_name || `LÃ´ #${h.batch_id}`;
+      const fromOrg = h.from_org_name || `Tá»• chá»©c #${h.from_org_id}`;
+      const note = h.notes || h.note || "â€”";
       return `
       <tr>
         <td class="id-cell">#${escapeHtml(h.batch_id)}</td>
         <td><strong>${escapeHtml(productName)}</strong></td>
         <td class="is-right">${formatNumber(h.batch_quantity)}</td>
-        <td><span class="badge badge--org">🏢 ${escapeHtml(fromOrg)}</span></td>
+        <td><span class="badge badge--org">ðŸ¢ ${escapeHtml(fromOrg)}</span></td>
         <td>${escapeHtml(formatDateTime(h.created_at))}</td>
         <td>${escapeHtml(note)}</td>
         <td class="is-center">
           <div class="table__actions" style="justify-content: center;">
             <button class="btn btn--success btn--sm" type="button"
                     data-action="accept-handover" data-id="${escapeHtml(h.id)}">
-              ✓ Xác nhận nhận lô
+              âœ“ XÃ¡c nháº­n nháº­n lÃ´
             </button>
             <button class="btn btn--danger btn--sm" type="button"
                     data-action="reject-handover" data-id="${escapeHtml(h.id)}">
-              ✕ Từ chối
+              âœ• Tá»« chá»‘i
             </button>
           </div>
         </td>
@@ -1262,7 +1268,7 @@ function renderPendingHandovers() {
 
   const countBadge = $("badge-pending-count");
   if (countBadge) {
-    countBadge.textContent = `${pendingHandovers.length} lô`;
+    countBadge.textContent = `${pendingHandovers.length} lÃ´`;
     countBadge.className = pendingHandovers.length > 0 ? "badge badge--warning" : "badge badge--muted";
   }
   const statPending = $("stat-pending-handovers");
@@ -1276,11 +1282,11 @@ function renderPendingHandovers() {
   renderStats();
 }
 
-/** Mở modal bàn giao lô hàng */
+/** Má»Ÿ modal bÃ n giao lÃ´ hÃ ng */
 function openHandoverModal(batchId) {
   const batch = batches.find((item) => item.id === batchId);
   if (!batch) {
-    toast(`Không tìm thấy lô nông sản #${batchId}.`, "error");
+    toast(`KhÃ´ng tÃ¬m tháº¥y lÃ´ nÃ´ng sáº£n #${batchId}.`, "error");
     return;
   }
 
@@ -1290,23 +1296,23 @@ function openHandoverModal(batchId) {
   const summary = $("modal-handover-summary");
   if (summary) {
     summary.innerHTML = `
-      <div><strong>Lô hàng:</strong> #${escapeHtml(batch.id)} — <strong>${escapeHtml(batch.product_name)}</strong></div>
-      <div><strong>Khối lượng:</strong> ${formatNumber(batch.quantity)} kg · <strong>Vùng xuất xứ:</strong> ${escapeHtml(farmLabel(batch.farm_id))}</div>
-      <div><strong>Tổ chức bàn giao:</strong> ${escapeHtml(session?.organization_name || "Tổ chức của bạn")}</div>
+      <div><strong>LÃ´ hÃ ng:</strong> #${escapeHtml(batch.id)} â€” <strong>${escapeHtml(batch.product_name)}</strong></div>
+      <div><strong>Khá»‘i lÆ°á»£ng:</strong> ${formatNumber(batch.quantity)} kg Â· <strong>VÃ¹ng xuáº¥t xá»©:</strong> ${escapeHtml(farmLabel(batch.farm_id))}</div>
+      <div><strong>Tá»• chá»©c bÃ n giao:</strong> ${escapeHtml(session?.organization_name || "Tá»• chá»©c cá»§a báº¡n")}</div>
     `;
   }
 
-  // Đổ danh sách tổ chức khác vào select
+  // Äá»• danh sÃ¡ch tá»• chá»©c khÃ¡c vÃ o select
   const select = $("handover-to-org");
   if (select) {
     const targetOrgs = organizations.filter((org) => org.id !== session?.organization_id);
     if (targetOrgs.length === 0) {
-      select.innerHTML = '<option value="">— Chưa có tổ chức đối tác khác nào trong hệ thống —</option>';
+      select.innerHTML = '<option value="">â€” ChÆ°a cÃ³ tá»• chá»©c Ä‘á»‘i tÃ¡c khÃ¡c nÃ o trong há»‡ thá»‘ng â€”</option>';
       select.disabled = true;
     } else {
       select.disabled = false;
       select.innerHTML =
-        '<option value="">— Chọn tổ chức tiếp nhận —</option>' +
+        '<option value="">â€” Chá»n tá»• chá»©c tiáº¿p nháº­n â€”</option>' +
         targetOrgs
           .map((org) => `<option value="${escapeHtml(org.id)}">${escapeHtml(org.name)} (${escapeHtml(org.code)})</option>`)
           .join("");
@@ -1316,13 +1322,13 @@ function openHandoverModal(batchId) {
   $("modal-handover").hidden = false;
 }
 
-/** Đóng modal bàn giao */
+/** ÄÃ³ng modal bÃ n giao */
 function closeHandoverModal() {
   $("modal-handover").hidden = true;
   $("handover-form").reset();
 }
 
-/** Xử lý gửi form bàn giao */
+/** Xá»­ lÃ½ gá»­i form bÃ n giao */
 async function handleHandoverSubmit(event) {
   event.preventDefault();
   const batchId = Number($("handover-batch-id").value);
@@ -1330,30 +1336,30 @@ async function handleHandoverSubmit(event) {
   const note = $("handover-note").value.trim() || null;
 
   if (!toOrgId) {
-    toast("Vui lòng chọn tổ chức tiếp nhận lô hàng!", "error");
+    toast("Vui lÃ²ng chá»n tá»• chá»©c tiáº¿p nháº­n lÃ´ hÃ ng!", "error");
     return;
   }
 
   const button = $("btn-submit-handover");
-  setButtonLoading(button, true, "Đang gửi…", "Xác nhận gửi bàn giao");
+  setButtonLoading(button, true, "Äang gá»­iâ€¦", "XÃ¡c nháº­n gá»­i bÃ n giao");
 
   try {
     await apiRequest(`/batches/${batchId}/handover`, {
       method: "POST",
       body: { to_org_id: toOrgId, note: note },
     });
-    toast(`Đã gửi yêu cầu bàn giao lô nông sản #${batchId} thành công!`, "success");
+    toast(`ÄÃ£ gá»­i yÃªu cáº§u bÃ n giao lÃ´ nÃ´ng sáº£n #${batchId} thÃ nh cÃ´ng!`, "success");
     closeHandoverModal();
     await loadBatches();
     await loadPendingHandovers();
   } catch (error) {
-    toast(`Bàn giao thất bại: ${error.message}`, "error");
+    toast(`BÃ n giao tháº¥t báº¡i: ${error.message}`, "error");
   } finally {
-    setButtonLoading(button, false, "Đang gửi…", "Xác nhận gửi bàn giao");
+    setButtonLoading(button, false, "Äang gá»­iâ€¦", "XÃ¡c nháº­n gá»­i bÃ n giao");
   }
 }
 
-/** Mở modal từ chối tiếp nhận */
+/** Má»Ÿ modal tá»« chá»‘i tiáº¿p nháº­n */
 function openRejectModal(handoverId) {
   $("reject-handover-id").value = String(handoverId);
   $("reject-reason").value = "";
@@ -1362,59 +1368,59 @@ function openRejectModal(handoverId) {
   $("reject-reason").focus();
 }
 
-/** Đóng modal từ chối tiếp nhận */
+/** ÄÃ³ng modal tá»« chá»‘i tiáº¿p nháº­n */
 function closeRejectModal() {
   $("modal-reject").hidden = true;
   $("reject-form").reset();
 }
 
-/** Cập nhật bộ đếm ký tự lý do từ chối */
+/** Cáº­p nháº­t bá»™ Ä‘áº¿m kÃ½ tá»± lÃ½ do tá»« chá»‘i */
 function updateRejectCounter() {
   const reason = $("reject-reason").value.trim();
   const counter = $("reject-reason-counter");
   if (counter) {
-    counter.textContent = `Đã nhập: ${reason.length} / tối thiểu 10 ký tự`;
+    counter.textContent = `ÄÃ£ nháº­p: ${reason.length} / tá»‘i thiá»ƒu 10 kÃ½ tá»±`;
     counter.style.color = reason.length >= 10 ? "var(--color-primary)" : "var(--color-danger)";
   }
 }
 
-/** Xử lý gửi form từ chối tiếp nhận */
+/** Xá»­ lÃ½ gá»­i form tá»« chá»‘i tiáº¿p nháº­n */
 async function handleRejectSubmit(event) {
   event.preventDefault();
   const handoverId = Number($("reject-handover-id").value);
   const reason = $("reject-reason").value.trim();
 
   if (reason.length < 10) {
-    toast("Lý do từ chối bắt buộc phải có tối thiểu 10 ký tự!", "error");
+    toast("LÃ½ do tá»« chá»‘i báº¯t buá»™c pháº£i cÃ³ tá»‘i thiá»ƒu 10 kÃ½ tá»±!", "error");
     $("reject-reason").focus();
     return;
   }
 
   const button = $("btn-submit-reject");
-  setButtonLoading(button, true, "Đang xử lý…", "Xác nhận từ chối");
+  setButtonLoading(button, true, "Äang xá»­ lÃ½â€¦", "XÃ¡c nháº­n tá»« chá»‘i");
 
   try {
     await apiRequest(`/handovers/${handoverId}/respond`, {
       method: "POST",
       body: { action: "REJECT", reject_reason: reason },
     });
-    toast("Đã từ chối tiếp nhận lô hàng.", "info");
+    toast("ÄÃ£ tá»« chá»‘i tiáº¿p nháº­n lÃ´ hÃ ng.", "info");
     closeRejectModal();
     await loadPendingHandovers();
     await loadBatches();
   } catch (error) {
-    toast(`Từ chối thất bại: ${error.message}`, "error");
+    toast(`Tá»« chá»‘i tháº¥t báº¡i: ${error.message}`, "error");
   } finally {
-    setButtonLoading(button, false, "Đang xử lý…", "Xác nhận từ chối");
+    setButtonLoading(button, false, "Äang xá»­ lÃ½â€¦", "XÃ¡c nháº­n tá»« chá»‘i");
   }
 }
 
-/** Tiếp nhận lô hàng (ACCEPT) */
+/** Tiáº¿p nháº­n lÃ´ hÃ ng (ACCEPT) */
 async function handleAcceptHandover(handoverId) {
   const h = pendingHandovers.find((item) => item.id === handoverId);
-  const batchName = h ? (h.batch_product_name || `lô #${h.batch_id}`) : `lô hàng #${handoverId}`;
+  const batchName = h ? (h.batch_product_name || `lÃ´ #${h.batch_id}`) : `lÃ´ hÃ ng #${handoverId}`;
 
-  if (!window.confirm(`Bạn có chắc chắn muốn xác nhận tiếp nhận ${batchName} về tổ chức của mình?`)) {
+  if (!window.confirm(`Báº¡n cÃ³ cháº¯c cháº¯n muá»‘n xÃ¡c nháº­n tiáº¿p nháº­n ${batchName} vá» tá»• chá»©c cá»§a mÃ¬nh?`)) {
     return;
   }
 
@@ -1423,29 +1429,29 @@ async function handleAcceptHandover(handoverId) {
       method: "POST",
       body: { action: "ACCEPT" },
     });
-    toast(`Đã tiếp nhận ${batchName} thành công!`, "success");
+    toast(`ÄÃ£ tiáº¿p nháº­n ${batchName} thÃ nh cÃ´ng!`, "success");
     await loadPendingHandovers();
     await loadBatches();
   } catch (error) {
-    toast(`Tiếp nhận lô hàng thất bại: ${error.message}`, "error");
+    toast(`Tiáº¿p nháº­n lÃ´ hÃ ng tháº¥t báº¡i: ${error.message}`, "error");
   }
 }
 
-/** Huỷ chế độ sửa của form vùng trồng / lô nông sản (nút "Huỷ sửa"). */
+/** Huá»· cháº¿ Ä‘á»™ sá»­a cá»§a form vÃ¹ng trá»“ng / lÃ´ nÃ´ng sáº£n (nÃºt "Huá»· sá»­a"). */
 function cancelEdit(entity) {
   if (entity === "farm") {
     resetFarmForm();
     renderFarms();
-    toast("Đã huỷ chế độ sửa vùng trồng.", "info");
+    toast("ÄÃ£ huá»· cháº¿ Ä‘á»™ sá»­a vÃ¹ng trá»“ng.", "info");
     return;
   }
 
   resetBatchForm();
   renderBatches();
-  toast("Đã huỷ chế độ sửa lô nông sản.", "info");
+  toast("ÄÃ£ huá»· cháº¿ Ä‘á»™ sá»­a lÃ´ nÃ´ng sáº£n.", "info");
 }
 
-/** [S-25] Xem trang chi tiết một lô nông sản theo batchId. */
+/** [S-25] Xem trang chi tiáº¿t má»™t lÃ´ nÃ´ng sáº£n theo batchId. */
 async function openBatchDetail(batchId) {
   const card = $("batch-detail-card");
   const loading = $("batch-detail-loading");
@@ -1455,7 +1461,7 @@ async function openBatchDetail(batchId) {
 
   if (!card) return;
 
-  // [T-59] Lưu lại batch ID đang xem để header buttons dùng đúng batch.
+  // [T-59] LÆ°u láº¡i batch ID Ä‘ang xem Ä‘á»ƒ header buttons dÃ¹ng Ä‘Ãºng batch.
   currentBatchId = batchId;
 
   card.hidden = false;
@@ -1475,57 +1481,57 @@ async function openBatchDetail(batchId) {
       return;
     }
 
-    $("batch-detail-header-title").textContent = `📦 Trang chi tiết lô nông sản #${data.id} - ${data.product_name}`;
+    $("batch-detail-header-title").textContent = `ðŸ“¦ Trang chi tiáº¿t lÃ´ nÃ´ng sáº£n #${data.id} - ${data.product_name}`;
     $("bd-id").textContent = `#${data.id}`;
     $("bd-product-name").textContent = data.product_name || "N/A";
     $("bd-initial-qty").textContent = formatNumber(data.initial_quantity || data.quantity);
     $("bd-remaining-qty").textContent = formatNumber(data.remaining_quantity != null ? data.remaining_quantity : (data.quantity || 0));
     $("bd-unit-1").textContent = data.unit || "kg";
     $("bd-unit-2").textContent = data.unit || "kg";
-    $("bd-status").textContent = data.status || "Đang lưu kho";
+    $("bd-status").textContent = data.status || "Äang lÆ°u kho";
     $("bd-harvest-date").textContent = formatDate(data.harvest_date);
 
-    $("bd-current-org").textContent = data.current_org_name ? `🏢 ${data.current_org_name}` : "Tổ chức chưa xác định";
+    $("bd-current-org").textContent = data.current_org_name ? `ðŸ¢ ${data.current_org_name}` : "Tá»• chá»©c chÆ°a xÃ¡c Ä‘á»‹nh";
     $("bd-farm-name").textContent = data.farm_name || farmLabel(data.farm_id) || "N/A";
     $("bd-farm-location").textContent = data.farm_location || "N/A";
 
-    // Lô mẹ trực tiếp
+    // LÃ´ máº¹ trá»±c tiáº¿p
     const parentContainer = $("bd-parent-container");
     if (data.parent && data.parent.id) {
       const p = data.parent;
       parentContainer.innerHTML = `
         <div class="tree-card">
           <div class="tree-card__info">
-            <span class="tree-card__code">🌱 Lô mẹ trực tiếp: #${escapeHtml(p.id)}</span>
+            <span class="tree-card__code">ðŸŒ± LÃ´ máº¹ trá»±c tiáº¿p: #${escapeHtml(p.id)}</span>
             <span class="tree-card__name">${escapeHtml(p.product_name)}</span>
-            <span class="tree-card__meta">Khối lượng: ${formatNumber(p.remaining_quantity != null ? p.remaining_quantity : p.quantity)} / ${formatNumber(p.quantity)} ${escapeHtml(p.unit || "kg")} · Trạng thái: ${escapeHtml(p.status || "Đang lưu kho")} · Nơi giữ: ${escapeHtml(p.current_org_name || "N/A")}</span>
+            <span class="tree-card__meta">Khá»‘i lÆ°á»£ng: ${formatNumber(p.remaining_quantity != null ? p.remaining_quantity : p.quantity)} / ${formatNumber(p.quantity)} ${escapeHtml(p.unit || "kg")} Â· Tráº¡ng thÃ¡i: ${escapeHtml(p.status || "Äang lÆ°u kho")} Â· NÆ¡i giá»¯: ${escapeHtml(p.current_org_name || "N/A")}</span>
           </div>
           <button class="btn btn--outline-primary btn--sm tree-card__action" type="button" onclick="openBatchDetail(${p.id})">
-            👁️ Xem lô mẹ #${p.id} ↗
+            ðŸ‘ï¸ Xem lÃ´ máº¹ #${p.id} â†—
           </button>
         </div>
       `;
     } else {
-      parentContainer.innerHTML = `<div class="no-tree-msg">Không có lô mẹ</div>`;
+      parentContainer.innerHTML = `<div class="no-tree-msg">KhÃ´ng cÃ³ lÃ´ máº¹</div>`;
     }
 
-    // Lô con trực tiếp
+    // LÃ´ con trá»±c tiáº¿p
     const childrenContainer = $("bd-children-container");
     if (data.children && data.children.length > 0) {
       childrenContainer.innerHTML = data.children.map((c) => `
         <div class="tree-card">
           <div class="tree-card__info">
-            <span class="tree-card__code">🌿 Lô con trực tiếp: #${escapeHtml(c.id)}</span>
+            <span class="tree-card__code">ðŸŒ¿ LÃ´ con trá»±c tiáº¿p: #${escapeHtml(c.id)}</span>
             <span class="tree-card__name">${escapeHtml(c.product_name)}</span>
-            <span class="tree-card__meta">Khối lượng: ${formatNumber(c.remaining_quantity != null ? c.remaining_quantity : c.quantity)} / ${formatNumber(c.quantity)} ${escapeHtml(c.unit || "kg")} · Trạng thái: ${escapeHtml(c.status || "Đang lưu kho")} · Nơi giữ: ${escapeHtml(c.current_org_name || "N/A")}</span>
+            <span class="tree-card__meta">Khá»‘i lÆ°á»£ng: ${formatNumber(c.remaining_quantity != null ? c.remaining_quantity : c.quantity)} / ${formatNumber(c.quantity)} ${escapeHtml(c.unit || "kg")} Â· Tráº¡ng thÃ¡i: ${escapeHtml(c.status || "Äang lÆ°u kho")} Â· NÆ¡i giá»¯: ${escapeHtml(c.current_org_name || "N/A")}</span>
           </div>
           <button class="btn btn--outline-primary btn--sm tree-card__action" type="button" onclick="openBatchDetail(${c.id})">
-            👁️ Xem lô con #${c.id} ↗
+            ðŸ‘ï¸ Xem lÃ´ con #${c.id} â†—
           </button>
         </div>
       `).join("");
     } else {
-      childrenContainer.innerHTML = `<div class="no-tree-msg">Không có lô con</div>`;
+      childrenContainer.innerHTML = `<div class="no-tree-msg">KhÃ´ng cÃ³ lÃ´ con</div>`;
     }
 
     body.hidden = false;
@@ -1535,20 +1541,20 @@ async function openBatchDetail(batchId) {
       notFound.hidden = false;
     } else {
       errorEl.hidden = false;
-      errorEl.textContent = `⚠️ Đã xảy ra lỗi khi lấy chi tiết lô nông sản: ${error.message}`;
+      errorEl.textContent = `âš ï¸ ÄÃ£ xáº£y ra lá»—i khi láº¥y chi tiáº¿t lÃ´ nÃ´ng sáº£n: ${error.message}`;
     }
   }
 }
 
-/** Đóng trang chi tiết lô */
+/** ÄÃ³ng trang chi tiáº¿t lÃ´ */
 function closeBatchDetail() {
   const card = $("batch-detail-card");
   if (card) card.hidden = true;
 }
 
-/* ------------------------------------------- [T-59] Dòng thời gian & Tổ tiên --- */
+/* ------------------------------------------- [T-59] DÃ²ng thá»i gian & Tá»• tiÃªn --- */
 
-/** Mở modal xem dòng thời gian (timeline events) của một lô. */
+/** Má»Ÿ modal xem dÃ²ng thá»i gian (timeline events) cá»§a má»™t lÃ´. */
 async function openBatchTimelineModal(batchId) {
   const modal = $("modal-batch-timeline");
   const loadingEl = $("modal-timeline-loading");
@@ -1565,7 +1571,7 @@ async function openBatchTimelineModal(batchId) {
   emptyEl.hidden = true;
   listEl.hidden = true;
   listEl.innerHTML = "";
-  if (labelEl) labelEl.textContent = `Lô nông sản #${batchId}`;
+  if (labelEl) labelEl.textContent = `LÃ´ nÃ´ng sáº£n #${batchId}`;
 
   try {
     const events = await apiRequest(`/batches/${batchId}/events`);
@@ -1584,7 +1590,7 @@ async function openBatchTimelineModal(batchId) {
           <div class="timeline-item__data">${escapeHtml(ev.event_data || "")}</div>
           <div class="timeline-item__time">
             ${ev.timestamp ? formatDate(ev.timestamp) : ""}
-            ${ev.user_id ? ` · Người ghi: #${ev.user_id}` : ""}
+            ${ev.user_id ? ` Â· NgÆ°á»i ghi: #${ev.user_id}` : ""}
           </div>
         </div>
       </div>
@@ -1593,17 +1599,17 @@ async function openBatchTimelineModal(batchId) {
   } catch (err) {
     loadingEl.hidden = true;
     errorEl.hidden = false;
-    errorEl.textContent = `⚠️ Không thể tải dòng thời gian: ${err.message}`;
+    errorEl.textContent = `âš ï¸ KhÃ´ng thá»ƒ táº£i dÃ²ng thá»i gian: ${err.message}`;
   }
 }
 
-/** Đóng modal dòng thời gian. */
+/** ÄÃ³ng modal dÃ²ng thá»i gian. */
 function closeBatchTimelineModal() {
   const modal = $("modal-batch-timeline");
   if (modal) modal.hidden = true;
 }
 
-/** Mở modal xem danh sách tổ tiên (ancestors) của một lô. */
+/** Má»Ÿ modal xem danh sÃ¡ch tá»• tiÃªn (ancestors) cá»§a má»™t lÃ´. */
 async function openBatchAncestorsModal(batchId) {
   const modal = $("modal-batch-ancestors");
   const loadingEl = $("modal-ancestors-loading");
@@ -1620,7 +1626,7 @@ async function openBatchAncestorsModal(batchId) {
   emptyEl.hidden = true;
   listEl.hidden = true;
   listEl.innerHTML = "";
-  if (labelEl) labelEl.textContent = `Lô nông sản #${batchId}`;
+  if (labelEl) labelEl.textContent = `LÃ´ nÃ´ng sáº£n #${batchId}`;
 
   try {
     const data = await apiRequest(`/batches/${batchId}/ancestors`);
@@ -1634,10 +1640,10 @@ async function openBatchAncestorsModal(batchId) {
     }
 
     const genLabel = (gen) => {
-      if (gen === 1) return "Lô mẹ trực tiếp";
-      if (gen === 2) return "Lô bà";
-      if (gen === 3) return "Lô cố";
-      return `Thế hệ ${gen}`;
+      if (gen === 1) return "LÃ´ máº¹ trá»±c tiáº¿p";
+      if (gen === 2) return "LÃ´ bÃ ";
+      if (gen === 3) return "LÃ´ cá»‘";
+      return `Tháº¿ há»‡ ${gen}`;
     };
 
     listEl.innerHTML = ancestors.map((anc) => `
@@ -1645,16 +1651,16 @@ async function openBatchAncestorsModal(batchId) {
         <span class="ancestor-item__gen">${genLabel(anc.generation || 1)}</span>
         <div class="ancestor-item__info">
           <div class="ancestor-item__name">
-            #${escapeHtml(String(anc.id))} · ${escapeHtml(anc.product_name || anc.product || "")}
+            #${escapeHtml(String(anc.id))} Â· ${escapeHtml(anc.product_name || anc.product || "")}
           </div>
           <div class="ancestor-item__meta">
-            KL còn lại: ${formatNumber(anc.remaining_quantity)} / ${formatNumber(anc.quantity)} ${escapeHtml(anc.unit || "kg")}
-            · ${escapeHtml(anc.current_org_name || "N/A")}
+            KL cÃ²n láº¡i: ${formatNumber(anc.remaining_quantity)} / ${formatNumber(anc.quantity)} ${escapeHtml(anc.unit || "kg")}
+            Â· ${escapeHtml(anc.current_org_name || "N/A")}
           </div>
         </div>
         <div class="ancestor-item__action">
           <button class="btn btn--outline-primary btn--sm" type="button" onclick="openBatchDetail(${anc.id})">
-            👁️ Xem #${anc.id}
+            ðŸ‘ï¸ Xem #${anc.id}
           </button>
         </div>
       </div>
@@ -1664,22 +1670,22 @@ async function openBatchAncestorsModal(batchId) {
     loadingEl.hidden = true;
     if (err.message && err.message.includes("404")) {
       errorEl.hidden = false;
-      errorEl.textContent = "❌ Không tìm thấy lô nông sản này.";
+      errorEl.textContent = "âŒ KhÃ´ng tÃ¬m tháº¥y lÃ´ nÃ´ng sáº£n nÃ y.";
     } else {
       errorEl.hidden = false;
-      errorEl.textContent = `⚠️ Không thể tải danh sách tổ tiên: ${err.message}`;
+      errorEl.textContent = `âš ï¸ KhÃ´ng thá»ƒ táº£i danh sÃ¡ch tá»• tiÃªn: ${err.message}`;
     }
   }
 }
 
-/** Đóng modal danh sách tổ tiên. */
+/** ÄÃ³ng modal danh sÃ¡ch tá»• tiÃªn. */
 function closeBatchAncestorsModal() {
   const modal = $("modal-batch-ancestors");
   if (modal) modal.hidden = true;
 }
 
 /**
- * Xử lý click ở cột "Thao tác" (Chi tiết, Sửa, Xoá, Bàn giao, Tiếp nhận, Từ chối).
+ * Xá»­ lÃ½ click á»Ÿ cá»™t "Thao tÃ¡c" (Chi tiáº¿t, Sá»­a, XoÃ¡, BÃ n giao, Tiáº¿p nháº­n, Tá»« chá»‘i).
  */
 function handleTableAction(event) {
   const button = event.target.closest("button[data-action]");
@@ -1722,7 +1728,7 @@ function handleTableAction(event) {
 
   if (action === "delete") {
     if (!canDelete()) {
-      toast("Chỉ tài khoản Quản trị viên mới có quyền xoá dữ liệu.", "error");
+      toast("Chá»‰ tÃ i khoáº£n Quáº£n trá»‹ viÃªn má»›i cÃ³ quyá»n xoÃ¡ dá»¯ liá»‡u.", "error");
       return;
     }
     if (entity === "farm") {
@@ -1733,7 +1739,7 @@ function handleTableAction(event) {
   }
 }
 
-/** Tải dữ liệu dùng chung cho giao diện sau khi đăng nhập (theo phân quyền). */
+/** Táº£i dá»¯ liá»‡u dÃ¹ng chung cho giao diá»‡n sau khi Ä‘Äƒng nháº­p (theo phÃ¢n quyá»n). */
 async function loadAllData() {
   await checkHealth();
   await loadOrganizations();
@@ -1746,33 +1752,33 @@ async function loadAllData() {
   }
 }
 
-/** Tải lại toàn bộ dữ liệu; `silent = true` để bỏ toast tổng kết. */
+/** Táº£i láº¡i toÃ n bá»™ dá»¯ liá»‡u; `silent = true` Ä‘á»ƒ bá» toast tá»•ng káº¿t. */
 async function reloadAll({ silent = false } = {}) {
   const button = $("btn-reload");
-  setButtonLoading(button, true, "Đang tải…", "Tải lại dữ liệu");
+  setButtonLoading(button, true, "Äang táº£iâ€¦", "Táº£i láº¡i dá»¯ liá»‡u");
 
   await loadAllData();
 
-  setButtonLoading(button, false, "Đang tải…", "Tải lại dữ liệu");
+  setButtonLoading(button, false, "Äang táº£iâ€¦", "Táº£i láº¡i dá»¯ liá»‡u");
   if (!silent) {
-    const parts = [`${farms.length} vùng trồng`, `${batches.length} lô nông sản`];
+    const parts = [`${farms.length} vÃ¹ng trá»“ng`, `${batches.length} lÃ´ nÃ´ng sáº£n`];
     if (pendingHandovers.length > 0) {
-      parts.push(`${pendingHandovers.length} lô chờ nhận`);
+      parts.push(`${pendingHandovers.length} lÃ´ chá» nháº­n`);
     }
     if (isAdmin()) {
-      parts.push(`${auditLogs.length} nhật ký hoạt động`);
+      parts.push(`${auditLogs.length} nháº­t kÃ½ hoáº¡t Ä‘á»™ng`);
     }
-    toast(`Đã cập nhật dữ liệu: ${parts.join(", ")}.`, "info");
+    toast(`ÄÃ£ cáº­p nháº­t dá»¯ liá»‡u: ${parts.join(", ")}.`, "info");
   }
 }
 
-/* ------------------------------------------------------- 13. Khởi động --- */
+/* ------------------------------------------------------- 13. Khá»Ÿi Ä‘á»™ng --- */
 /**
- * Khởi động ứng dụng:
- * 1. gắn sự kiện + kiểm tra backend đang chạy;
- * 2. nếu tab còn phiên đăng nhập cũ (sessionStorage) thì xác thực lại với
- *    backend rồi vào thẳng giao diện;
- * 3. ngược lại, hiện màn hình đăng nhập.
+ * Khá»Ÿi Ä‘á»™ng á»©ng dá»¥ng:
+ * 1. gáº¯n sá»± kiá»‡n + kiá»ƒm tra backend Ä‘ang cháº¡y;
+ * 2. náº¿u tab cÃ²n phiÃªn Ä‘Äƒng nháº­p cÅ© (sessionStorage) thÃ¬ xÃ¡c thá»±c láº¡i vá»›i
+ *    backend rá»“i vÃ o tháº³ng giao diá»‡n;
+ * 3. ngÆ°á»£c láº¡i, hiá»‡n mÃ n hÃ¬nh Ä‘Äƒng nháº­p.
  */
 async function init() {
   const apiEl = $("stat-api");
@@ -1789,7 +1795,7 @@ async function init() {
     try {
       const data = await requestLogin(saved.username, saved.password);
       startSession({ username: data.username, role: data.role, password: saved.password });
-      toast(`Đã khôi phục phiên đăng nhập: ${data.username}.`, "info");
+      toast(`ÄÃ£ khÃ´i phá»¥c phiÃªn Ä‘Äƒng nháº­p: ${data.username}.`, "info");
       await reloadAll({ silent: true });
       return;
     } catch (error) {
@@ -1802,3 +1808,4 @@ async function init() {
 }
 
 document.addEventListener("DOMContentLoaded", init);
+

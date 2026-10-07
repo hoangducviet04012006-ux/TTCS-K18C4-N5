@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="vi">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Hệ thống Truy xuất nguồn gốc và Giám sát Chuỗi cung ứng Nông sản</title>
+  <title>Há»‡ thá»‘ng Truy xuáº¥t nguá»“n gá»‘c vÃ  GiÃ¡m sÃ¡t Chuá»—i cung á»©ng NÃ´ng sáº£n</title>
   <link rel="stylesheet" href="css/style.css?v=8" />
 </head>
 <body>
@@ -11,57 +11,57 @@
   <header class="app-header">
     <div class="app-header__inner">
       <div class="app-header__branding">
-        <h1 class="app-title">Truy xuất nguồn gốc &amp; Giám sát chuỗi lạnh nông sản</h1>
-        <p class="app-subtitle">Hệ thống Quản lý Vùng trồng &amp; Chuỗi cung ứng Nông sản An toàn</p>
+        <h1 class="app-title">Truy xuáº¥t nguá»“n gá»‘c &amp; GiÃ¡m sÃ¡t chuá»—i láº¡nh nÃ´ng sáº£n</h1>
+        <p class="app-subtitle">Há»‡ thá»‘ng Quáº£n lÃ½ VÃ¹ng trá»“ng &amp; Chuá»—i cung á»©ng NÃ´ng sáº£n An toÃ n</p>
       </div>
       <div class="app-header__actions">
-        <span id="health-badge" class="badge badge--muted">Đang kết nối hệ thống…</span>
+        <span id="health-badge" class="badge badge--muted">Äang káº¿t ná»‘i há»‡ thá»‘ngâ€¦</span>
         <span id="org-badge" class="badge badge--org" hidden></span>
-        <span id="user-badge" class="badge badge--muted" hidden>Chưa đăng nhập</span>
-        <button id="btn-reload" class="btn btn--light" type="button" hidden>Tải lại dữ liệu</button>
-        <button id="btn-logout" class="btn btn--light" type="button" hidden>Đăng xuất</button>
+        <span id="user-badge" class="badge badge--muted" hidden>ChÆ°a Ä‘Äƒng nháº­p</span>
+        <button id="btn-reload" class="btn btn--light" type="button" hidden>Táº£i láº¡i dá»¯ liá»‡u</button>
+        <button id="btn-logout" class="btn btn--light" type="button" hidden>ÄÄƒng xuáº¥t</button>
       </div>
     </div>
   </header>
 
   <main class="container">
-    <!-- ============================== ĐĂNG NHẬP ============================== -->
-    <section id="login-view" class="login" aria-label="Đăng nhập hệ thống">
+    <!-- ============================== ÄÄ‚NG NHáº¬P ============================== -->
+    <section id="login-view" class="login" aria-label="ÄÄƒng nháº­p há»‡ thá»‘ng">
       <div class="login__card card">
         <header class="card__header">
           <div>
-            <h2 class="card__title">Đăng nhập hệ thống</h2>
-            <p class="card__desc">Vui lòng nhập tài khoản để truy cập và quản lý dữ liệu.</p>
+            <h2 class="card__title">ÄÄƒng nháº­p há»‡ thá»‘ng</h2>
+            <p class="card__desc">Vui lÃ²ng nháº­p tÃ i khoáº£n Ä‘á»ƒ truy cáº­p vÃ  quáº£n lÃ½ dá»¯ liá»‡u.</p>
           </div>
         </header>
 
         <form id="login-form" class="form">
           <label class="field">
-            <span class="field__label">Tên đăng nhập <em>*</em></span>
+            <span class="field__label">TÃªn Ä‘Äƒng nháº­p <em>*</em></span>
             <input id="login-username" type="text" maxlength="50" required
-                   autocomplete="username" placeholder="Nhập tên tài khoản (VD: admin, farmer)" />
+                   autocomplete="username" placeholder="Nháº­p tÃªn tÃ i khoáº£n (VD: admin, farmer)" />
           </label>
           <label class="field">
-            <span class="field__label">Mật khẩu <em>*</em></span>
+            <span class="field__label">Máº­t kháº©u <em>*</em></span>
             <input id="login-password" type="password" maxlength="128" required
-                   autocomplete="current-password" placeholder="Nhập mật khẩu" />
+                   autocomplete="current-password" placeholder="Nháº­p máº­t kháº©u" />
           </label>
           <div class="form__actions">
-            <button id="login-submit" class="btn btn--primary" type="submit">Đăng nhập</button>
+            <button id="login-submit" class="btn btn--primary" type="submit">ÄÄƒng nháº­p</button>
           </div>
         </form>
 
         <div class="login-quick">
-          <span class="login-quick__title">Đăng nhập nhanh theo Tổ chức (Sprint 1):</span>
+          <span class="login-quick__title">ÄÄƒng nháº­p nhanh theo Tá»• chá»©c (Sprint 1):</span>
           <div class="login-quick__buttons">
-            <button id="btn-quick-admin" class="btn btn--light btn--sm" type="button" title="Đăng nhập Quản trị viên (HTX Đồng Tháp)">
-              Quản trị viên · HTX Đồng Tháp
+            <button id="btn-quick-admin" class="btn btn--light btn--sm" type="button" title="ÄÄƒng nháº­p Quáº£n trá»‹ viÃªn (HTX Äá»“ng ThÃ¡p)">
+              Quáº£n trá»‹ viÃªn Â· HTX Äá»“ng ThÃ¡p
             </button>
-            <button id="btn-quick-farmer" class="btn btn--light btn--sm" type="button" title="Đăng nhập Nông dân (HTX Đồng Tháp)">
-              Nông dân · HTX Đồng Tháp
+            <button id="btn-quick-farmer" class="btn btn--light btn--sm" type="button" title="ÄÄƒng nháº­p NÃ´ng dÃ¢n (HTX Äá»“ng ThÃ¡p)">
+              NÃ´ng dÃ¢n Â· HTX Äá»“ng ThÃ¡p
             </button>
-            <button id="btn-quick-farmer-tg" class="btn btn--light btn--sm" type="button" title="Đăng nhập Nông dân (HTX Tiền Giang)">
-              Nông dân · HTX Tiền Giang
+            <button id="btn-quick-farmer-tg" class="btn btn--light btn--sm" type="button" title="ÄÄƒng nháº­p NÃ´ng dÃ¢n (HTX Tiá»n Giang)">
+              NÃ´ng dÃ¢n Â· HTX Tiá»n Giang
             </button>
           </div>
         </div>
@@ -69,50 +69,50 @@
     </section>
   </main>
 
-  <!-- ================ ỨNG DỤNG (chỉ hiện sau khi đăng nhập) ================ -->
+  <!-- ================ á»¨NG Dá»¤NG (chá»‰ hiá»‡n sau khi Ä‘Äƒng nháº­p) ================ -->
   <div id="app-view" class="container" hidden>
-    <!-- =============================== THỐNG KÊ =============================== -->
-    <section class="stats" aria-label="Thống kê nhanh">
+    <!-- =============================== THá»NG KÃŠ =============================== -->
+    <section class="stats" aria-label="Thá»‘ng kÃª nhanh">
       <article class="stat-card">
-        <span class="stat-card__label">Tổng vùng trồng</span>
+        <span class="stat-card__label">Tá»•ng vÃ¹ng trá»“ng</span>
         <strong id="stat-farms" class="stat-card__value">0</strong>
-        <span class="stat-card__hint">Cơ sở canh tác đang hoạt động</span>
+        <span class="stat-card__hint">CÆ¡ sá»Ÿ canh tÃ¡c Ä‘ang hoáº¡t Ä‘á»™ng</span>
       </article>
       <article class="stat-card">
-        <span class="stat-card__label">Tổng lô nông sản</span>
+        <span class="stat-card__label">Tá»•ng lÃ´ nÃ´ng sáº£n</span>
         <strong id="stat-batches" class="stat-card__value">0</strong>
-        <span class="stat-card__hint">Lô hàng đã ghi nhận thu hoạch</span>
+        <span class="stat-card__hint">LÃ´ hÃ ng Ä‘Ã£ ghi nháº­n thu hoáº¡ch</span>
       </article>
       <article class="stat-card">
-        <span class="stat-card__label">Tổng sản lượng</span>
+        <span class="stat-card__label">Tá»•ng sáº£n lÆ°á»£ng</span>
         <strong class="stat-card__value"><span id="stat-yield">0</span> <small class="unit">kg</small></strong>
-        <span class="stat-card__hint">Tổng khối lượng toàn hệ thống</span>
+        <span class="stat-card__hint">Tá»•ng khá»‘i lÆ°á»£ng toÃ n há»‡ thá»‘ng</span>
       </article>
-      <!-- Thẻ đếm lô chờ xác nhận bàn giao -->
+      <!-- Tháº» Ä‘áº¿m lÃ´ chá» xÃ¡c nháº­n bÃ n giao -->
       <article id="stat-pending-card" class="stat-card">
-        <span class="stat-card__label">Lô chờ xác nhận</span>
+        <span class="stat-card__label">LÃ´ chá» xÃ¡c nháº­n</span>
         <strong id="stat-pending-handovers" class="stat-card__value">0</strong>
         <span class="stat-card__hint">
-          Chờ tiếp nhận · <a href="#pending-handovers-card">Xem chi tiết ↓</a>
+          Chá» tiáº¿p nháº­n Â· <a href="#pending-handovers-card">Xem chi tiáº¿t â†“</a>
         </span>
       </article>
-      <!-- Thẻ đếm lịch sử thao tác - chỉ admin thấy -->
+      <!-- Tháº» Ä‘áº¿m lá»‹ch sá»­ thao tÃ¡c - chá»‰ admin tháº¥y -->
       <article id="stat-audit-card" class="stat-card" hidden>
-        <span class="stat-card__label">Nhật ký hoạt động</span>
+        <span class="stat-card__label">Nháº­t kÃ½ hoáº¡t Ä‘á»™ng</span>
         <strong id="stat-audit" class="stat-card__value">0</strong>
         <span class="stat-card__hint">
-          Lịch sử ghi nhận · <a href="#audit-card">Xem chi tiết ↓</a>
+          Lá»‹ch sá»­ ghi nháº­n Â· <a href="#audit-card">Xem chi tiáº¿t â†“</a>
         </span>
       </article>
     </section>
 
-    <!-- ===================== QUẢN LÝ THỬA ĐẤT / VÙNG TRỒNG ===================== -->
+    <!-- ===================== QUáº¢N LÃ THá»¬A Äáº¤T / VÃ™NG TRá»’NG ===================== -->
     <section class="card">
       <header class="card__header">
         <div>
-          <h2 class="card__title">Quản lý Thửa đất &amp; Vùng trồng</h2>
+          <h2 class="card__title">Quáº£n lÃ½ Thá»­a Ä‘áº¥t &amp; VÃ¹ng trá»“ng</h2>
           <p class="card__desc">
-            Khai báo và quản lý các thửa đất canh tác trực thuộc Hợp tác xã. Phân quyền và cô lập dữ liệu theo từng tổ chức.
+            Khai bÃ¡o vÃ  quáº£n lÃ½ cÃ¡c thá»­a Ä‘áº¥t canh tÃ¡c trá»±c thuá»™c Há»£p tÃ¡c xÃ£. PhÃ¢n quyá»n vÃ  cÃ´ láº­p dá»¯ liá»‡u theo tá»«ng tá»• chá»©c.
           </p>
         </div>
       </header>
@@ -121,90 +121,90 @@
         <p id="farm-form-mode" class="form__mode" hidden></p>
         <div class="form__row">
           <label class="field">
-            <span class="field__label">Tên thửa đất / Vùng trồng <em>*</em></span>
+            <span class="field__label">TÃªn thá»­a Ä‘áº¥t / VÃ¹ng trá»“ng <em>*</em></span>
             <input id="farm-name" type="text" maxlength="255" required
-                   placeholder="VD: Thửa 1 - Vườn xoài Cát Chu Tháp Mười" />
+                   placeholder="VD: Thá»­a 1 - VÆ°á»n xoÃ i CÃ¡t Chu ThÃ¡p MÆ°á»i" />
           </label>
           <label class="field">
-            <span class="field__label">Địa điểm / Vị trí canh tác <em>*</em></span>
+            <span class="field__label">Äá»‹a Ä‘iá»ƒm / Vá»‹ trÃ­ canh tÃ¡c <em>*</em></span>
             <input id="farm-location" type="text" maxlength="255" required
-                   placeholder="VD: Xã Mỹ Xương, TP. Cao Lãnh, Đồng Tháp" />
+                   placeholder="VD: XÃ£ Má»¹ XÆ°Æ¡ng, TP. Cao LÃ£nh, Äá»“ng ThÃ¡p" />
           </label>
         </div>
 
         <div class="form__row form__row--3cols">
           <label class="field">
-            <span class="field__label">Diện tích (ha) <em>*</em></span>
+            <span class="field__label">Diá»‡n tÃ­ch (ha) <em>*</em></span>
             <input id="farm-area" type="number" min="0.001" step="0.01" required
-                   placeholder="VD: 2.5 (lớn hơn 0)" />
-            <span class="field__hint">Diện tích bắt buộc &gt; 0</span>
+                   placeholder="VD: 2.5 (lá»›n hÆ¡n 0)" />
+            <span class="field__hint">Diá»‡n tÃ­ch báº¯t buá»™c &gt; 0</span>
           </label>
           <label class="field">
-            <span class="field__label">Tọa độ GPS (Vĩ độ, Kinh độ)</span>
+            <span class="field__label">Tá»a Ä‘á»™ GPS (VÄ© Ä‘á»™, Kinh Ä‘á»™)</span>
             <input id="farm-coordinates" type="text" maxlength="100"
                    placeholder="VD: 10.4532, 105.6321" />
-            <span class="field__hint">Tọa độ định vị GPS thửa đất</span>
+            <span class="field__hint">Tá»a Ä‘á»™ Ä‘á»‹nh vá»‹ GPS thá»­a Ä‘áº¥t</span>
           </label>
           <label class="field">
-            <span class="field__label">Người phụ trách / Nông hộ <em>*</em></span>
+            <span class="field__label">NgÆ°á»i phá»¥ trÃ¡ch / NÃ´ng há»™ <em>*</em></span>
             <input id="farm-owner" type="text" maxlength="255" required
-                   placeholder="VD: Nông dân Nguyễn Văn A" />
+                   placeholder="VD: NÃ´ng dÃ¢n Nguyá»…n VÄƒn A" />
           </label>
         </div>
 
         <div class="form__actions">
-          <button id="farm-submit" class="btn btn--primary" type="submit">Thêm thửa đất</button>
-          <button id="farm-cancel" class="btn btn--ghost" type="button" hidden>Huỷ sửa</button>
+          <button id="farm-submit" class="btn btn--primary" type="submit">ThÃªm thá»­a Ä‘áº¥t</button>
+          <button id="farm-cancel" class="btn btn--ghost" type="button" hidden>Huá»· sá»­a</button>
         </div>
       </form>
 
       <div class="section-toolbar">
         <div>
-          <h3 class="table-title">Danh mục thửa đất của tổ chức</h3>
-          <p id="farm-org-context" class="section-hint">Hiển thị các thửa đất thuộc quyền quản lý</p>
+          <h3 class="table-title">Danh má»¥c thá»­a Ä‘áº¥t cá»§a tá»• chá»©c</h3>
+          <p id="farm-org-context" class="section-hint">Hiá»ƒn thá»‹ cÃ¡c thá»­a Ä‘áº¥t thuá»™c quyá»n quáº£n lÃ½</p>
         </div>
         <div class="view-toggle">
-          <button id="btn-view-cards" class="btn btn--sm btn--active" type="button">🌾 Dạng thẻ</button>
-          <button id="btn-view-table" class="btn btn--sm btn--light" type="button">📋 Dạng bảng</button>
+          <button id="btn-view-cards" class="btn btn--sm btn--active" type="button">ðŸŒ¾ Dáº¡ng tháº»</button>
+          <button id="btn-view-table" class="btn btn--sm btn--light" type="button">ðŸ“‹ Dáº¡ng báº£ng</button>
         </div>
       </div>
 
-      <!-- Hiển thị dạng Thẻ trực quan cho nông dân -->
+      <!-- Hiá»ƒn thá»‹ dáº¡ng Tháº» trá»±c quan cho nÃ´ng dÃ¢n -->
       <div id="farm-cards-container" class="farm-grid"></div>
 
-      <!-- Hiển thị dạng Bảng chi tiết -->
+      <!-- Hiá»ƒn thá»‹ dáº¡ng Báº£ng chi tiáº¿t -->
       <div id="farm-table-wrap" class="table-wrap" hidden>
         <table class="table">
           <thead>
             <tr>
-              <th>Tên thửa đất</th>
-              <th>Địa điểm</th>
-              <th>Tọa độ GPS</th>
-              <th class="is-right">Diện tích (ha)</th>
-              <th>Người phụ trách</th>
-              <th class="is-center">Thao tác</th>
+              <th>TÃªn thá»­a Ä‘áº¥t</th>
+              <th>Äá»‹a Ä‘iá»ƒm</th>
+              <th>Tá»a Ä‘á»™ GPS</th>
+              <th class="is-right">Diá»‡n tÃ­ch (ha)</th>
+              <th>NgÆ°á»i phá»¥ trÃ¡ch</th>
+              <th class="is-center">Thao tÃ¡c</th>
             </tr>
           </thead>
           <tbody id="farm-table-body"></tbody>
         </table>
       </div>
-      <p id="farm-empty" class="empty" hidden>Hợp tác xã chưa có thửa đất nào được khai báo. Vui lòng thêm thửa đất mới ở biểu mẫu phía trên.</p>
+      <p id="farm-empty" class="empty" hidden>Há»£p tÃ¡c xÃ£ chÆ°a cÃ³ thá»­a Ä‘áº¥t nÃ o Ä‘Æ°á»£c khai bÃ¡o. Vui lÃ²ng thÃªm thá»­a Ä‘áº¥t má»›i á»Ÿ biá»ƒu máº«u phÃ­a trÃªn.</p>
     </section>
 
-    <!-- ==================== LÔ CHỜ TIẾP NHẬN BÀN GIAO ==================== -->
+    <!-- ==================== LÃ” CHá»œ TIáº¾P NHáº¬N BÃ€N GIAO ==================== -->
     <section id="pending-handovers-card" class="card card--highlight">
       <header class="card__header">
         <div class="card__header-flex">
           <div>
             <h2 class="card__title">
-              📥 Lô hàng chờ xác nhận bàn giao
-              <span id="badge-pending-count" class="badge badge--warning">0 lô</span>
+              ðŸ“¥ LÃ´ hÃ ng chá» xÃ¡c nháº­n bÃ n giao
+              <span id="badge-pending-count" class="badge badge--warning">0 lÃ´</span>
             </h2>
             <p class="card__desc">
-              Danh sách các lô nông sản được tổ chức khác bàn giao đến tổ chức của bạn. Vui lòng xác nhận tiếp nhận hoặc từ chối.
+              Danh sÃ¡ch cÃ¡c lÃ´ nÃ´ng sáº£n Ä‘Æ°á»£c tá»• chá»©c khÃ¡c bÃ n giao Ä‘áº¿n tá»• chá»©c cá»§a báº¡n. Vui lÃ²ng xÃ¡c nháº­n tiáº¿p nháº­n hoáº·c tá»« chá»‘i.
             </p>
           </div>
-          <button id="btn-refresh-pending" class="btn btn--light btn--sm" type="button">🔄 Làm mới</button>
+          <button id="btn-refresh-pending" class="btn btn--light btn--sm" type="button">ðŸ”„ LÃ m má»›i</button>
         </div>
       </header>
 
@@ -212,28 +212,28 @@
         <table class="table">
           <thead>
             <tr>
-              <th>Mã lô</th>
-              <th>Tên sản phẩm</th>
-              <th class="is-right">Khối lượng (kg)</th>
-              <th>Tổ chức gửi</th>
-              <th>Thời gian gửi</th>
-              <th>Ghi chú bàn giao</th>
-              <th class="is-center">Thao tác tiếp nhận</th>
+              <th>MÃ£ lÃ´</th>
+              <th>TÃªn sáº£n pháº©m</th>
+              <th class="is-right">Khá»‘i lÆ°á»£ng (kg)</th>
+              <th>Tá»• chá»©c gá»­i</th>
+              <th>Thá»i gian gá»­i</th>
+              <th>Ghi chÃº bÃ n giao</th>
+              <th class="is-center">Thao tÃ¡c tiáº¿p nháº­n</th>
             </tr>
           </thead>
           <tbody id="pending-handovers-table-body"></tbody>
         </table>
       </div>
-      <p id="pending-handovers-empty" class="empty">Hiện không có lô hàng nào đang chờ tổ chức của bạn xác nhận.</p>
+      <p id="pending-handovers-empty" class="empty">Hiá»‡n khÃ´ng cÃ³ lÃ´ hÃ ng nÃ o Ä‘ang chá» tá»• chá»©c cá»§a báº¡n xÃ¡c nháº­n.</p>
     </section>
 
-    <!-- ======================== QUẢN LÝ LÔ NÔNG SẢN ======================== -->
+    <!-- ======================== QUáº¢N LÃ LÃ” NÃ”NG Sáº¢N ======================== -->
     <section class="card">
       <header class="card__header">
         <div>
-          <h2 class="card__title">Quản lý lô nông sản</h2>
+          <h2 class="card__title">Quáº£n lÃ½ lÃ´ nÃ´ng sáº£n</h2>
           <p class="card__desc">
-            Theo dõi thông tin thu hoạch, sản lượng và nguồn gốc xuất xứ của từng lô hàng.
+            Theo dÃµi thÃ´ng tin thu hoáº¡ch, sáº£n lÆ°á»£ng vÃ  nguá»“n gá»‘c xuáº¥t xá»© cá»§a tá»«ng lÃ´ hÃ ng.
           </p>
         </div>
       </header>
@@ -242,176 +242,327 @@
         <p id="batch-form-mode" class="form__mode" hidden></p>
         <div class="form__row">
           <label class="field">
-            <span class="field__label">Vùng trồng xuất xứ <em>*</em></span>
+            <span class="field__label">VÃ¹ng trá»“ng xuáº¥t xá»© <em>*</em></span>
             <select id="batch-farm-id" required></select>
-            <span class="field__hint">Chọn vùng trồng trực thuộc</span>
+            <span class="field__hint">Chá»n vÃ¹ng trá»“ng trá»±c thuá»™c</span>
           </label>
           <label class="field">
-            <span class="field__label">Tên sản phẩm <em>*</em></span>
+            <span class="field__label">TÃªn sáº£n pháº©m <em>*</em></span>
             <input id="batch-product-name" type="text" maxlength="255" required
-                   placeholder="VD: Xoài cát Chu xuất khẩu" />
+                   placeholder="VD: XoÃ i cÃ¡t Chu xuáº¥t kháº©u" />
           </label>
         </div>
 
         <div class="form__row">
           <label class="field">
-            <span class="field__label">Khối lượng (kg) <em>*</em></span>
+            <span class="field__label">Khá»‘i lÆ°á»£ng (kg) <em>*</em></span>
             <input id="batch-quantity" type="number" min="0.1" step="0.1" required
                    placeholder="VD: 500" />
           </label>
           <label class="field">
-            <span class="field__label">Ngày thu hoạch <em>*</em></span>
+            <span class="field__label">NgÃ y thu hoáº¡ch <em>*</em></span>
             <input id="batch-harvest-date" type="date" required />
           </label>
         </div>
 
         <div class="form__actions">
-          <button id="batch-submit" class="btn btn--primary" type="submit">Tạo lô nông sản</button>
-          <button id="batch-cancel" class="btn btn--ghost" type="button" hidden>Huỷ sửa</button>
+          <button id="batch-submit" class="btn btn--primary" type="submit">Táº¡o lÃ´ nÃ´ng sáº£n</button>
+          <button id="batch-cancel" class="btn btn--ghost" type="button" hidden>Huá»· sá»­a</button>
         </div>
       </form>
 
-      <h3 class="table-title">Danh sách lô nông sản</h3>
+      <h3 class="table-title">Danh sÃ¡ch lÃ´ nÃ´ng sáº£n</h3>
       <div class="table-wrap">
         <table class="table">
           <thead>
             <tr>
-              <th>Mã lô</th>
-              <th>Vùng trồng xuất xứ</th>
-              <th>Tên sản phẩm</th>
-              <th class="is-right">Khối lượng (kg)</th>
-              <th>Ngày thu hoạch</th>
-              <th>Đơn vị nắm giữ</th>
-              <th>Trạng thái</th>
-              <th class="is-center">Thao tác</th>
+              <th>MÃ£ lÃ´</th>
+              <th>VÃ¹ng trá»“ng xuáº¥t xá»©</th>
+              <th>TÃªn sáº£n pháº©m</th>
+              <th class="is-right">Khá»‘i lÆ°á»£ng (kg)</th>
+              <th>NgÃ y thu hoáº¡ch</th>
+              <th>ÄÆ¡n vá»‹ náº¯m giá»¯</th>
+              <th>Tráº¡ng thÃ¡i</th>
+              <th class="is-center">Thao tÃ¡c</th>
             </tr>
           </thead>
           <tbody id="batch-table-body"></tbody>
         </table>
       </div>
-      <p id="batch-empty" class="empty" hidden>Chưa có lô nông sản nào được ghi nhận. Vui lòng tạo lô mới ở biểu mẫu phía trên.</p>
+      <p id="batch-empty" class="empty" hidden>ChÆ°a cÃ³ lÃ´ nÃ´ng sáº£n nÃ o Ä‘Æ°á»£c ghi nháº­n. Vui lÃ²ng táº¡o lÃ´ má»›i á»Ÿ biá»ƒu máº«u phÃ­a trÃªn.</p>
     </section>
 
-    <!-- ==================== [S-25] TRANG CHI TIẾT LÔ NÔNG SẢN ==================== -->
+<!-- ==================== [S-07] DANH MỤC SẢN PHẨM & ĐƠN VỊ TÍNH ==================== -->
+<section id="catalog-card" class="card">
+  <header class="card__header">
+    <div>
+      <h2 class="card__title">📚 Danh mục sản phẩm & đơn vị tính</h2>
+      <p class="card__desc">
+        Quản lý danh mục sản phẩm và đơn vị tính được sử dụng khi ghi nhận lô thu hoạch.
+        Dữ liệu được giới hạn theo tổ chức của tài khoản đang đăng nhập.
+      </p>
+    </div>
+  </header>
+
+  <div class="form__row">
+    <!-- Danh mục sản phẩm -->
+    <div class="card card--nested">
+      <h3 class="table-title">🌾 Sản phẩm</h3>
+
+      <form id="product-form" class="form">
+        <p id="product-form-mode" class="form__mode" hidden></p>
+
+        <label class="field">
+          <span class="field__label">Tên sản phẩm <em>*</em></span>
+          <input
+            id="product-name"
+            type="text"
+            maxlength="255"
+            required
+            placeholder="VD: Xoài Cát Chu"
+          />
+        </label>
+
+        <label class="field">
+          <span class="field__label">Mã sản phẩm <em>*</em></span>
+          <input
+            id="product-code"
+            type="text"
+            maxlength="50"
+            required
+            placeholder="VD: XCC"
+          />
+        </label>
+
+        <label class="field field--checkbox">
+          <input id="product-active" type="checkbox" checked />
+          <span>Đang hoạt động</span>
+        </label>
+
+        <div class="form__actions">
+          <button id="product-submit" class="btn btn--primary" type="submit">
+            Thêm sản phẩm
+          </button>
+          <button
+            id="product-cancel"
+            class="btn btn--ghost"
+            type="button"
+            hidden
+          >
+            Huỷ sửa
+          </button>
+        </div>
+      </form>
+
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Tên sản phẩm</th>
+              <th>Mã</th>
+              <th>Trạng thái</th>
+              <th class="is-center">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody id="product-table-body"></tbody>
+        </table>
+      </div>
+
+      <p id="product-empty" class="empty" hidden>
+        Chưa có sản phẩm nào trong danh mục.
+      </p>
+    </div>
+
+    <!-- Danh mục đơn vị tính -->
+    <div class="card card--nested">
+      <h3 class="table-title">⚖️ Đơn vị tính</h3>
+
+      <form id="unit-form" class="form">
+        <p id="unit-form-mode" class="form__mode" hidden></p>
+
+        <label class="field">
+          <span class="field__label">Tên đơn vị <em>*</em></span>
+          <input
+            id="unit-name"
+            type="text"
+            maxlength="50"
+            required
+            placeholder="VD: Kilogram"
+          />
+        </label>
+
+        <label class="field">
+          <span class="field__label">Ký hiệu <em>*</em></span>
+          <input
+            id="unit-symbol"
+            type="text"
+            maxlength="20"
+            required
+            placeholder="VD: kg"
+          />
+        </label>
+
+        <label class="field field--checkbox">
+          <input id="unit-active" type="checkbox" checked />
+          <span>Đang hoạt động</span>
+        </label>
+
+        <div class="form__actions">
+          <button id="unit-submit" class="btn btn--primary" type="submit">
+            Thêm đơn vị
+          </button>
+          <button
+            id="unit-cancel"
+            class="btn btn--ghost"
+            type="button"
+            hidden
+          >
+            Huỷ sửa
+          </button>
+        </div>
+      </form>
+
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Tên đơn vị</th>
+              <th>Ký hiệu</th>
+              <th>Trạng thái</th>
+              <th class="is-center">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody id="unit-table-body"></tbody>
+        </table>
+      </div>
+
+      <p id="unit-empty" class="empty" hidden>
+        Chưa có đơn vị tính nào trong danh mục.
+      </p>
+    </div>
+  </div>
+</section>
+
+    <!-- ==================== [S-25] TRANG CHI TIáº¾T LÃ” NÃ”NG Sáº¢N ==================== -->
     <section id="batch-detail-card" class="card card--highlight" hidden>
       <header class="card__header card__header-flex">
         <div>
           <h2 class="card__title" id="batch-detail-header-title">
-            📦 Trang chi tiết lô nông sản
+            ðŸ“¦ Trang chi tiáº¿t lÃ´ nÃ´ng sáº£n
           </h2>
           <p class="card__desc">
-            Hiển thị đầy đủ thông tin sản phẩm, khối lượng còn lại, đơn vị nắm giữ và quan hệ cây lô mẹ – lô con trực tiếp.
+            Hiá»ƒn thá»‹ Ä‘áº§y Ä‘á»§ thÃ´ng tin sáº£n pháº©m, khá»‘i lÆ°á»£ng cÃ²n láº¡i, Ä‘Æ¡n vá»‹ náº¯m giá»¯ vÃ  quan há»‡ cÃ¢y lÃ´ máº¹ â€“ lÃ´ con trá»±c tiáº¿p.
           </p>
         </div>
         <div class="card__header-actions">
-          <button id="btn-view-batch-timeline" class="btn btn--outline-info btn--sm" type="button">⏱️ Xem dòng thời gian</button>
-          <button id="btn-view-batch-ancestors" class="btn btn--outline-warning btn--sm" type="button">🌳 Xem danh sách tổ tiên</button>
-          <button id="btn-close-batch-detail" class="btn btn--light btn--sm" type="button">✖️ Đóng chi tiết</button>
+          <button id="btn-view-batch-timeline" class="btn btn--outline-info btn--sm" type="button">â±ï¸ Xem dÃ²ng thá»i gian</button>
+          <button id="btn-view-batch-ancestors" class="btn btn--outline-warning btn--sm" type="button">ðŸŒ³ Xem danh sÃ¡ch tá»• tiÃªn</button>
+          <button id="btn-close-batch-detail" class="btn btn--light btn--sm" type="button">âœ–ï¸ ÄÃ³ng chi tiáº¿t</button>
         </div>
       </header>
 
-      <!-- Trạng thái Loading -->
+      <!-- Tráº¡ng thÃ¡i Loading -->
       <div id="batch-detail-loading" class="empty" hidden>
-        ⌛ Đang tải thông tin chi tiết lô nông sản...
+        âŒ› Äang táº£i thÃ´ng tin chi tiáº¿t lÃ´ nÃ´ng sáº£n...
       </div>
 
-      <!-- Trạng thái Không tìm thấy (404) -->
+      <!-- Tráº¡ng thÃ¡i KhÃ´ng tÃ¬m tháº¥y (404) -->
       <div id="batch-detail-not-found" class="empty empty--error" hidden>
-        ❌ Rất tiếc, không tìm thấy lô nông sản với mã ID này trong hệ thống.
+        âŒ Ráº¥t tiáº¿c, khÃ´ng tÃ¬m tháº¥y lÃ´ nÃ´ng sáº£n vá»›i mÃ£ ID nÃ y trong há»‡ thá»‘ng.
       </div>
 
-      <!-- Trạng thái Lỗi API -->
+      <!-- Tráº¡ng thÃ¡i Lá»—i API -->
       <div id="batch-detail-error" class="empty empty--error" hidden>
-        ⚠️ Đã xảy ra lỗi khi kết nối với máy chủ API.
+        âš ï¸ ÄÃ£ xáº£y ra lá»—i khi káº¿t ná»‘i vá»›i mÃ¡y chá»§ API.
       </div>
 
-      <!-- Nội dung chi tiết lô -->
+      <!-- Ná»™i dung chi tiáº¿t lÃ´ -->
       <div id="batch-detail-body" hidden>
         <div class="batch-detail-grid">
-          <!-- 1. THÔNG TIN LÔ & KHỐI LƯỢNG CÒN LẠI -->
+          <!-- 1. THÃ”NG TIN LÃ” & KHá»I LÆ¯á»¢NG CÃ’N Láº I -->
           <div class="batch-detail-box">
-            <h3 class="box-title">📋 1. Thông tin sản phẩm &amp; Khối lượng</h3>
+            <h3 class="box-title">ðŸ“‹ 1. ThÃ´ng tin sáº£n pháº©m &amp; Khá»‘i lÆ°á»£ng</h3>
             <table class="detail-info-table">
               <tr>
-                <th>Mã lô hàng:</th>
+                <th>MÃ£ lÃ´ hÃ ng:</th>
                 <td><strong id="bd-id" class="badge badge--org">#--</strong></td>
               </tr>
               <tr>
-                <th>Tên sản phẩm:</th>
+                <th>TÃªn sáº£n pháº©m:</th>
                 <td><span id="bd-product-name" class="detail-highlight">--</span></td>
               </tr>
               <tr>
-                <th>Khối lượng ban đầu:</th>
+                <th>Khá»‘i lÆ°á»£ng ban Ä‘áº§u:</th>
                 <td><span id="bd-initial-qty">--</span> <small id="bd-unit-1">kg</small></td>
               </tr>
               <tr>
-                <th>Khối lượng còn lại:</th>
+                <th>Khá»‘i lÆ°á»£ng cÃ²n láº¡i:</th>
                 <td>
                   <strong id="bd-remaining-qty" class="detail-qty">--</strong> <small id="bd-unit-2">kg</small>
                 </td>
               </tr>
               <tr>
-                <th>Trạng thái lô:</th>
+                <th>Tráº¡ng thÃ¡i lÃ´:</th>
                 <td><span id="bd-status" class="badge badge--success">--</span></td>
               </tr>
               <tr>
-                <th>Ngày thu hoạch:</th>
+                <th>NgÃ y thu hoáº¡ch:</th>
                 <td><span id="bd-harvest-date">--</span></td>
               </tr>
             </table>
           </div>
 
-          <!-- 2. NƠI GIỮ HIỆN TẠI -->
+          <!-- 2. NÆ I GIá»® HIá»†N Táº I -->
           <div class="batch-detail-box">
-            <h3 class="box-title">🏢 2. Nơi giữ hiện tại</h3>
+            <h3 class="box-title">ðŸ¢ 2. NÆ¡i giá»¯ hiá»‡n táº¡i</h3>
             <table class="detail-info-table">
               <tr>
-                <th>Tổ chức/Đơn vị quản lý:</th>
+                <th>Tá»• chá»©c/ÄÆ¡n vá»‹ quáº£n lÃ½:</th>
                 <td><strong id="bd-current-org">--</strong></td>
               </tr>
               <tr>
-                <th>Vùng trồng xuất xứ:</th>
+                <th>VÃ¹ng trá»“ng xuáº¥t xá»©:</th>
                 <td><span id="bd-farm-name">--</span></td>
               </tr>
               <tr>
-                <th>Địa điểm canh tác:</th>
+                <th>Äá»‹a Ä‘iá»ƒm canh tÃ¡c:</th>
                 <td><span id="bd-farm-location">--</span></td>
               </tr>
             </table>
           </div>
         </div>
 
-        <!-- 3. LÔ MẸ TRỰC TIẾP -->
+        <!-- 3. LÃ” Máº¸ TRá»°C TIáº¾P -->
         <div class="batch-detail-box margin-top">
-          <h3 class="box-title">🌱 3. Lô mẹ trực tiếp</h3>
+          <h3 class="box-title">ðŸŒ± 3. LÃ´ máº¹ trá»±c tiáº¿p</h3>
           <div id="bd-parent-container">
-            <!-- Hiển thị lô mẹ hoặc "Không có lô mẹ" -->
+            <!-- Hiá»ƒn thá»‹ lÃ´ máº¹ hoáº·c "KhÃ´ng cÃ³ lÃ´ máº¹" -->
           </div>
         </div>
 
-        <!-- 4. LÔ CON TRỰC TIẾP -->
+        <!-- 4. LÃ” CON TRá»°C TIáº¾P -->
         <div class="batch-detail-box margin-top">
-          <h3 class="box-title">🌿 4. Danh sách lô con trực tiếp</h3>
+          <h3 class="box-title">ðŸŒ¿ 4. Danh sÃ¡ch lÃ´ con trá»±c tiáº¿p</h3>
           <div id="bd-children-container">
-            <!-- Hiển thị danh sách lô con hoặc "Không có lô con" -->
+            <!-- Hiá»ƒn thá»‹ danh sÃ¡ch lÃ´ con hoáº·c "KhÃ´ng cÃ³ lÃ´ con" -->
           </div>
         </div>
 
-        <!-- [T-59] Thanh điều hướng nhanh sang Timeline / Ancestors -->
+        <!-- [T-59] Thanh Ä‘iá»u hÆ°á»›ng nhanh sang Timeline / Ancestors -->
         <div class="batch-detail-nav" id="batch-detail-nav">
-          <button id="btn-detail-nav-timeline" class="btn btn--info btn--sm" type="button">⏱️ Xem dòng thời gian</button>
-          <button id="btn-detail-nav-ancestors" class="btn btn--warning btn--sm" type="button">🌳 Xem danh sách tổ tiên</button>
+          <button id="btn-detail-nav-timeline" class="btn btn--info btn--sm" type="button">â±ï¸ Xem dÃ²ng thá»i gian</button>
+          <button id="btn-detail-nav-ancestors" class="btn btn--warning btn--sm" type="button">ðŸŒ³ Xem danh sÃ¡ch tá»• tiÃªn</button>
         </div>
       </div>
     </section>
 
-    <!-- ==================== TÀI KHOẢN (chỉ admin) ==================== -->
+    <!-- ==================== TÃ€I KHOáº¢N (chá»‰ admin) ==================== -->
     <section id="users-card" class="card" hidden>
       <header class="card__header">
         <div>
-          <h2 class="card__title">Danh sách người dùng hệ thống <span class="tag">Quản trị</span></h2>
+          <h2 class="card__title">Danh sÃ¡ch ngÆ°á»i dÃ¹ng há»‡ thá»‘ng <span class="tag">Quáº£n trá»‹</span></h2>
           <p class="card__desc">
-            Danh mục tài khoản và vai trò phân quyền người dùng trong hệ thống.
+            Danh má»¥c tÃ i khoáº£n vÃ  vai trÃ² phÃ¢n quyá»n ngÆ°á»i dÃ¹ng trong há»‡ thá»‘ng.
           </p>
         </div>
       </header>
@@ -420,53 +571,53 @@
         <table class="table">
           <thead>
             <tr>
-              <th>Mã ID</th>
-              <th>Tên tài khoản</th>
-              <th>Vai trò phân quyền</th>
+              <th>MÃ£ ID</th>
+              <th>TÃªn tÃ i khoáº£n</th>
+              <th>Vai trÃ² phÃ¢n quyá»n</th>
             </tr>
           </thead>
           <tbody id="user-table-body"></tbody>
         </table>
       </div>
-      <p id="user-empty" class="empty" hidden>Chưa có tài khoản nào trong hệ thống.</p>
+      <p id="user-empty" class="empty" hidden>ChÆ°a cÃ³ tÃ i khoáº£n nÃ o trong há»‡ thá»‘ng.</p>
     </section>
 
-    <!-- =========== LỊCH SỬ THAO TÁC (chỉ admin) =========== -->
+    <!-- =========== Lá»ŠCH Sá»¬ THAO TÃC (chá»‰ admin) =========== -->
     <section id="audit-card" class="card" hidden>
       <header class="card__header">
         <div>
-          <h2 class="card__title">Nhật ký hoạt động hệ thống <span class="tag">Quản trị</span></h2>
+          <h2 class="card__title">Nháº­t kÃ½ hoáº¡t Ä‘á»™ng há»‡ thá»‘ng <span class="tag">Quáº£n trá»‹</span></h2>
           <p class="card__desc">
-            Theo dõi chi tiết các thao tác tạo mới, cập nhật hoặc xóa dữ liệu để kiểm soát và truy vết.
+            Theo dÃµi chi tiáº¿t cÃ¡c thao tÃ¡c táº¡o má»›i, cáº­p nháº­t hoáº·c xÃ³a dá»¯ liá»‡u Ä‘á»ƒ kiá»ƒm soÃ¡t vÃ  truy váº¿t.
           </p>
         </div>
       </header>
 
       <div class="audit-toolbar">
-        <button id="btn-load-audit" class="btn btn--primary" type="button">Làm mới nhật ký</button>
+        <button id="btn-load-audit" class="btn btn--primary" type="button">LÃ m má»›i nháº­t kÃ½</button>
         <span class="audit-toolbar__hint">
-          Hiển thị các thao tác mới nhất theo thời gian thực
+          Hiá»ƒn thá»‹ cÃ¡c thao tÃ¡c má»›i nháº¥t theo thá»i gian thá»±c
         </span>
       </div>
 
-      <h3 class="table-title">Danh sách thao tác gần đây</h3>
+      <h3 class="table-title">Danh sÃ¡ch thao tÃ¡c gáº§n Ä‘Ã¢y</h3>
       <div class="table-wrap">
         <table class="table">
           <thead>
             <tr>
-              <th>Mã số</th>
-              <th>Thời gian thực hiện</th>
-              <th>Người thao tác</th>
-              <th>Thao tác</th>
-              <th>Đối tượng</th>
-              <th class="is-right">Mã đối tượng</th>
+              <th>MÃ£ sá»‘</th>
+              <th>Thá»i gian thá»±c hiá»‡n</th>
+              <th>NgÆ°á»i thao tÃ¡c</th>
+              <th>Thao tÃ¡c</th>
+              <th>Äá»‘i tÆ°á»£ng</th>
+              <th class="is-right">MÃ£ Ä‘á»‘i tÆ°á»£ng</th>
             </tr>
           </thead>
           <tbody id="audit-table-body"></tbody>
         </table>
       </div>
       <p id="audit-empty" class="empty" hidden>
-        Chưa có thao tác nào được ghi nhận trên hệ thống.
+        ChÆ°a cÃ³ thao tÃ¡c nÃ o Ä‘Æ°á»£c ghi nháº­n trÃªn há»‡ thá»‘ng.
       </p>
       <p id="audit-error" class="empty empty--error" hidden></p>
     </section>
@@ -477,115 +628,115 @@
   <footer class="app-footer">
     <div class="app-footer__inner">
       <div class="app-footer__copyright">
-        <strong>Hệ thống Truy xuất nguồn gốc &amp; Giám sát chuỗi lạnh nông sản</strong>
-        <div>Thực tập cơ sở · K18C4 - Nhóm 5</div>
+        <strong>Há»‡ thá»‘ng Truy xuáº¥t nguá»“n gá»‘c &amp; GiÃ¡m sÃ¡t chuá»—i láº¡nh nÃ´ng sáº£n</strong>
+        <div>Thá»±c táº­p cÆ¡ sá»Ÿ Â· K18C4 - NhÃ³m 5</div>
       </div>
       <div class="app-footer__links">
-        <span class="server-status">Máy chủ: <code id="stat-api">http://127.0.0.1:8000</code></span>
+        <span class="server-status">MÃ¡y chá»§: <code id="stat-api">http://127.0.0.1:8000</code></span>
         <a href="http://127.0.0.1:8000/docs" target="_blank" rel="noopener" class="api-doc-link">
-          Tài liệu API (Swagger UI) ↗
+          TÃ i liá»‡u API (Swagger UI) â†—
         </a>
       </div>
     </div>
   </footer>
 
-  <!-- Vùng hiển thị thông báo thêm thành công / thất bại -->
+  <!-- VÃ¹ng hiá»ƒn thá»‹ thÃ´ng bÃ¡o thÃªm thÃ nh cÃ´ng / tháº¥t báº¡i -->
   <div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="true"></div>
 
-  <!-- ==================== POPUP / MODAL BÀN GIAO LÔ HÀNG ==================== -->
+  <!-- ==================== POPUP / MODAL BÃ€N GIAO LÃ” HÃ€NG ==================== -->
   <div id="modal-handover" class="modal-backdrop" hidden>
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-handover-title">
       <header class="modal__header">
-        <h3 id="modal-handover-title" class="modal__title">🚚 Bàn giao lô nông sản</h3>
-        <button id="btn-close-handover-modal" class="modal__close" type="button" aria-label="Đóng">&times;</button>
+        <h3 id="modal-handover-title" class="modal__title">ðŸšš BÃ n giao lÃ´ nÃ´ng sáº£n</h3>
+        <button id="btn-close-handover-modal" class="modal__close" type="button" aria-label="ÄÃ³ng">&times;</button>
       </header>
       <div class="modal__body">
         <div id="modal-handover-summary" class="handover-batch-summary"></div>
         <form id="handover-form" class="form">
           <input id="handover-batch-id" type="hidden" />
           <label class="field">
-            <span class="field__label">Tổ chức / Hợp tác xã tiếp nhận <em>*</em></span>
+            <span class="field__label">Tá»• chá»©c / Há»£p tÃ¡c xÃ£ tiáº¿p nháº­n <em>*</em></span>
             <select id="handover-to-org" required>
-              <option value="">— Chọn tổ chức tiếp nhận —</option>
+              <option value="">â€” Chá»n tá»• chá»©c tiáº¿p nháº­n â€”</option>
             </select>
-            <span class="field__hint">Chọn đơn vị đối tác nhận lô hàng này</span>
+            <span class="field__hint">Chá»n Ä‘Æ¡n vá»‹ Ä‘á»‘i tÃ¡c nháº­n lÃ´ hÃ ng nÃ y</span>
           </label>
           <label class="field">
-            <span class="field__label">Ghi chú bàn giao (tùy chọn)</span>
-            <textarea id="handover-note" rows="3" maxlength="500" placeholder="VD: Bàn giao lô xoài phục vụ kiểm nghiệm và đóng gói xuất khẩu..."></textarea>
+            <span class="field__label">Ghi chÃº bÃ n giao (tÃ¹y chá»n)</span>
+            <textarea id="handover-note" rows="3" maxlength="500" placeholder="VD: BÃ n giao lÃ´ xoÃ i phá»¥c vá»¥ kiá»ƒm nghiá»‡m vÃ  Ä‘Ã³ng gÃ³i xuáº¥t kháº©u..."></textarea>
           </label>
           <div class="modal__actions">
-            <button id="btn-cancel-handover" class="btn btn--ghost" type="button">Hủy bỏ</button>
-            <button id="btn-submit-handover" class="btn btn--primary" type="submit">Xác nhận gửi bàn giao</button>
+            <button id="btn-cancel-handover" class="btn btn--ghost" type="button">Há»§y bá»</button>
+            <button id="btn-submit-handover" class="btn btn--primary" type="submit">XÃ¡c nháº­n gá»­i bÃ n giao</button>
           </div>
         </form>
       </div>
     </div>
   </div>
 
-  <!-- ==================== POPUP / MODAL TỪ CHỐI TIẾP NHẬN ==================== -->
+  <!-- ==================== POPUP / MODAL Tá»ª CHá»I TIáº¾P NHáº¬N ==================== -->
   <div id="modal-reject" class="modal-backdrop" hidden>
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-reject-title">
       <header class="modal__header">
-        <h3 id="modal-reject-title" class="modal__title">❌ Từ chối tiếp nhận lô hàng</h3>
-        <button id="btn-close-reject-modal" class="modal__close" type="button" aria-label="Đóng">&times;</button>
+        <h3 id="modal-reject-title" class="modal__title">âŒ Tá»« chá»‘i tiáº¿p nháº­n lÃ´ hÃ ng</h3>
+        <button id="btn-close-reject-modal" class="modal__close" type="button" aria-label="ÄÃ³ng">&times;</button>
       </header>
       <div class="modal__body">
         <p class="modal__desc">
-          Vui lòng nhập lý do từ chối để thông báo cho bên gửi và lưu trữ trong lịch sử sự kiện truy xuất nguồn gốc (tối thiểu 10 ký tự).
+          Vui lÃ²ng nháº­p lÃ½ do tá»« chá»‘i Ä‘á»ƒ thÃ´ng bÃ¡o cho bÃªn gá»­i vÃ  lÆ°u trá»¯ trong lá»‹ch sá»­ sá»± kiá»‡n truy xuáº¥t nguá»“n gá»‘c (tá»‘i thiá»ƒu 10 kÃ½ tá»±).
         </p>
         <form id="reject-form" class="form">
           <input id="reject-handover-id" type="hidden" />
           <label class="field">
-            <span class="field__label">Lý do từ chối <em>*</em></span>
-            <textarea id="reject-reason" rows="3" minlength="10" maxlength="500" required placeholder="Nhập lý do cụ thể (tối thiểu 10 ký tự, VD: Nông sản không đạt độ ngọt yêu cầu hoặc bị dập nát trong vận chuyển...)"></textarea>
-            <span id="reject-reason-counter" class="field__hint">Đã nhập: 0 / tối thiểu 10 ký tự</span>
+            <span class="field__label">LÃ½ do tá»« chá»‘i <em>*</em></span>
+            <textarea id="reject-reason" rows="3" minlength="10" maxlength="500" required placeholder="Nháº­p lÃ½ do cá»¥ thá»ƒ (tá»‘i thiá»ƒu 10 kÃ½ tá»±, VD: NÃ´ng sáº£n khÃ´ng Ä‘áº¡t Ä‘á»™ ngá»t yÃªu cáº§u hoáº·c bá»‹ dáº­p nÃ¡t trong váº­n chuyá»ƒn...)"></textarea>
+            <span id="reject-reason-counter" class="field__hint">ÄÃ£ nháº­p: 0 / tá»‘i thiá»ƒu 10 kÃ½ tá»±</span>
           </label>
           <div class="modal__actions">
-            <button id="btn-cancel-reject" class="btn btn--ghost" type="button">Hủy bỏ</button>
-            <button id="btn-submit-reject" class="btn btn--danger" type="submit">Xác nhận từ chối</button>
+            <button id="btn-cancel-reject" class="btn btn--ghost" type="button">Há»§y bá»</button>
+            <button id="btn-submit-reject" class="btn btn--danger" type="submit">XÃ¡c nháº­n tá»« chá»‘i</button>
           </div>
         </form>
       </div>
     </div>
   </div>
 
-  <!-- ==================== [T-59] MODAL DÒNG THỜI GIAN ==================== -->
+  <!-- ==================== [T-59] MODAL DÃ’NG THá»œI GIAN ==================== -->
   <div id="modal-batch-timeline" class="modal-backdrop" hidden>
     <div class="modal modal--wide" role="dialog" aria-modal="true" aria-labelledby="modal-timeline-title">
       <header class="modal__header">
-        <h3 id="modal-timeline-title" class="modal__title">⏱️ Dòng thời gian lô nông sản</h3>
-        <button id="btn-close-timeline-modal" class="modal__close" type="button" aria-label="Đóng">&times;</button>
+        <h3 id="modal-timeline-title" class="modal__title">â±ï¸ DÃ²ng thá»i gian lÃ´ nÃ´ng sáº£n</h3>
+        <button id="btn-close-timeline-modal" class="modal__close" type="button" aria-label="ÄÃ³ng">&times;</button>
       </header>
       <div class="modal__body">
         <p id="modal-timeline-batch-label" class="modal__desc"></p>
-        <div id="modal-timeline-loading" class="empty">⌛ Đang tải dòng thời gian...</div>
+        <div id="modal-timeline-loading" class="empty">âŒ› Äang táº£i dÃ²ng thá»i gian...</div>
         <div id="modal-timeline-error" class="empty empty--error" hidden></div>
-        <div id="modal-timeline-empty" class="empty" hidden>Chưa có sự kiện nào được ghi nhận cho lô này.</div>
+        <div id="modal-timeline-empty" class="empty" hidden>ChÆ°a cÃ³ sá»± kiá»‡n nÃ o Ä‘Æ°á»£c ghi nháº­n cho lÃ´ nÃ y.</div>
         <div id="modal-timeline-list" hidden></div>
       </div>
     </div>
   </div>
 
-  <!-- ==================== [T-59] MODAL DANH SÁCH TỔ TIÊN ==================== -->
+  <!-- ==================== [T-59] MODAL DANH SÃCH Tá»” TIÃŠN ==================== -->
   <div id="modal-batch-ancestors" class="modal-backdrop" hidden>
     <div class="modal modal--wide" role="dialog" aria-modal="true" aria-labelledby="modal-ancestors-title">
       <header class="modal__header">
-        <h3 id="modal-ancestors-title" class="modal__title">🌳 Danh sách tổ tiên lô nông sản</h3>
-        <button id="btn-close-ancestors-modal" class="modal__close" type="button" aria-label="Đóng">&times;</button>
+        <h3 id="modal-ancestors-title" class="modal__title">ðŸŒ³ Danh sÃ¡ch tá»• tiÃªn lÃ´ nÃ´ng sáº£n</h3>
+        <button id="btn-close-ancestors-modal" class="modal__close" type="button" aria-label="ÄÃ³ng">&times;</button>
       </header>
       <div class="modal__body">
         <p id="modal-ancestors-batch-label" class="modal__desc"></p>
-        <div id="modal-ancestors-loading" class="empty">⌛ Đang tải danh sách tổ tiên...</div>
+        <div id="modal-ancestors-loading" class="empty">âŒ› Äang táº£i danh sÃ¡ch tá»• tiÃªn...</div>
         <div id="modal-ancestors-error" class="empty empty--error" hidden></div>
-        <div id="modal-ancestors-empty" class="empty" hidden>Lô này là lô gốc, không có tổ tiên phía trên.</div>
+        <div id="modal-ancestors-empty" class="empty" hidden>LÃ´ nÃ y lÃ  lÃ´ gá»‘c, khÃ´ng cÃ³ tá»• tiÃªn phÃ­a trÃªn.</div>
         <div id="modal-ancestors-list" hidden></div>
       </div>
     </div>
   </div>
 
   <noscript>
-    <p class="noscript">Trang này cần JavaScript để gọi API backend. Hãy bật JavaScript và tải lại trang.</p>
+    <p class="noscript">Trang nÃ y cáº§n JavaScript Ä‘á»ƒ gá»i API backend. HÃ£y báº­t JavaScript vÃ  táº£i láº¡i trang.</p>
   </noscript>
 
   <script src="js/app.js?v=10"></script>
