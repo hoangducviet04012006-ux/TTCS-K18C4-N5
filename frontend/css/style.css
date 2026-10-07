@@ -46,7 +46,10 @@ body {
   background: var(--color-bg);
 }
 
-h1, h2, h3, p {
+h1,
+h2,
+h3,
+p {
   margin: 0;
 }
 
@@ -61,7 +64,11 @@ a {
 
 /* ---------------------------------------------------------- 3. Header --- */
 .app-header {
-  background: linear-gradient(120deg, var(--color-primary) 0%, var(--color-accent) 100%);
+  background: linear-gradient(
+    120deg,
+    var(--color-primary) 0%,
+    var(--color-accent) 100%
+  );
   color: #fff;
   box-shadow: var(--shadow);
 }
@@ -286,7 +293,9 @@ a {
   border: 1px solid transparent;
   border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: background-color 0.15s ease, opacity 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    opacity 0.15s ease;
 }
 
 .btn:disabled {
@@ -489,8 +498,14 @@ a {
 }
 
 @keyframes toast-in {
-  from { opacity: 0; transform: translateX(24px); }
-  to { opacity: 1; transform: translateX(0); }
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 /* -------------------------------------------------------- 11. Footer --- */
@@ -774,7 +789,9 @@ a {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   display: flex;
   flex-direction: column;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
   overflow: hidden;
 }
 
@@ -899,7 +916,9 @@ a {
   width: 100%;
   background: var(--color-surface);
   border-radius: 12px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.1);
+  box-shadow:
+    0 20px 25px -5px rgba(0, 0, 0, 0.2),
+    0 10px 10px -5px rgba(0, 0, 0, 0.1);
   overflow: hidden;
   animation: modalEnter 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -940,7 +959,9 @@ a {
   cursor: pointer;
   padding: 2px 6px;
   border-radius: var(--radius-sm);
-  transition: color 0.15s, background-color 0.15s;
+  transition:
+    color 0.15s,
+    background-color 0.15s;
 }
 
 .modal__close:hover {
@@ -1025,7 +1046,9 @@ a {
   font-size: 0.95rem;
   resize: vertical;
   outline: none;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
 }
 
 .field textarea:focus {
@@ -1311,4 +1334,54 @@ a {
 
 .ancestor-item__action {
   flex-shrink: 0;
+}
+/* ==================== [S-14] DANH SÁCH LÔ ==================== */
+
+.batch-filters {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin: 16px 0;
+}
+
+.batch-pagination-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color, #e5e7eb);
+}
+
+.batch-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.batch-pagination button {
+  min-width: 38px;
+}
+
+.batch-pagination button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+  .batch-filters {
+    grid-template-columns: 1fr;
+  }
+
+  .batch-pagination-wrapper {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .batch-pagination {
+    justify-content: center;
+  }
 }
