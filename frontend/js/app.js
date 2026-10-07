@@ -957,7 +957,19 @@ function renderBatches() {
         batch.pending_handover ||
         pendingHandovers.find((h) => h.batch_id === batch.id);
       const isPending = !!pendingInfo;
+      // [S-24] Kiểm tra nếu lô hàng đang chờ bàn giao và đã quá 24h
+      const isOverdue =
+        isPending &&
+        isOverdueHandover(
+          pendingInfo?.created_at ||
+            pendingInfo?.time ||
+            pendingInfo?.handover_date ||
+            batch.created_at,
+        );
 
+      const overdueTag = isOverdue
+        ? `<br><span style="color: #dc2626; font-weight: bold; font-size: 0.85em;">⚠️ Quá hạn 24h</span>`
+        : "";
       // [S-24] Kiểm tra quá hạn (Lưu ý: thay 'created_at' bằng đúng tên trường thời gian backend trả về, ví dụ 'handover_date')
       let isOverdue = false;
       if (isPending) {
@@ -1000,7 +1012,7 @@ function renderBatches() {
         <td class="is-right">${formatNumber(batch.quantity)}</td>
         <td>${escapeHtml(formatDate(batch.harvest_date))}</td>
         <td><span class="badge badge--org">🏢 ${escapeHtml(holdingOrg)}</span></td>
-        <td>${statusBadge}</td>
+        <td>${statusBadge}${overdueTag}</td>
         <td>
           <div class="table__actions">
             <button class="btn btn--light btn--sm" type="button"
