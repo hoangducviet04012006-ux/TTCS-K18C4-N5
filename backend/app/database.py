@@ -166,10 +166,94 @@ def migrate_user_security_columns() -> None:
                     connection.exec_driver_sql(f"ALTER TABLE farms ADD COLUMN {col_name} {col_type}")
 
 
+def migrate_handover_and_batch_columns() -> None:
+    """Thêm cột current_org_id cho bảng batches và tạo index unique cho handovers nếu thiếu."""
+    with engine.begin() as connection:
+        existing_batches = {
+            row[1] for row in connection.exec_driver_sql("PRAGMA table_info(batches)")
+        }
+        if existing_batches:
+            if "current_org_id" not in existing_batches:
+                connection.exec_driver_sql(
+                    "ALTER TABLE batches ADD COLUMN current_org_id INTEGER REFERENCES organizations(id)"
+                )
+            if "parent_id" not in existing_batches:
+                connection.exec_driver_sql(
+                    "ALTER TABLE batches ADD COLUMN parent_id INTEGER REFERENCES batches(id)"
+                )
+            if "remaining_quantity" not in existing_batches:
+                connection.exec_driver_sql(
+                    "ALTER TABLE batches ADD COLUMN remaining_quantity REAL"
+                )
+            if "status" not in existing_batches:
+                connection.exec_driver_sql(
+                    "ALTER TABLE batches ADD COLUMN status TEXT"
+                )
+            if "unit" not in existing_batches:
+                connection.exec_driver_sql(
+                    "ALTER TABLE batches ADD COLUMN unit TEXT"
+                )
+            try:
+                connection.exec_driver_sql(
+                    "UPDATE batches SET current_org_id = ("
+                    "    SELECT farms.organization_id FROM farms WHERE farms.id = batches.farm_id"
+                    ") WHERE current_org_id IS NULL"
+                )
+                connection.exec_driver_sql(
+                    "UPDATE batches SET remaining_quantity = quantity WHERE remaining_quantity IS NULL"
+                )
+                connection.exec_driver_sql(
+                    "UPDATE batches SET status = 'Đang lưu kho' WHERE status IS NULL OR status = ''"
+                )
+                connection.exec_driver_sql(
+                    "UPDATE batches SET unit = 'kg' WHERE unit IS NULL OR unit = ''"
+                )
+            except Exception:
+                pass
+
+        existing_handovers = {
+            row[1] for row in connection.exec_driver_sql("PRAGMA table_info(handovers)")
+        }
+        if existing_handovers:
+            try:
+                connection.exec_driver_sql(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS uq_batch_pending_handover "
+                    "ON handovers (batch_id) WHERE status = 'PENDING'"
+                )
+            except Exception:
+                pass
+
+
+def create_event_immutability_triggers(target_engine=None) -> None:
+    """Tạo DB Triggers để ngăn UPDATE và DELETE trên bảng batch_events (S-11) ở tầng database."""
+    eng = target_engine if target_engine is not None else engine
+    triggers_sql = [
+        """
+        CREATE TRIGGER IF NOT EXISTS prevent_batch_events_update
+        BEFORE UPDATE ON batch_events
+        BEGIN
+            SELECT RAISE(ABORT, 'S-11: Updates to batch_events table are strictly prohibited (append-only log).');
+        END;
+        """,
+        """
+        CREATE TRIGGER IF NOT EXISTS prevent_batch_events_delete
+        BEFORE DELETE ON batch_events
+        BEGIN
+            SELECT RAISE(ABORT, 'S-11: Deletions from batch_events table are strictly prohibited (append-only log).');
+        END;
+        """,
+    ]
+    with eng.begin() as connection:
+        for sql in triggers_sql:
+            connection.exec_driver_sql(sql)
+
+
 def init_db() -> None:
     """Tạo bảng và chạy migration khi ứng dụng khởi động."""
     from app import models  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
     migrate_user_security_columns()
+    migrate_handover_and_batch_columns()
+    create_event_immutability_triggers()
     seed_default_users()

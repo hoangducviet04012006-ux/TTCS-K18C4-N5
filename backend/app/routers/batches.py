@@ -28,7 +28,13 @@ from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
+from app.batch_tree import (
+    build_batch_tree_response,
+    get_batch_ancestors,
+    get_batch_with_direct_relations,
+)
 from app.audit import record_action
+from app.events import record_batch_event
 from app.database import get_db
 from app.models import (
     ACTION_CREATE,
@@ -39,7 +45,16 @@ from app.models import (
     Farm,
     User,
 )
-from app.schemas import BatchCreate, BatchResponse, BatchUpdate, DeleteResponse
+from app.schemas import (
+    BatchAncestorsResponse,
+    BatchCreate,
+    BatchDetailResponse,
+    BatchResponse,
+    BatchSummaryResponse,
+    BatchTreeDetailResponse,
+    BatchUpdate,
+    DeleteResponse,
+)
 from app.security import require_admin, require_farmer
 
 router = APIRouter(
@@ -107,7 +122,7 @@ def create_batch(
         )
 
     # Bước 2: lưu lô nông sản.
-    batch = Batch(**payload.model_dump())
+    batch = Batch(**payload.model_dump(), current_org_id=farm.organization_id)
     db.add(batch)
 
     try:
@@ -115,6 +130,14 @@ def create_batch(
         db.flush()
         # Sprint 7: ghi lịch sử "ai đã tạo lô nông sản nào" (chưa commit vội).
         record_action(db, current_user, ACTION_CREATE, ENTITY_BATCH, batch.id)
+        # S-11 & S-12: Tự động ghi event khởi tạo lô vào batch_events (append-only hash chain)
+        record_batch_event(
+            db=db,
+            batch_id=batch.id,
+            event_type="BATCH_CREATED",
+            event_data=f"Khởi tạo lô nông sản: {batch.product_name}",
+            user_id=current_user.id,
+        )
         db.commit()
     except SQLAlchemyError as exc:
         db.rollback()
@@ -148,10 +171,13 @@ def list_batches(db: Session = Depends(get_db)) -> list[Batch]:
 
 @router.get(
     "/{batch_id}",
-    response_model=BatchResponse,
+    response_model=BatchDetailResponse,
     status_code=status.HTTP_200_OK,
     summary="Xem chi tiết một lô nông sản",
-    description="Trả về thông tin chi tiết của lô theo `id`. Trả `404` nếu không tồn tại.",
+    description=(
+        "Trả về thông tin chi tiết của lô theo `id` (kèm lô mẹ và danh sách lô con trực tiếp). "
+        "Trả `404` nếu không tồn tại."
+    ),
     responses={
         status.HTTP_404_NOT_FOUND: {
             "description": "Không tìm thấy lô nông sản.",
@@ -161,15 +187,139 @@ def list_batches(db: Session = Depends(get_db)) -> list[Batch]:
 def get_batch(
     batch_id: int = Path(..., ge=1, description="ID lô nông sản cần xem."),
     db: Session = Depends(get_db),
-) -> Batch:
-    """Lấy chi tiết một lô nông sản theo ``id``.
+) -> BatchDetailResponse:
+    """Lấy chi tiết một lô nông sản theo ``id`` (phục vụ S-25).
 
     Args:
         batch_id: ID của lô cần tìm.
         db: Session SQLAlchemy từ dependency ``get_db``.
 
     Returns:
-        Batch: Bản ghi lô tương ứng (HTTP 200).
+        BatchDetailResponse: Chi tiết lô nông sản bao gồm lô mẹ và các lô con trực tiếp.
+
+    Raises:
+        HTTPException: 404 nếu không tìm thấy lô.
+    """
+    batch = get_batch_with_direct_relations(db, batch_id)
+    if batch is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Không tìm thấy lô nông sản có id={batch_id}.",
+        )
+
+    parent_summary = None
+    if batch.parent:
+        parent_summary = BatchSummaryResponse(
+            id=batch.parent.id,
+            product_name=batch.parent.product_name,
+            quantity=batch.parent.quantity,
+            remaining_quantity=batch.parent.remaining_qty,
+            unit=batch.parent.batch_unit,
+            status=batch.parent.batch_status,
+            current_org_name=batch.parent.current_org_name,
+        )
+
+    children_summary = [
+        BatchSummaryResponse(
+            id=child.id,
+            product_name=child.product_name,
+            quantity=child.quantity,
+            remaining_quantity=child.remaining_qty,
+            unit=child.batch_unit,
+            status=child.batch_status,
+            current_org_name=child.current_org_name,
+        )
+        for child in batch.children
+    ]
+
+    return BatchDetailResponse(
+        id=batch.id,
+        farm_id=batch.farm_id,
+        farm_name=batch.farm.name if batch.farm else None,
+        farm_location=batch.farm.location if batch.farm else None,
+        product_name=batch.product_name,
+        initial_quantity=batch.quantity,
+        remaining_quantity=batch.remaining_qty,
+        unit=batch.batch_unit,
+        harvest_date=batch.harvest_date,
+        status=batch.batch_status,
+        current_org_id=batch.holder_org_id,
+        current_org_name=batch.current_org_name,
+        parent_id=batch.parent_id,
+        parent=parent_summary,
+        children=children_summary,
+    )
+
+
+@router.get(
+    "/{batch_id}/tree",
+    response_model=BatchTreeDetailResponse,
+    status_code=status.HTTP_200_OK,
+    summary="[T-58] Truy vấn tổng hợp chi tiết lô kèm lô mẹ và lô con trực tiếp",
+    description=(
+        "API nhận `batch_id` và trả về thông tin chi tiết của lô, kèm duy nhất lô mẹ trực tiếp "
+        "(parent = null nếu không có) và danh sách các lô con trực tiếp (children = [] nếu không có). "
+        "Không lấy toàn bộ tổ tiên/hậu duệ và tối ưu SQL tránh N+1 query."
+    ),
+    responses={
+        status.HTTP_404_NOT_FOUND: {
+            "description": "Không tìm thấy lô nông sản.",
+        },
+    },
+)
+def get_batch_tree(
+    batch_id: int = Path(..., ge=1, description="ID lô nông sản cần xem cây quan hệ."),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Truy vấn tổng hợp chi tiết lô kèm lô mẹ và các lô con trực tiếp (T-58).
+
+    Args:
+        batch_id: ID của lô cần xem.
+        db: Session SQLAlchemy từ dependency ``get_db``.
+
+    Returns:
+        dict: Cấu trúc JSON chuẩn T-58 gồm 3 khối {batch, parent, children}.
+
+    Raises:
+        HTTPException: 404 nếu không tìm thấy lô.
+    """
+    batch = get_batch_with_direct_relations(db, batch_id)
+    if batch is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Không tìm thấy lô nông sản có id={batch_id}.",
+        )
+
+    return build_batch_tree_response(batch)
+
+
+@router.get(
+    "/{batch_id}/ancestors",
+    response_model=BatchAncestorsResponse,
+    status_code=status.HTTP_200_OK,
+    summary="[T-59] Lấy danh sách các lô tổ tiên của một lô nông sản",
+    description=(
+        "API truy vết ngược từ `parent_id` của lô hiện tại lên các thế hệ trước "
+        "(Mẹ -> Bà -> Cố -> Lô gốc). Trả `404` nếu lô không tồn tại."
+    ),
+    responses={
+        status.HTTP_404_NOT_FOUND: {
+            "description": "Không tìm thấy lô nông sản.",
+        },
+    },
+)
+def get_batch_ancestors_route(
+    batch_id: int = Path(..., ge=1, description="ID lô nông sản cần truy vết tổ tiên."),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Lấy danh sách tổ tiên của một lô nông sản theo quan hệ database (T-59).
+
+    Args:
+        batch_id: ID của lô cần xem danh sách tổ tiên.
+        db: Session SQLAlchemy từ dependency ``get_db``.
+
+    Returns:
+        dict: Cấu trúc JSON chứa batch_id và danh sách ancestors.
 
     Raises:
         HTTPException: 404 nếu không tìm thấy lô.
@@ -180,7 +330,12 @@ def get_batch(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Không tìm thấy lô nông sản có id={batch_id}.",
         )
-    return batch
+
+    ancestors = get_batch_ancestors(db, batch_id)
+    return {
+        "batch_id": batch_id,
+        "ancestors": ancestors,
+    }
 
 
 @router.put(
@@ -233,7 +388,11 @@ def update_batch(
         )
 
     current_farm = db.get(Farm, batch.farm_id)
-    if current_farm and current_user.organization_id is not None and current_farm.organization_id != current_user.organization_id:
+    if (
+        current_farm
+        and current_user.organization_id is not None
+        and current_farm.organization_id != current_user.organization_id
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Bạn không có quyền sửa lô nông sản của tổ chức khác.",
@@ -318,7 +477,11 @@ def delete_batch(
         )
 
     current_farm = db.get(Farm, batch.farm_id)
-    if current_farm and current_user.organization_id is not None and current_farm.organization_id != current_user.organization_id:
+    if (
+        current_farm
+        and current_user.organization_id is not None
+        and current_farm.organization_id != current_user.organization_id
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Bạn không có quyền xoá lô nông sản của tổ chức khác.",

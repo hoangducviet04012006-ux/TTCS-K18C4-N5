@@ -14,8 +14,8 @@ pydantic==2.10.4
 # Băm mật khẩu an toàn theo chuẩn Argon2id
 argon2-cffi==25.1.0
 
-# Kiểm thử (dev) - chạy: python -m pytest
-# `httpx` cần cho TestClient của FastAPI (test gọi API mà không cần bật server).
+# Kiểm thử (dev) và kiểm tra chất lượng mã nguồn (linter)
 pytest==9.1.1
 httpx==0.28.1
+flake8==7.1.1
 

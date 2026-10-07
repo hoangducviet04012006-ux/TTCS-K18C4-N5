@@ -7,7 +7,7 @@ Tách riêng schemas (Pydantic) khỏi models (SQLAlchemy) giúp:
 
 from datetime import date, datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class HealthResponse(BaseModel):
@@ -15,17 +15,22 @@ class HealthResponse(BaseModel):
 
     Ví dụ::
 
-        {"status": "running"}
+        {"status": "ok", "database": "connected"}
     """
 
     model_config = ConfigDict(
-        json_schema_extra={"example": {"status": "running"}},
+        json_schema_extra={"example": {"status": "ok", "database": "connected"}},
     )
 
     status: str = Field(
         ...,
         description="Trạng thái hoạt động của API.",
-        examples=["running"],
+        examples=["ok"],
+    )
+    database: str = Field(
+        default="connected",
+        description="Trạng thái kết nối cơ sở dữ liệu.",
+        examples=["connected", "disconnected"],
     )
 
 
@@ -309,6 +314,12 @@ class BatchCreate(BaseModel):
         description="Ngày thu hoạch, định dạng yyyy-MM-dd.",
         examples=["2026-01-15"],
     )
+    parent_id: int | None = Field(
+        default=None,
+        gt=0,
+        description="ID lô mẹ trực tiếp (nếu đây là lô con được tách ra từ lô khác).",
+        examples=[None],
+    )
 
 
 class BatchUpdate(BatchCreate):
@@ -354,6 +365,123 @@ class BatchResponse(BaseModel):
     product_name: str = Field(..., description="Tên sản phẩm của lô.")
     quantity: float = Field(..., description="Số lượng / khối lượng (kg).")
     harvest_date: date = Field(..., description="Ngày thu hoạch.")
+    current_org_id: int | None = Field(default=None, description="ID tổ chức đang nắm giữ lô hàng.")
+    current_org_name: str | None = Field(default=None, description="Tên tổ chức đang nắm giữ lô hàng.")
+    parent_id: int | None = Field(default=None, description="ID lô mẹ trực tiếp (nếu có).")
+    remaining_quantity: float | None = Field(default=None, description="Khối lượng còn lại (kg).")
+    status: str | None = Field(default="Đang lưu kho", description="Trạng thái lô nông sản.")
+    unit: str | None = Field(default="kg", description="Đơn vị khối lượng.")
+
+
+class BatchSummaryResponse(BaseModel):
+    """Tóm tắt thông tin một lô nông sản (dùng cho lô mẹ / lô con trực tiếp)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int = Field(..., description="Mã định danh lô.")
+    product_name: str = Field(..., description="Tên sản phẩm.")
+    quantity: float = Field(..., description="Khối lượng ban đầu (kg).")
+    remaining_quantity: float | None = Field(default=None, description="Khối lượng còn lại.")
+    unit: str = Field(default="kg", description="Đơn vị khối lượng.")
+    status: str = Field(default="Đang lưu kho", description="Trạng thái lô.")
+    current_org_name: str | None = Field(default=None, description="Tên tổ chức đang nắm giữ.")
+
+
+class BatchDetailResponse(BaseModel):
+    """Dữ liệu chi tiết đầy đủ của một lô nông sản phục vụ S-25 Trang chi tiết lô."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int = Field(..., description="Mã định danh lô nông sản.")
+    farm_id: int = Field(..., description="ID vùng trồng xuất xứ.")
+    farm_name: str | None = Field(default=None, description="Tên vùng trồng xuất xứ.")
+    farm_location: str | None = Field(default=None, description="Địa điểm vùng trồng xuất xứ.")
+    product_name: str = Field(..., description="Tên sản phẩm.")
+    initial_quantity: float = Field(..., description="Khối lượng ban đầu (kg).")
+    remaining_quantity: float = Field(..., description="Khối lượng còn lại (kg).")
+    unit: str = Field(default="kg", description="Đơn vị khối lượng.")
+    harvest_date: date = Field(..., description="Ngày thu hoạch.")
+    status: str = Field(default="Đang lưu kho", description="Trạng thái lô.")
+    current_org_id: int | None = Field(default=None, description="ID tổ chức đang nắm giữ.")
+    current_org_name: str | None = Field(default=None, description="Tên tổ chức đang nắm giữ.")
+    parent_id: int | None = Field(default=None, description="ID lô mẹ trực tiếp (nếu có).")
+    parent: BatchSummaryResponse | None = Field(default=None, description="Thông tin lô mẹ trực tiếp.")
+    children: list[BatchSummaryResponse] = Field(default_factory=list, description="Danh sách các lô con trực tiếp.")
+
+
+class BatchTreeNodeResponse(BaseModel):
+    """Thông tin lô nút (lô mẹ hoặc lô con trực tiếp) cho T-58."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int = Field(..., description="Mã định danh lô.")
+    product: str = Field(..., description="Tên sản phẩm của lô.")
+    product_name: str | None = Field(default=None, description="Tên sản phẩm của lô.")
+    quantity: float = Field(..., description="Khối lượng ban đầu (kg).")
+    remaining_quantity: float = Field(..., description="Khối lượng còn lại (kg).")
+    unit: str = Field(default="kg", description="Đơn vị khối lượng.")
+    status: str = Field(default="Đang lưu kho", description="Trạng thái lô.")
+    current_org_name: str | None = Field(default=None, description="Tên tổ chức đang nắm giữ.")
+
+
+class BatchTreeMainInfo(BaseModel):
+    """Thông tin chi tiết lô chính cho T-58."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int = Field(..., description="Mã định danh lô.")
+    product: str = Field(..., description="Tên sản phẩm của lô.")
+    product_name: str | None = Field(default=None, description="Tên sản phẩm của lô.")
+    quantity: float = Field(..., description="Khối lượng ban đầu (kg).")
+    remaining_quantity: float = Field(..., description="Khối lượng còn lại (kg).")
+    unit: str = Field(default="kg", description="Đơn vị khối lượng.")
+    location: str | None = Field(default=None, description="Vị trí / địa điểm vùng trồng hoặc đơn vị nắm giữ.")
+    status: str = Field(default="Đang lưu kho", description="Trạng thái lô.")
+    current_org_name: str | None = Field(default=None, description="Tên tổ chức đang nắm giữ.")
+    harvest_date: date = Field(..., description="Ngày thu hoạch.")
+    farm_id: int | None = Field(default=None, description="ID vùng trồng xuất xứ.")
+    farm_name: str | None = Field(default=None, description="Tên vùng trồng xuất xứ.")
+
+
+class BatchTreeDetailResponse(BaseModel):
+    """Cấu trúc response chuẩn của T-58: chi tiết lô kèm lô mẹ và các lô con trực tiếp."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    batch: BatchTreeMainInfo = Field(..., description="Thông tin chi tiết của lô được truy vấn.")
+    parent: BatchTreeNodeResponse | None = Field(default=None, description="Lô mẹ trực tiếp (null nếu không có).")
+    children: list[BatchTreeNodeResponse] = Field(
+        default_factory=list,
+        description="Danh sách các lô con trực tiếp (mảng rỗng [] nếu không có).",
+    )
+
+
+class BatchAncestorNodeResponse(BaseModel):
+    """Thông tin một lô tổ tiên trong danh sách tổ tiên (T-59)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int = Field(..., description="Mã định danh lô tổ tiên.")
+    product: str = Field(..., description="Tên sản phẩm.")
+    product_name: str | None = Field(default=None, description="Tên sản phẩm.")
+    quantity: float = Field(..., description="Khối lượng ban đầu (kg).")
+    remaining_quantity: float = Field(..., description="Khối lượng còn lại (kg).")
+    unit: str = Field(default="kg", description="Đơn vị khối lượng.")
+    status: str = Field(default="Đang lưu kho", description="Trạng thái lô.")
+    current_org_name: str | None = Field(default=None, description="Tên tổ chức đang nắm giữ.")
+    generation: int = Field(..., description="Cấp thế hệ ngược (1 = Lô mẹ trực tiếp, 2 = Lô bà...).")
+
+
+class BatchAncestorsResponse(BaseModel):
+    """Danh sách các lô tổ tiên của một lô nông sản (T-59)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    batch_id: int = Field(..., description="ID lô nông sản được truy vấn.")
+    ancestors: list[BatchAncestorNodeResponse] = Field(
+        default_factory=list,
+        description="Danh sách các lô tổ tiên theo thứ tự từ Lô mẹ trực tiếp tới Lô gốc.",
+    )
 
 
 # ----------------------------------------------------------------- Chung ---
@@ -466,3 +594,161 @@ class AuditLogResponse(BaseModel):
         description="Thời điểm ghi log (UTC, ISO 8601).",
         examples=["2026-01-20T03:15:42.123456"],
     )
+
+
+# ------------------------------------------------------------- Handover ---
+class HandoverCreate(BaseModel):
+    """Dữ liệu gửi lên khi tạo yêu cầu bàn giao lô nông sản (POST /batches/{id}/handover)."""
+
+    to_org_id: int = Field(
+        ...,
+        gt=0,
+        description="ID tổ chức tiếp nhận lô hàng (phải khác tổ chức hiện tại).",
+        examples=[2],
+    )
+    note: str | None = Field(
+        default=None,
+        max_length=500,
+        description="Ghi chú kèm theo khi bàn giao (tùy chọn).",
+        examples=["Bàn giao đợt 1 để sơ chế và đóng gói xuất khẩu"],
+    )
+
+
+class HandoverRespond(BaseModel):
+    """Dữ liệu phản hồi yêu cầu bàn giao (POST /handovers/{id}/respond)."""
+
+    action: str = Field(
+        ...,
+        description="Hành động xử lý: 'ACCEPT' (nhận lô) hoặc 'REJECT' (từ chối).",
+        examples=["ACCEPT", "REJECT"],
+    )
+    reject_reason: str | None = Field(
+        default=None,
+        max_length=500,
+        description="Lý do từ chối (bắt buộc khi action='REJECT', tối thiểu 10 ký tự).",
+        examples=["Nông sản không đạt độ chín theo tiêu chuẩn quy định"],
+    )
+
+    @field_validator("action")
+    @classmethod
+    def validate_action(cls, v: str) -> str:
+        upper = v.strip().upper()
+        if upper not in ("ACCEPT", "REJECT"):
+            raise ValueError("Hành động phải là 'ACCEPT' hoặc 'REJECT'.")
+        return upper
+
+    @model_validator(mode="after")
+    def validate_reject_reason(self) -> "HandoverRespond":
+        if self.action == "REJECT":
+            if not self.reject_reason or len(self.reject_reason.strip()) < 10:
+                raise ValueError("Lý do từ chối là bắt buộc và phải có tối thiểu 10 ký tự.")
+        return self
+
+
+class HandoverOut(BaseModel):
+    """Dữ liệu trả về cho một yêu cầu bàn giao."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int = Field(..., description="Mã định danh bàn giao.")
+    batch_id: int = Field(..., description="Mã lô nông sản.")
+    from_org_id: int = Field(..., description="ID tổ chức gửi.")
+    to_org_id: int = Field(..., description="ID tổ chức nhận.")
+    status: str = Field(..., description="Trạng thái: PENDING, ACCEPTED, REJECTED.")
+    reject_reason: str | None = Field(default=None, description="Lý do từ chối (nếu có).")
+    created_at: datetime = Field(..., description="Thời điểm gửi yêu cầu.")
+    updated_at: datetime = Field(..., description="Thời điểm cập nhật mới nhất.")
+
+    # Thông tin mở rộng hỗ trợ frontend
+    batch_product_name: str | None = Field(default=None, description="Tên sản phẩm của lô.")
+    batch_quantity: float | None = Field(default=None, description="Khối lượng của lô (kg).")
+    from_org_name: str | None = Field(default=None, description="Tên tổ chức gửi.")
+    to_org_name: str | None = Field(default=None, description="Tên tổ chức nhận.")
+
+
+class BatchEventOut(BaseModel):
+    """Dữ liệu trả về cho một sự kiện vòng đời lô nông sản."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int = Field(..., description="Mã định danh sự kiện.")
+    batch_id: int = Field(..., description="Mã lô nông sản.")
+    event_type: str = Field(..., description="Loại sự kiện (HANDOVER_PENDING, HANDOVER_ACCEPTED, HANDOVER_REJECTED,...).")
+    user_id: int | None = Field(default=None, description="ID tài khoản thực hiện.")
+    from_org_id: int | None = Field(default=None, description="ID tổ chức gửi (nếu có).")
+    to_org_id: int | None = Field(default=None, description="ID tổ chức nhận (nếu có).")
+    notes: str | None = Field(default=None, description="Ghi chú chi tiết sự kiện.")
+    created_at: datetime = Field(..., description="Thời điểm ghi nhận sự kiện.")
+
+
+class BatchEventCreate(BaseModel):
+    """Dữ liệu client gửi lên khi tạo sự kiện mới cho lô (``POST /batches/{batch_id}/events``)."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "event_type": "HARVEST",
+                "event_data": "Thu hoạch xoài cát Chu đợt 1, nhiệt độ bảo quản 15°C.",
+            }
+        }
+    )
+
+    event_type: str = Field(
+        ...,
+        min_length=1,
+        max_length=100,
+        description="Loại sự kiện (VD: BATCH_CREATED, HARVEST, PROCESSING, TEMP_CHECK, TRANSPORT, QUALITY_INSPECTION...).",
+        examples=["HARVEST"],
+    )
+    event_data: str | None = Field(
+        default=None,
+        max_length=2000,
+        description="Dữ liệu / thông tin mô tả chi tiết của sự kiện.",
+        examples=["Thu hoạch xoài cát Chu đợt 1, nhiệt độ bảo quản 15°C."],
+    )
+
+
+class BatchEventResponse(BaseModel):
+    """Dữ liệu trả về cho một sự kiện lô nông sản (append-only log)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int = Field(..., description="ID sự kiện.", examples=[1])
+    batch_id: int = Field(..., description="ID lô nông sản.", examples=[1])
+    event_type: str = Field(..., description="Loại sự kiện.", examples=["HARVEST"])
+    event_data: str | None = Field(default=None, description="Thông tin dữ liệu sự kiện.")
+    user_id: int | None = Field(default=None, description="ID người thực hiện.")
+    from_org_id: int | None = Field(default=None, description="ID tổ chức từ.")
+    to_org_id: int | None = Field(default=None, description="ID tổ chức đến.")
+    notes: str | None = Field(default=None, description="Ghi chú.")
+    created_at: datetime = Field(..., description="Thời điểm ghi nhận sự kiện (UTC).")
+    prev_hash: str = Field(..., description="Hash SHA-256 của sự kiện liền trước của lô.")
+    record_hash: str = Field(..., description="Hash SHA-256 của bản ghi hiện tại.")
+
+
+class BatchIntegrityResponse(BaseModel):
+    """Kết quả kiểm tra toàn vẹn chuỗi sự kiện của một lô nông sản (Sprint S-12)."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "valid": True,
+                "batch_id": 1,
+                "total_events": 3,
+                "message": "Toàn bộ 3 sự kiện của lô #1 đều hợp lệ và đảm bảo tính toàn vẹn dữ liệu.",
+            }
+        }
+    )
+
+    valid: bool = Field(..., description="`true` nếu chuỗi sự kiện toàn vẹn, `false` nếu bị đứt mạch/sai băm.")
+    batch_id: int = Field(..., description="ID lô nông sản.")
+    total_events: int | None = Field(default=None, description="Tổng số sự kiện (khi valid = true).")
+    event_id: int | None = Field(default=None, description="ID của sự kiện bị lỗi/đứt mạch đầu tiên (khi valid = false).")
+    index: int | None = Field(default=None, description="Vị trí (index 0-based) của sự kiện bị lỗi trong chuỗi.")
+    error_type: str | None = Field(
+        default=None,
+        description="Loại lỗi phát hiện (`PREV_HASH_MISMATCH`, `RECORD_HASH_MISMATCH`).",
+    )
+    expected_hash: str | None = Field(default=None, description="Mã băm kỳ vọng theo công thức hash chain.")
+    actual_hash: str | None = Field(default=None, description="Mã băm thực tế ghi trong cơ sở dữ liệu / prev_hash.")
+    message: str | None = Field(default=None, description="Thông báo chi tiết giải thích vị trí đứt mạch.")
