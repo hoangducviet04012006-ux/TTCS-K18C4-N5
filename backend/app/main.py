@@ -36,6 +36,7 @@ from app.routers import (
     audit,
     auth,
     batches,
+    catalogs,
     events,
     farms,
     handovers,
@@ -129,6 +130,7 @@ app.include_router(health.router)
 app.include_router(auth.router)
 app.include_router(farms.router)
 app.include_router(batches.router)
+app.include_router(catalogs.router)
 app.include_router(events.router)
 app.include_router(users.router)
 app.include_router(audit.router)
