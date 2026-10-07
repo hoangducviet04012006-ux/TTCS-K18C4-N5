@@ -405,6 +405,3 @@ def test_limit_va_gia_tri_loc_khong_hop_le(client: TestClient) -> None:
     assert limit_too_big.status_code == 422
     assert bad_entity.status_code == 422
     assert bad_user_id.status_code == 422
-
-
-

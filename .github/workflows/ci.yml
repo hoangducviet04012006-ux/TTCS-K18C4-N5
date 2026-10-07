@@ -1,4 +1,4 @@
-name: CI Pipeline - TTCS Nông Sản
+name: CI/CD Pipeline - TTCS Nông Sản
 
 on:
   push:
@@ -7,6 +7,9 @@ on:
     branches: [ main, master, develop ]
 
 jobs:
+  # ============================================================================
+  # 1. CI: KIỂM TRA CHẤT LƯỢNG MÃ NGUỒN (SCRUM-16 / S-02)
+  # ============================================================================
   backend-ci:
     name: Backend Lint & Automated Tests
     runs-on: ubuntu-latest
@@ -15,30 +18,102 @@ jobs:
       - name: Checkout mã nguồn
         uses: actions/checkout@v4
 
-      - name: Cài đặt môi trường Python 3.11
+      - name: Thiết lập môi trường Python 3.11
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
           cache: "pip"
           cache-dependency-path: backend/requirements.txt
 
-      - name: Cài đặt phụ thuộc
+      - name: Cài đặt thư viện phụ thuộc
         run: |
           python -m pip install --upgrade pip
-          pip install flake8
           pip install -r backend/requirements.txt
 
-      - name: Kiểm tra cú pháp và code style (flake8)
+      - name: Kiểm tra cú pháp và chất lượng mã nguồn (flake8)
         run: |
-          # Dừng build ngay lập tức nếu phát hiện lỗi cú pháp Python hoặc biến chưa định nghĩa
-          flake8 backend/app --count --select=E9,F63,F7,F82 --show-source --statistics
-          # Kiểm tra các cảnh báo phong cách code (exit-zero để không chặn cảnh báo nhỏ)
-          flake8 backend/app --count --exit-zero --max-complexity=15 --max-line-length=127 --statistics
+          # Kiểm tra mã nguồn theo cấu hình .flake8 (dừng build nếu có lỗi lint)
+          flake8 backend/app --show-source --statistics
 
-      - name: Chạy toàn bộ bộ kiểm thử tự động (pytest)
+      - name: Chạy toàn bộ kiểm thử tự động (pytest)
         run: |
+          # Chạy toàn bộ test suites trong backend/tests/
           pytest backend/tests/ -v
 
-      - name: Báo cáo trạng thái hoàn thành
+      - name: Báo cáo kết quả kiểm tra CI
         if: success()
-        run: echo "Toàn bộ kiểm thử tự động và kiểm tra cú pháp đã vượt qua thành công!"
+        run: echo "✅ Toàn bộ kiểm thử tự động và kiểm tra code style đã vượt qua thành công!"
+
+  # ============================================================================
+  # 2. CD: TRIỂN KHAI STAGING TỰ ĐỘNG & HEALTH CHECK (SCRUM-17 / S-03)
+  # ============================================================================
+  deploy-staging:
+    name: Deploy Staging & Health Check
+    needs: backend-ci
+    # Chỉ chạy khi commit được push / merge vào nhánh chính và CI đã PASS
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout mã nguồn
+        uses: actions/checkout@v4
+
+      - name: Thiết lập Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Đóng gói Docker image Backend Staging
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          load: true
+          tags: ttcs-backend:staging
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Khởi chạy container dịch vụ Staging
+        run: |
+          echo "🚀 Khởi chạy container dịch vụ Backend Staging..."
+          docker run -d \
+            --name staging_backend \
+            -p 8000:8000 \
+            -e PYTHONUNBUFFERED=1 \
+            -e DATABASE_URL=sqlite:////app/data/ttcs_staging.db \
+            ttcs-backend:staging
+
+      - name: Kiểm tra sức khỏe hệ thống (Health Check)
+        run: |
+          echo "🔍 Kiểm tra trạng thái endpoint GET /health của Staging..."
+          MAX_RETRIES=10
+          RETRY_COUNT=0
+          HEALTH_URL="http://localhost:8000/health"
+
+          until [ $RETRY_COUNT -ge $MAX_RETRIES ]
+          do
+            echo "Lần thử $((RETRY_COUNT+1))/$MAX_RETRIES..."
+            RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" "$HEALTH_URL" || true)
+            HTTP_STATUS=$(echo "$RESPONSE" | grep "HTTP_STATUS:" | cut -d':' -f2)
+            BODY=$(echo "$RESPONSE" | grep -v "HTTP_STATUS:")
+
+            echo "Response: $BODY (HTTP $HTTP_STATUS)"
+
+            if [ "$HTTP_STATUS" = "200" ]; then
+              # Kiểm tra JSON phản hồi có chứa status=ok và database=connected
+              if echo "$BODY" | grep -q '"status"' && echo "$BODY" | grep -q '"database":\s*"connected"\|"database":"connected"'; then
+                echo "✅ Health check thành công! Dịch vụ Staging đang hoạt động và database đã kết nối."
+                exit 0
+              fi
+            fi
+
+            RETRY_COUNT=$((RETRY_COUNT+1))
+            sleep 3
+          done
+
+          echo "❌ Health check thất bại sau $MAX_RETRIES lần thử!"
+          docker logs staging_backend
+          exit 1
+
+      - name: Dọn dẹp container sau khi kiểm tra
+        if: always()
+        run: |
+          docker rm -f staging_backend || true

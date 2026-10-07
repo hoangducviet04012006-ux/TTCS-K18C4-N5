@@ -1,0 +1,151 @@
+﻿<!-- ==================== [S-07] DANH MỤC SẢN PHẨM & ĐƠN VỊ TÍNH ==================== -->
+<section id="catalog-card" class="card">
+  <header class="card__header">
+    <div>
+      <h2 class="card__title">📚 Danh mục sản phẩm & đơn vị tính</h2>
+      <p class="card__desc">
+        Quản lý danh mục sản phẩm và đơn vị tính được sử dụng khi ghi nhận lô thu hoạch.
+        Dữ liệu được giới hạn theo tổ chức của tài khoản đang đăng nhập.
+      </p>
+    </div>
+  </header>
+
+  <div class="form__row">
+    <!-- Danh mục sản phẩm -->
+    <div class="card card--nested">
+      <h3 class="table-title">🌾 Sản phẩm</h3>
+
+      <form id="product-form" class="form">
+        <p id="product-form-mode" class="form__mode" hidden></p>
+
+        <label class="field">
+          <span class="field__label">Tên sản phẩm <em>*</em></span>
+          <input
+            id="product-name"
+            type="text"
+            maxlength="255"
+            required
+            placeholder="VD: Xoài Cát Chu"
+          />
+        </label>
+
+        <label class="field">
+          <span class="field__label">Mã sản phẩm <em>*</em></span>
+          <input
+            id="product-code"
+            type="text"
+            maxlength="50"
+            required
+            placeholder="VD: XCC"
+          />
+        </label>
+
+        <label class="field field--checkbox">
+          <input id="product-active" type="checkbox" checked />
+          <span>Đang hoạt động</span>
+        </label>
+
+        <div class="form__actions">
+          <button id="product-submit" class="btn btn--primary" type="submit">
+            Thêm sản phẩm
+          </button>
+          <button
+            id="product-cancel"
+            class="btn btn--ghost"
+            type="button"
+            hidden
+          >
+            Huỷ sửa
+          </button>
+        </div>
+      </form>
+
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Tên sản phẩm</th>
+              <th>Mã</th>
+              <th>Trạng thái</th>
+              <th class="is-center">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody id="product-table-body"></tbody>
+        </table>
+      </div>
+
+      <p id="product-empty" class="empty" hidden>
+        Chưa có sản phẩm nào trong danh mục.
+      </p>
+    </div>
+
+    <!-- Danh mục đơn vị tính -->
+    <div class="card card--nested">
+      <h3 class="table-title">⚖️ Đơn vị tính</h3>
+
+      <form id="unit-form" class="form">
+        <p id="unit-form-mode" class="form__mode" hidden></p>
+
+        <label class="field">
+          <span class="field__label">Tên đơn vị <em>*</em></span>
+          <input
+            id="unit-name"
+            type="text"
+            maxlength="50"
+            required
+            placeholder="VD: Kilogram"
+          />
+        </label>
+
+        <label class="field">
+          <span class="field__label">Ký hiệu <em>*</em></span>
+          <input
+            id="unit-symbol"
+            type="text"
+            maxlength="20"
+            required
+            placeholder="VD: kg"
+          />
+        </label>
+
+        <label class="field field--checkbox">
+          <input id="unit-active" type="checkbox" checked />
+          <span>Đang hoạt động</span>
+        </label>
+
+        <div class="form__actions">
+          <button id="unit-submit" class="btn btn--primary" type="submit">
+            Thêm đơn vị
+          </button>
+          <button
+            id="unit-cancel"
+            class="btn btn--ghost"
+            type="button"
+            hidden
+          >
+            Huỷ sửa
+          </button>
+        </div>
+      </form>
+
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Tên đơn vị</th>
+              <th>Ký hiệu</th>
+              <th>Trạng thái</th>
+              <th class="is-center">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody id="unit-table-body"></tbody>
+        </table>
+      </div>
+
+      <p id="unit-empty" class="empty" hidden>
+        Chưa có đơn vị tính nào trong danh mục.
+      </p>
+    </div>
+  </div>
+</section>
+
