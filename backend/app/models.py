@@ -284,6 +284,11 @@ class Batch(Base):
         unique=True,
         index=True,
     )
+    # S-09: kh?a ch?ng t?o tr?ng khi client g?i l?i c?ng m?t request.
+    idempotency_key: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True,
+    )
 
     product_id: Mapped[int | None] = mapped_column(
         ForeignKey("products.id"),

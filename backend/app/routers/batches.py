@@ -25,9 +25,9 @@ Log náº±m trong cÃ¹ng transaction vá»›i thao tÃ¡c nÃªn thao tÃ¡c 
 
 import secrets
 
-from fastapi import APIRouter, Depends, HTTPException, Path, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Request, status
 from sqlalchemy import select
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.batch_tree import (
@@ -115,6 +115,7 @@ router = APIRouter(
 )
 def create_batch(
     payload: BatchCreate,
+    request: Request,
     current_user: User = Depends(require_farmer),
     db: Session = Depends(get_db),
 ) -> Batch:
@@ -149,7 +150,57 @@ def create_batch(
         )
 
     # BÆ°á»›c 2: lÆ°u lÃ´ nÃ´ng sáº£n.
-    batch = Batch(**payload.model_dump(), current_org_id=farm.organization_id)
+    idempotency_key = request.headers.get("Idempotency-Key")
+    if idempotency_key:
+        existing = db.scalar(
+            select(Batch).where(
+                Batch.current_org_id == farm.organization_id,
+                Batch.idempotency_key == idempotency_key,
+            )
+        )
+        if existing is not None:
+            return existing
+
+    if payload.product_id is not None:
+        product = db.get(Product, payload.product_id)
+        if product is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Product not found.",
+            )
+        if product.organization_id != farm.organization_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Product belongs to another organization.",
+            )
+        if not product.active:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Product is inactive.",
+            )
+
+    if payload.unit_id is not None:
+        unit = db.get(Unit, payload.unit_id)
+        if unit is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Unit not found.",
+            )
+        if unit.organization_id != farm.organization_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Unit belongs to another organization.",
+            )
+        if not unit.active:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Unit is inactive.",
+            )
+
+    batch_data = payload.model_dump()
+    batch_data["batch_code"] = generate_unique_batch_code(db)
+    batch_data["idempotency_key"] = idempotency_key or None
+    batch = Batch(**batch_data, current_org_id=farm.organization_id)
     db.add(batch)
 
     try:
@@ -166,6 +217,21 @@ def create_batch(
             user_id=current_user.id,
         )
         db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        if idempotency_key:
+            existing = db.scalar(
+                select(Batch).where(
+                    Batch.current_org_id == farm.organization_id,
+                    Batch.idempotency_key == idempotency_key,
+                )
+            )
+            if existing is not None:
+                return existing
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Duplicate request.",
+        ) from exc
     except SQLAlchemyError as exc:
         db.rollback()
         raise HTTPException(

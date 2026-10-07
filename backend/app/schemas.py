@@ -436,6 +436,11 @@ class BatchResponse(BaseModel):
         json_schema_extra={"example": _BATCH_EXAMPLE},
     )
 
+    batch_code: str | None = Field(
+        default=None,
+        description="M? l? thu ho?ch g?m 8 k? t? IN HOA, d? ??c.",
+        examples=["A7K2M9QP"],
+    )
     id: int = Field(..., description="MÃ£ Ä‘á»‹nh danh lÃ´ nÃ´ng sáº£n.", examples=[1])
     farm_id: int = Field(..., description="ID vÃ¹ng trá»“ng xuáº¥t xá»©.", examples=[1])
     product_name: str = Field(..., description="TÃªn sáº£n pháº©m cá»§a lÃ´.")

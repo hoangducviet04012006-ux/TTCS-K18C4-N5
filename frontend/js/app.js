@@ -124,7 +124,7 @@ function setButtonLoading(button, isLoading, loadingText, idleText) {
  * truyền `auth: false` cho request không cần xác thực (VD: đăng nhập).
  * Ném Error với thông điệp tiếng Việt dễ đọc nếu request thất bại.
  */
-async function apiRequest(path, { method = "GET", body, auth = true } = {}) {
+async function apiRequest(path, { method = "GET", body, auth = true, headers: extraHeaders = {} } = {}) {
   const headers = {};
   if (body) {
     headers["Content-Type"] = "application/json";
@@ -132,6 +132,7 @@ async function apiRequest(path, { method = "GET", body, auth = true } = {}) {
   if (auth) {
     Object.assign(headers, authHeader());
   }
+  Object.assign(headers, extraHeaders);
 
   let response;
   try {
@@ -796,7 +797,18 @@ async function handleBatchSubmit(event) {
       const updated = await apiRequest(`/batches/${editingBatchId}`, { method: "PUT", body: payload });
       toast(`Đã cập nhật lô #${updated.id} "${updated.product_name}"`, "success");
     } else {
-      const created = await apiRequest("/batches", { method: "POST", body: payload });
+      const idempotencyKey = (
+        window.crypto?.randomUUID?.() ||
+        `${Date.now()}-${Math.random().toString(36).slice(2)}`
+      );
+
+      const created = await apiRequest("/batches", {
+        method: "POST",
+        body: payload,
+        headers: {
+          "Idempotency-Key": idempotencyKey,
+        },
+      });
       toast(
         `Tạo thành công lô #${created.id} "${created.product_name}" cho vùng trồng #${created.farm_id}`,
         "success"

@@ -248,6 +248,30 @@ def create_event_immutability_triggers(target_engine=None) -> None:
             connection.exec_driver_sql(sql)
 
 
+
+def migrate_s09_idempotency_column() -> None:
+    """Migration S-09: l?u Idempotency-Key ?? ch?ng t?o l? thu ho?ch tr?ng."""
+    with engine.begin() as conn:
+        columns = {
+            row[1]
+            for row in conn.exec_driver_sql("PRAGMA table_info(batches)").fetchall()
+        }
+
+        if "idempotency_key" not in columns:
+            conn.exec_driver_sql(
+                "ALTER TABLE batches ADD COLUMN idempotency_key VARCHAR(255)"
+            )
+
+        conn.exec_driver_sql(
+            """
+            CREATE UNIQUE INDEX IF NOT EXISTS
+            uq_batches_current_org_idempotency_key
+            ON batches(current_org_id, idempotency_key)
+            WHERE idempotency_key IS NOT NULL
+            """
+        )
+
+
 def init_db() -> None:
     """Táº¡o báº£ng vÃ  cháº¡y migration khi á»©ng dá»¥ng khá»Ÿi Ä‘á»™ng."""
     from app import models  # noqa: F401
@@ -256,6 +280,7 @@ def init_db() -> None:
     migrate_user_security_columns()
     migrate_handover_and_batch_columns()
     migrate_s07_s08_s09_columns()
+    migrate_s09_idempotency_column()
     create_event_immutability_triggers()
     seed_default_users()
 
