@@ -1,0 +1,158 @@
+app\database.py:163:1: C901 'migrate_sprint2_schema' is too complex (19)
+def migrate_sprint2_schema(target_engine=None) -> None:
+^
+app\database.py:225:128: E501 line too long (128 > 127 characters)
+                    "UPDATE batches SET remaining_quantity = quantity WHERE remaining_quantity IS NULL AND quantity IS NOT NULL"
+                                                                                                                               ^
+app\routers\batches.py:26:1: F401 'app.models.EVENT_CONSUMED' imported but unused
+from app.models import (
+^
+app\routers\batches.py:101:1: C901 'create_batch' is too complex (20)
+def create_batch(
+^
+app\routers\batches.py:542:1: C901 'merge_batches' is too complex (20)
+def merge_batches(
+^
+app\routers\batches.py:765:1: C901 'split_batch' is too complex (21)
+def split_batch(
+^
+app\routers\batches.py:845:128: E501 line too long (128 > 127 characters)
+            detail=f"Tổng khối lượng tách ({total_split}) vượt quá khối lượng còn lại của lô mẹ ({parent.remaining_quantity}).",
+                                                                                                                               ^
+app\routers\batches.py:1140:128: E501 line too long (142 > 127 characters)
+        "- Phân quyền: Cán bộ kiểm tra (Inspector) xem toàn bộ liên tổ chức. Người dùng tổ chức không thấy thông tin nội bộ của tổ chức khác."
+                                                                                                                               ^
+app\routers\batches.py:1311:1: W391 blank line at end of file
+
+^
+app\routers\events.py:32:1: F401 'app.services.rbac.get_handover_history_cutoff' imported but unused
+from app.services.rbac import get_handover_cutoff_event_id, get_handover_history_cutoff
+^
+app\routers\users.py:182:1: C901 'edit_user' is too complex (16)
+def edit_user(
+^
+app\schemas.py:757:128: E501 line too long (144 > 127 characters)
+    descendants_by_level: dict[int, list[TraceForwardNode]] = Field(..., description="Danh sách các thế hệ hậu duệ phân tầng theo khoảng cách.")
+                                                                                                                               ^
+app\schemas.py:758:128: E501 line too long (131 > 127 characters)
+    terminal_batches: list[TerminalBatchInfo] = Field(..., description="Danh sách các lô lá cuối chuỗi cung ứng hoặc đã tiêu thụ.")
+                                                                                                                               ^
+app\security.py:231:1: W293 blank line contains whitespace
+    """Lấy tài khoản đang gọi API từ Phiên làm việc (Session Cookie) hoặc HTTP Basic.
+    
+    Ngăn chặn việc dùng HTTP Basic làm đường vòng vượt qua session bị thu hồi/hết hạn.
+    """
+^
+app\security.py:281:128: E501 line too long (147 > 127 characters)
+            detail="Hệ thống đã vô hiệu hóa HTTP Basic Auth trong môi trường sản xuất. Vui lòng đăng nhập qua /auth/login để nhận phiên làm việc.",
+                                                                                                                               ^
+app\seeds\seed_demo.py:128:128: E501 line too long (137 > 127 characters)
+                h = create_handover(HandoverCreate(to_org_id=orgs[1].id, note="Bàn giao sơ chế gộp lô"), r.child_batch_id, actors[0], db)
+                                                                                                                               ^
+app\seeds\seed_lineage_graph.py:50:1: C901 'seed_lineage_graph' is too complex (33)
+def seed_lineage_graph(db: Session | None = None) -> dict[str, int]:
+^
+app\seeds\seed_lineage_graph.py:215:128: E501 line too long (138 > 127 characters)
+        b_root1 = get_or_create_batch("B-ROOT-01", plots[0].id, Decimal("1000.00"), Decimal("0.00"), date(2026, 9, 1), org_dt.id, "SPLIT")
+                                                                                                                               ^
+app\seeds\seed_lineage_graph.py:216:128: E501 line too long (138 > 127 characters)
+        b_root2 = get_or_create_batch("B-ROOT-02", plots[1].id, Decimal("1000.00"), Decimal("0.00"), date(2026, 9, 2), org_dt.id, "SPLIT")
+                                                                                                                               ^
+app\seeds\seed_lineage_graph.py:217:128: E501 line too long (138 > 127 characters)
+        b_root3 = get_or_create_batch("B-ROOT-03", plots[2].id, Decimal("1000.00"), Decimal("0.00"), date(2026, 9, 3), org_dt.id, "SPLIT")
+                                                                                                                               ^
+app\seeds\seed_lineage_graph.py:225:128: E501 line too long (145 > 127 characters)
+                    payload={"batch_code": r_batch.code, "harvest_date": str(r_batch.harvest_date), "quantity": float(r_batch.initial_quantity)},
+                                                                                                                               ^
+app\seeds\seed_lineage_graph.py:233:128: E501 line too long (138 > 127 characters)
+        b_s1a = get_or_create_batch("B-SPLIT-01A", plots[0].id, Decimal("400.00"), Decimal("0.00"), date(2026, 9, 1), org_dt.id, "MERGED")
+                                                                                                                               ^
+app\seeds\seed_lineage_graph.py:234:128: E501 line too long (138 > 127 characters)
+        b_s1b = get_or_create_batch("B-SPLIT-01B", plots[0].id, Decimal("600.00"), Decimal("0.00"), date(2026, 9, 1), org_dt.id, "MERGED")
+                                                                                                                               ^
+app\seeds\seed_lineage_graph.py:238:128: E501 line too long (138 > 127 characters)
+        b_s2a = get_or_create_batch("B-SPLIT-02A", plots[1].id, Decimal("500.00"), Decimal("0.00"), date(2026, 9, 2), org_dt.id, "MERGED")
+                                                                                                                               ^
+app\seeds\seed_lineage_graph.py:239:128: E501 line too long (138 > 127 characters)
+        b_s2b = get_or_create_batch("B-SPLIT-02B", plots[1].id, Decimal("500.00"), Decimal("0.00"), date(2026, 9, 2), org_dt.id, "MERGED")
+                                                                                                                               ^
+app\seeds\seed_lineage_graph.py:243:128: E501 line too long (138 > 127 characters)
+        b_s3a = get_or_create_batch("B-SPLIT-03A", plots[2].id, Decimal("300.00"), Decimal("0.00"), date(2026, 9, 3), org_dt.id, "MERGED")
+                                                                                                                               ^
+app\seeds\seed_lineage_graph.py:244:128: E501 line too long (138 > 127 characters)
+        b_s3b = get_or_create_batch("B-SPLIT-03B", plots[2].id, Decimal("700.00"), Decimal("0.00"), date(2026, 9, 3), org_dt.id, "MERGED")
+                                                                                                                               ^
+app\seeds\seed_lineage_graph.py:255:128: E501 line too long (135 > 127 characters)
+                    payload={"child_batch_codes": [c.code for c in children], "total_split_quantity": float(p_batch.initial_quantity)},
+                                                                                                                               ^
+app\seeds\seed_lineage_graph.py:265:128: E501 line too long (138 > 127 characters)
+                        payload={"parent_batch_code": p_batch.code, "parent_batch_id": p_batch.id, "quantity": float(c.initial_quantity)},
+                                                                                                                               ^
+app\seeds\seed_lineage_graph.py:273:128: E501 line too long (135 > 127 characters)
+        b_m1 = get_or_create_batch("B-MERGE-01", plots[0].id, Decimal("900.00"), Decimal("0.00"), date(2026, 9, 4), org_dt.id, "SPLIT")
+                                                                                                                               ^
+app\seeds\seed_lineage_graph.py:277:128: E501 line too long (138 > 127 characters)
+        b_m2 = get_or_create_batch("B-MERGE-02", plots[0].id, Decimal("900.00"), Decimal("900.00"), date(2026, 9, 4), org_dt.id, "ACTIVE")
+                                                                                                                               ^
+app\seeds\seed_lineage_graph.py:281:128: E501 line too long (140 > 127 characters)
+        b_m3 = get_or_create_batch("B-MERGE-03", plots[1].id, Decimal("1200.00"), Decimal("1200.00"), date(2026, 9, 4), org_dt.id, "ACTIVE")
+                                                                                                                               ^
+app\seeds\seed_lineage_graph.py:307:128: E501 line too long (161 > 127 characters)
+                    payload={"parent_batches": [{"code": p[0].code, "quantity": p[1]} for p in parents_info], "total_quantity": float(m_batch.initial_quantity)},
+                                                                                                                               ^
+app\seeds\seed_lineage_graph.py:316:128: E501 line too long (140 > 127 characters)
+        b_fin1 = get_or_create_batch("B-FINAL-01", plots[0].id, Decimal("500.00"), Decimal("500.00"), date(2026, 9, 5), org_tg.id, "ACTIVE")
+                                                                                                                               ^
+app\seeds\seed_lineage_graph.py:317:128: E501 line too long (141 > 127 characters)
+        b_fin2 = get_or_create_batch("B-FINAL-02", plots[0].id, Decimal("400.00"), Decimal("400.00"), date(2026, 9, 5), org_xnk.id, "ACTIVE")
+                                                                                                                               ^
+app\seeds\seed_lineage_graph.py:339:128: E501 line too long (130 > 127 characters)
+                    payload={"parent_batch_code": b_m1.code, "parent_batch_id": b_m1.id, "quantity": float(fin.initial_quantity)},
+                                                                                                                               ^
+app\services\session_store.py:16:1: F401 'typing.Any' imported but unused
+from typing import Any
+^
+app\services\session_store.py:17:1: F401 'sqlalchemy.select' imported but unused
+from sqlalchemy import select, text
+^
+app\services\session_store.py:82:1: W293 blank line contains whitespace
+    """Tạo một phiên đăng nhập mới cho người dùng.
+    
+    Trong môi trường production (is_production_mode=True):
+    Bắt buộc phải lưu vào bảng DB `user_sessions`. Nếu chưa migrate bảng hoặc DB lỗi,
+    sẽ ném RuntimeError chứ tuyệt đối không âm thầm fallback in-memory.
+    """
+^
+app\services\traceability.py:38:1: C901 'trace_backwards' is too complex (16)
+def trace_backwards(
+^
+app\services\traceability.py:135:128: E501 line too long (135 > 127 characters)
+            location = parent_batch.plot.location if parent_batch.plot else (parent_batch.farm.location if parent_batch.farm else None)
+                                                                                                                               ^
+app\services\traceability.py:153:128: E501 line too long (128 > 127 characters)
+                "initial_quantity": float(parent_batch.initial_quantity) if parent_batch.initial_quantity is not None else None,
+                                                                                                                               ^
+app\services\traceability.py:154:128: E501 line too long (134 > 127 characters)
+                "remaining_quantity": float(parent_batch.remaining_quantity) if parent_batch.remaining_quantity is not None else None,
+                                                                                                                               ^
+app\services\traceability.py:245:1: C901 'trace_forward' is too complex (19)
+def trace_forward(
+^
+app\services\traceability.py:355:128: E501 line too long (140 > 127 characters)
+            rem_qty = 0.0 if is_consumed else (float(child_batch.remaining_quantity) if child_batch.remaining_quantity is not None else 0.0)
+                                                                                                                               ^
+app\services\traceability.py:414:128: E501 line too long (140 > 127 characters)
+                "remaining_quantity": 0.0 if is_c else (float(target.remaining_quantity) if target.remaining_quantity is not None else 0.0),
+                                                                                                                               ^
+app\services\traceability.py:441:128: E501 line too long (134 > 127 characters)
+                    "remaining_quantity": 0.0 if is_c else (float(b.remaining_quantity) if b.remaining_quantity is not None else 0.0),
+                                                                                                                               ^
+app\services\traceability.py:459:1: W391 blank line at end of file
+
+^
+8     C901 'migrate_sprint2_schema' is too complex (19)
+32    E501 line too long (128 > 127 characters)
+4     F401 'app.models.EVENT_CONSUMED' imported but unused
+2     W293 blank line contains whitespace
+2     W391 blank line at end of file
+48

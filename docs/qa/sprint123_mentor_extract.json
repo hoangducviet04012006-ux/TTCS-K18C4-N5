@@ -1,0 +1,2857 @@
+{
+  "Thông tin": [
+    {
+      "row": 1,
+      "values": [
+        "Trường",
+        "Giá trị"
+      ]
+    },
+    {
+      "row": 2,
+      "values": [
+        "Tên dự án",
+        "Truy xuất nguồn gốc và giám sát chuỗi lạnh nông sản"
+      ]
+    },
+    {
+      "row": 3,
+      "values": [
+        "Ngày lập",
+        "2026-09-08"
+      ]
+    },
+    {
+      "row": 4,
+      "values": [
+        "Ngày sửa lớn",
+        "2026-09-15 — sinh lại đủ khối lượng cho 8 sprint, mọi story đều có SP"
+      ]
+    },
+    {
+      "row": 5,
+      "values": [
+        "Số developer",
+        "5"
+      ]
+    },
+    {
+      "row": 6,
+      "values": [
+        "Độ dài sprint",
+        "1 tuần"
+      ]
+    },
+    {
+      "row": 7,
+      "values": [
+        "Ngày làm việc / sprint",
+        "5"
+      ]
+    },
+    {
+      "row": 8,
+      "values": [
+        "Focus factor",
+        "0.5"
+      ]
+    },
+    {
+      "row": 9,
+      "values": [
+        "Đơn vị ước lượng",
+        "story point (Fibonacci)"
+      ]
+    },
+    {
+      "row": 10,
+      "values": [
+        "Product Goal",
+        "Chuỗi cung ứng nông sản truy được nguồn gốc từng lô từ vườn tới tay người mua, phát hiện được vi phạm chuỗi lạnh, và khi có sự cố thì chỉ ra đúng và đủ mọi lô hàng liên quan trong vòng vài phút thay vì vài ngày"
+      ]
+    },
+    {
+      "row": 11,
+      "values": [
+        "Kinh nghiệm team",
+        "thực tập / mới ra trường"
+      ]
+    },
+    {
+      "row": 12,
+      "values": [
+        "Quen Scrum",
+        "mới áp dụng"
+      ]
+    },
+    {
+      "row": 13,
+      "values": [
+        "Loại dự án",
+        "mới tinh (greenfield)"
+      ]
+    },
+    {
+      "row": 14,
+      "values": [
+        "Ràng buộc tuân thủ",
+        "có — an toàn thực phẩm và truy xuất nguồn gốc; dữ liệu định danh nông hộ và cơ sở sơ chế (Nghị định 13/2023/NĐ-CP)"
+      ]
+    },
+    {
+      "row": 15,
+      "values": [
+        "Vai trò sẵn có",
+        "không có QA, không có DevOps, không có người thiết kế — cả 5 thành viên đều lập trình"
+      ]
+    }
+  ],
+  "Sprints": [
+    {
+      "row": 1,
+      "values": [
+        "Sprint",
+        "Từ ngày",
+        "Đến ngày",
+        "Sprint Goal",
+        "Capacity (SP)",
+        "Đã xếp (SP)"
+      ]
+    },
+    {
+      "row": 2,
+      "values": [
+        "1",
+        null,
+        null,
+        "Vùng trồng khai báo được thửa đất của mình trên môi trường staging chạy thật, và mọi thay đổi mã đều đi qua CI",
+        "12",
+        "12"
+      ]
+    },
+    {
+      "row": 3,
+      "values": [
+        "2",
+        null,
+        null,
+        "Lô thu hoạch được ghi nhận, bàn giao được, và lịch sử của nó không ai sửa lén được mà không bị phát hiện",
+        "20",
+        "20"
+      ]
+    },
+    {
+      "row": 4,
+      "values": [
+        "3",
+        null,
+        null,
+        "Lô tách và gộp được ở hợp tác xã, và từ lô bất kỳ truy ngược ra đúng vùng trồng gốc",
+        "20",
+        "20"
+      ]
+    },
+    {
+      "row": 5,
+      "values": [
+        "4",
+        null,
+        null,
+        "Từ một lô gốc chỉ ra được mọi lô con đã phát sinh và nơi chúng đang nằm",
+        "20",
+        "20"
+      ]
+    },
+    {
+      "row": 6,
+      "values": [
+        "5",
+        null,
+        null,
+        "Thu hồi một lô chỉ ra đúng và đủ mọi lô liên quan, và từng bên xác nhận được đã xử lý",
+        "20",
+        "20"
+      ]
+    },
+    {
+      "row": 7,
+      "values": [
+        "6",
+        null,
+        null,
+        "Vi phạm chuỗi lạnh trên đường vận chuyển được phát hiện đúng và gắn vào từng lô liên quan",
+        "20",
+        "20"
+      ]
+    },
+    {
+      "row": 8,
+      "values": [
+        "7",
+        null,
+        null,
+        "Người tiêu dùng quét QR xem được hành trình lô hàng mà không lộ dữ liệu nội bộ",
+        "20",
+        "20"
+      ]
+    },
+    {
+      "row": 9,
+      "values": [
+        "8",
+        null,
+        null,
+        "Cán bộ kiểm tra tự tra cứu và xuất được hồ sơ truy xuất đầy đủ mà không cần lập trình viên hỗ trợ",
+        "20",
+        "20"
+      ]
+    }
+  ],
+  "Epics": [
+    {
+      "row": 1,
+      "values": [
+        "ID",
+        "Title",
+        "Tier",
+        "Priority",
+        "Status",
+        "Story",
+        "AC",
+        "Deps",
+        "NFR",
+        "Owner"
+      ]
+    },
+    {
+      "row": 2,
+      "values": [
+        "E-01",
+        "Hạ tầng, CI/CD và môi trường",
+        "Ready",
+        "Must",
+        "Todo",
+        "Môi trường chạy được từ ngày đầu: khung dự án, cơ sở dữ liệu, pipeline CI, triển khai staging bằng Docker. Không có DevOps riêng nên toàn bộ phải xong trong Sprint 1, nếu không Sprint 3 mới phát hiện không deploy được.",
+        "Mọi thành viên chạy được dự án bằng một lệnh; mỗi lần merge vào nhánh chính thì staging tự cập nhật",
+        "không",
+        "bí mật nạp từ biến môi trường, không nằm trong mã nguồn",
+        "cả team"
+      ]
+    },
+    {
+      "row": 3,
+      "values": [
+        "E-04",
+        "Sự kiện chuỗi cung ứng và chuỗi bản ghi không sửa được",
+        "Ready",
+        "Must",
+        "Todo",
+        "Nền tảng tin cậy của cả hệ thống. Mọi việc xảy ra với một lô đều được ghi thành sự kiện chỉ thêm không sửa, và mỗi sự kiện chứa hash của sự kiện liền trước. Ai sửa lén một bản ghi giữa chuỗi thì hash sau đó không khớp và hệ thống phát hiện ra. **Không dùng blockchain** — chuỗi hash đã đủ cho bài toán này, và hiểu vì sao đủ chính là một phần giá trị học tập. Epic này cũng chứa bàn giao giữa các tổ chức vì bàn giao là sự kiện quan trọng nhất của chuỗi.",
+        "Sửa lén một bản ghi bằng SQL rồi chạy kiểm tra toàn vẹn thì hệ thống chỉ ra đúng bản ghi bị sửa",
+        "E-03, K-01",
+        "không có đường nào trong ứng dụng sửa hay xoá được sự kiện đã ghi",
+        "cả team"
+      ]
+    },
+    {
+      "row": 4,
+      "values": [
+        "E-02",
+        "Tài khoản, tổ chức và phân quyền",
+        "Ready",
+        "Must",
+        "Todo",
+        "Bảy vai trò thuộc nhiều tổ chức độc lập cùng dùng một hệ thống. Mỗi tổ chức chỉ thấy lô đang thuộc quyền quản lý của mình, nhưng ai cũng xem được nguồn gốc của lô mình đang giữ. Cách ly dữ liệu làm ở tầng truy vấn, không làm ở giao diện.",
+        "Tổ chức A không xem được lô đang nằm ở tổ chức B, nhưng nếu lô của A có nguồn gốc từ B thì A xem được phần lịch sử đó",
+        "E-01",
+        "mật khẩu hash bằng argon2id; không log mật khẩu và token",
+        "cả team"
+      ]
+    },
+    {
+      "row": 5,
+      "values": [
+        "E-03",
+        "Vùng trồng, sản phẩm và lô hàng",
+        "Ready",
+        "Must",
+        "Todo",
+        "Dữ liệu nền: vùng trồng thuộc một tổ chức, sản phẩm là loại nông sản, lô hàng là một mẻ cụ thể có khối lượng và ngày thu hoạch, địa điểm là kho hay cửa hàng bên trong một tổ chức. Mã lô là thứ người ta đọc và gõ tay nên phải ngắn và khó nhầm.",
+        "Khai báo được thửa và sản phẩm; ghi nhận được lô thu hoạch với mã lô duy nhất; xem được lô của mình",
+        "E-02",
+        "mã lô không dùng ký tự dễ nhầm khi đọc, và không đoán được lô kế tiếp từ lô hiện tại",
+        "cả team"
+      ]
+    },
+    {
+      "row": 6,
+      "values": [
+        "E-05",
+        "Phả hệ lô hàng: tách và gộp",
+        "Ready",
+        "Must",
+        "Todo",
+        "Phần khó nhất về mặt thuật toán. Một lô mẹ tách thành nhiều lô con; nhiều lô lại gộp thành một lô lớn. Kết quả là một đồ thị có hướng, và hai câu hỏi ngược chiều nhau: *lô này đến từ đâu* (truy ngược, Sprint 3) và *lô này đã đi tới đâu* (truy xuôi, Sprint 4). Mọi thuật toán ở đây kiểm bằng bộ dữ liệu mẫu có đáp án đếm tay, không kiểm bằng chính mã của mình.",
+        "Dựng đồ thị lô ba tầng có cả tách và gộp, rồi truy ngược và truy xuôi đều trả về đúng tập lô trong đáp án",
+        "E-04",
+        "truy xuất trên đồ thị 1000 lô xong dưới 2 giây; phải chống được vòng lặp vô hạn nếu dữ liệu lỗi tạo ra chu trình",
+        "cả team"
+      ]
+    },
+    {
+      "row": 7,
+      "values": [
+        "E-06",
+        "Thu hồi lô hàng",
+        "Next",
+        "Must",
+        "Todo",
+        "Tính năng đắt giá nhất của cả hệ thống và là lý do những thứ trước đó tồn tại. Phát hiện một lô có sự cố thì trong vài phút phải trả lời được: những lô nào đã sinh ra từ nó, đang nằm ở tổ chức nào, còn bao nhiêu chưa bán, và ai đã xử lý xong phần mình.",
+        "Đánh dấu một lô gốc có sự cố thì hệ thống liệt kê đủ mọi lô con qua mọi tầng, không sót, và theo dõi được từng bên xác nhận",
+        "E-05",
+        "thà liệt kê thừa còn hơn sót — sót một lô nghĩa là hàng có vấn đề vẫn nằm trên kệ",
+        "chưa phân"
+      ]
+    },
+    {
+      "row": 8,
+      "values": [
+        "E-11",
+        "Thông báo và cảnh báo",
+        "Next",
+        "Should",
+        "Todo",
+        "Kênh để hệ thống chủ động báo cho người dùng: bàn giao đang chờ, lệnh thu hồi liên quan, vi phạm chuỗi lạnh. Bắt đầu bằng thông báo trong lệnh thu hồi vì đó là chỗ chậm một ngày là hàng lỗi bán thêm một ngày; trung tâm thông báo và email nằm ở phần đệm.",
+        "Mọi bên liên quan tới một lệnh thu hồi thấy thông báo trong vòng một phút sau khi lệnh mở",
+        "E-06",
+        "thông báo không chứa dữ liệu nhạy cảm ngoài mã lô và mã lệnh",
+        "chưa phân"
+      ]
+    },
+    {
+      "row": 9,
+      "values": [
+        "E-07",
+        "Giám sát chuỗi lạnh",
+        "Later",
+        "Must",
+        "Todo",
+        "Nhiệt độ được ghi liên tục suốt hành trình vận chuyển. Vượt ngưỡng nhất thời khi mở cửa xe là bình thường, nên vi phạm phải tính theo độ trễ: vượt liên tục quá 30 phút mới coi là vi phạm. Cảm biến giả lập bằng script vì không làm phần cứng.",
+        "Bơm chuỗi nhiệt độ có đáp án biết trước thì hệ thống phát hiện đúng số vi phạm, không nhiều không ít",
+        "E-04",
+        "bảng dữ liệu nhiệt độ phải có cơ chế nén hoặc dọn, nếu không sẽ phình vô hạn",
+        "chưa phân"
+      ]
+    },
+    {
+      "row": 10,
+      "values": [
+        "E-08",
+        "Trang truy xuất công khai quét QR",
+        "Later",
+        "Must",
+        "Todo",
+        "Trang không cần đăng nhập, người tiêu dùng quét mã trên bao bì là xem được hành trình. Đây là mặt tiền của cả hệ thống — và cũng là chỗ dễ lộ dữ liệu nội bộ nhất nếu không tách rõ thông tin công khai với thông tin kinh doanh.",
+        "Quét QR của lô bất kỳ thì thấy hành trình nhưng không thấy khối lượng, không thấy tên đối tác nội bộ, không thấy giá",
+        "E-05",
+        "trang công khai chịu tải cao và không được để dò quét toàn bộ mã lô",
+        "chưa phân"
+      ]
+    },
+    {
+      "row": 11,
+      "values": [
+        "E-09",
+        "Báo cáo và hồ sơ kiểm tra",
+        "Later",
+        "Should",
+        "Todo",
+        "Cán bộ kiểm tra tra cứu lô trên mọi tổ chức, xuất hồ sơ truy xuất đầy đủ, và xem thống kê vi phạm chuỗi lạnh theo đơn vị vận chuyển.",
+        "Xuất được hồ sơ đầy đủ của một lô đủ dùng làm tài liệu kiểm tra",
+        "E-06",
+        "hồ sơ xuất ra phải kèm kết quả kiểm tra toàn vẹn tại thời điểm xuất",
+        "chưa phân"
+      ]
+    },
+    {
+      "row": 12,
+      "values": [
+        "E-10",
+        "Vận hành và bảo vệ dữ liệu",
+        "Later",
+        "Must",
+        "Todo",
+        "Kiểm tra toàn vẹn định kỳ toàn hệ thống, sao lưu, và nghĩa vụ xoá dữ liệu định danh cá nhân của nông hộ. Chỗ khó: xoá dữ liệu cá nhân mà không phá vỡ chuỗi hash — nếu xoá nội dung sự kiện thì hash không còn khớp.",
+        "Xoá được dữ liệu định danh mà chuỗi hash vẫn kiểm tra được là nguyên vẹn; khôi phục được từ bản sao lưu",
+        "E-04",
+        "cách xoá phải quyết định trước Sprint 5, không để tới lúc cần mới nghĩ",
+        "chưa phân"
+      ]
+    }
+  ],
+  "Backlog": [
+    {
+      "row": 1,
+      "values": [
+        "ID",
+        "Type",
+        "Parent",
+        "Title",
+        "Tier",
+        "Priority",
+        "SP",
+        "Sprint",
+        "Status",
+        "Thuộc epic",
+        "Story",
+        "AC",
+        "Deps",
+        "NFR",
+        "Owner"
+      ]
+    },
+    {
+      "row": 2,
+      "values": [
+        "S-01",
+        "Story",
+        "E-01",
+        "Khung ứng dụng chạy được trên máy cá nhân bằng một lệnh",
+        "Ready",
+        "Must",
+        "2",
+        "1",
+        "Todo",
+        "Hạ tầng, CI/CD và môi trường",
+        "Là thành viên phát triển tôi muốn lấy mã nguồn về và chạy được ứng dụng cùng cơ sở dữ liệu bằng một lệnh để không ai mất nửa ngày đầu chỉ để cài môi trường",
+        "Giả sử máy mới chỉ có Docker và git, Khi chạy lệnh khởi động ghi trong README, Thì ứng dụng và PostgreSQL chạy lên, trang chủ trả về HTTP 200\nGiả sử cơ sở dữ liệu còn trống, Khi ứng dụng khởi động, Thì migration đầu tiên tự chạy và không báo lỗi\nGiả sử thiếu biến môi trường bắt buộc, Khi khởi động, Thì ứng dụng dừng ngay và nói rõ thiếu biến nào thay vì chạy với giá trị mặc định",
+        "không",
+        "chuỗi kết nối và mọi bí mật đọc từ biến môi trường; log không in chuỗi kết nối",
+        "cả team"
+      ]
+    },
+    {
+      "row": 3,
+      "values": [
+        "S-02",
+        "Story",
+        "E-01",
+        "Pipeline CI chặn merge khi build, lint hoặc test đỏ",
+        "Ready",
+        "Must",
+        "1",
+        "1",
+        "Todo",
+        "Hạ tầng, CI/CD và môi trường",
+        "Là thành viên phát triển tôi muốn mã lỗi không merge được vào nhánh chính để staging không bao giờ chạy phiên bản hỏng",
+        "Giả sử một pull request có test thất bại, Khi CI chạy xong, Thì nút merge bị khoá và pull request hiện trạng thái đỏ\nGiả sử pull request xanh nhưng chưa ai duyệt, Khi bấm merge, Thì bị chặn cho tới khi có ít nhất một người khác duyệt\nGiả sử push thẳng lên nhánh chính, Khi push, Thì bị từ chối",
+        "S-01",
+        "pipeline chạy xong dưới 5 phút để không làm chậm nhịp sprint 1 tuần",
+        "cả team"
+      ]
+    },
+    {
+      "row": 4,
+      "values": [
+        "S-03",
+        "Story",
+        "E-01",
+        "Merge vào nhánh chính thì staging tự cập nhật",
+        "Ready",
+        "Must",
+        "2",
+        "1",
+        "Todo",
+        "Hạ tầng, CI/CD và môi trường",
+        "Là thành viên phát triển tôi muốn mọi thay đổi đã merge tự lên staging để mọi story sau đều có chỗ chạy thật thay vì chỉ chạy trên máy cá nhân",
+        "Giả sử pull request vừa merge, Khi pipeline chạy xong, Thì staging chạy phiên bản mới trong vòng 10 phút mà không ai phải thao tác tay\nGiả sử bản mới khởi động thất bại, Khi kiểm tra sức khoẻ không đạt, Thì staging giữ nguyên bản cũ và pipeline báo đỏ\nGiả sử migration mới cần chạy, Khi triển khai, Thì migration chạy trước khi bản mới nhận yêu cầu",
+        "S-02",
+        "máy chủ staging chỉ nhận image từ pipeline, không ai build tay trên đó",
+        "cả team"
+      ]
+    },
+    {
+      "row": 5,
+      "values": [
+        "K-01",
+        "Spike",
+        "E-04",
+        "Chọn cách chống sửa lén bản ghi sự kiện",
+        "Ready",
+        "Must",
+        "2",
+        "1",
+        "Todo",
+        "Sự kiện chuỗi cung ứng và chuỗi bản ghi không sửa được",
+        "Spike timebox 1 ngày công, **có người hướng dẫn ngồi cùng** vì team chưa từng làm việc này. So sánh ba cách bảo vệ bản ghi: chuỗi hash tự viết trong bảng thường, dùng quyền của cơ sở dữ liệu để chặn sửa xoá, và blockchain. Dựng thử chuỗi hash cho 1000 sự kiện rồi đo thời gian ghi và thời gian kiểm tra. Kết quả quyết định cách làm S-10 và S-12.",
+        "Đầu ra là một trang tài liệu nêu cách đã chọn, con số đo được, thuật toán băm và cách chuẩn hoá nội dung, cùng **lý do loại blockchain viết bằng ngôn ngữ người không chuyên đọc được** — đây là câu hỏi mọi người sẽ hỏi khi xem dự án",
+        "S-01",
+        "không viết mã sản phẩm trong spike; mã thử vứt đi được",
+        "cả team"
+      ]
+    },
+    {
+      "row": 6,
+      "values": [
+        "S-04",
+        "Story",
+        "E-02",
+        "Đăng nhập bằng email và mật khẩu, khoá tạm sau 5 lần sai",
+        "Ready",
+        "Must",
+        "2",
+        "1",
+        "Todo",
+        "Tài khoản, tổ chức và phân quyền",
+        "Là người dùng thuộc một tổ chức trong chuỗi tôi muốn đăng nhập bằng tài khoản riêng để mọi thao tác của tôi gắn với tên tôi và tổ chức tôi",
+        "Giả sử thông tin đúng, Khi đăng nhập, Thì tạo phiên và chuyển tới trang danh sách lô của tổ chức tôi\nGiả sử sai mật khẩu, Khi đăng nhập, Thì thông báo lỗi không tiết lộ email có tồn tại hay không\nGiả sử nhập sai 5 lần liên tiếp, Khi thử lần thứ 6, Thì tài khoản bị khoá 15 phút kể cả khi nhập đúng\nGiả sử phiên đã hết hạn, Khi mở một trang cần đăng nhập, Thì bị đưa về trang đăng nhập và quay lại đúng trang cũ sau khi đăng nhập",
+        "S-01",
+        "mật khẩu hash bằng argon2id; cookie phiên có cờ HttpOnly và Secure",
+        "cả team"
+      ]
+    },
+    {
+      "row": 7,
+      "values": [
+        "S-05",
+        "Story",
+        "E-02",
+        "Mỗi tổ chức chỉ thấy dữ liệu của chính mình",
+        "Ready",
+        "Must",
+        "2",
+        "1",
+        "Todo",
+        "Tài khoản, tổ chức và phân quyền",
+        "Là hợp tác xã sơ chế tôi muốn tổ chức khác không đọc được dữ liệu của tôi để cấu trúc kinh doanh của tôi không lọt ra ngoài",
+        "Giả sử tôi đã đăng nhập, Khi xem bất kỳ danh sách nào, Thì chỉ thấy bản ghi thuộc tổ chức tôi\nGiả sử tôi gọi thẳng API với mã bản ghi của tổ chức khác bằng công cụ dòng lệnh, Khi máy chủ nhận yêu cầu, Thì trả về 403 và ghi nhật ký lần thử\nGiả sử một route mới được thêm mà quên khai báo quyền, Khi gọi route đó, Thì bị từ chối — mặc định là chặn\nGiả sử tôi là cán bộ kiểm tra, Khi xem, Thì thấy được lô của mọi tổ chức nhưng chỉ ở chế độ đọc",
+        "S-04",
+        "lọc theo tổ chức ở tầng truy vấn, không lọc ở giao diện; test tích hợp phải chạy trong CI",
+        "cả team"
+      ]
+    },
+    {
+      "row": 8,
+      "values": [
+        "S-06",
+        "Story",
+        "E-03",
+        "Vùng trồng khai báo thửa đất của mình",
+        "Ready",
+        "Must",
+        "1",
+        "1",
+        "Todo",
+        "Vùng trồng, sản phẩm và lô hàng",
+        "Là vùng trồng tôi muốn khai báo thửa đất mình canh tác để lô thu hoạch sau này gắn được vào đúng nguồn gốc",
+        "Giả sử đã đăng nhập bằng vai trò vùng trồng, Khi khai báo thửa với tên, diện tích và toạ độ hợp lệ, Thì thửa được lưu và thuộc tổ chức của tôi\nGiả sử tôi nhập diện tích âm hoặc bằng 0, Khi lưu, Thì bị chặn kèm thông báo rõ lý do\nGiả sử tôi xem danh sách thửa, Khi tải trang, Thì chỉ thấy thửa của tổ chức mình\nGiả sử tôi sửa tên thửa, Khi lưu, Thì lô đã gắn với thửa vẫn trỏ đúng thửa đó",
+        "S-05",
+        "toạ độ lưu ở dạng số thực đủ chính xác để hiện vị trí trên bản đồ ở S-60",
+        "cả team"
+      ]
+    },
+    {
+      "row": 9,
+      "values": [
+        "S-10",
+        "Story",
+        "E-04",
+        "Mọi thay đổi của lô được ghi thành sự kiện nối tiếp có hash",
+        "Ready",
+        "Must",
+        "3",
+        "2",
+        "Todo",
+        "Sự kiện chuỗi cung ứng và chuỗi bản ghi không sửa được",
+        "Là cán bộ kiểm tra tôi muốn mọi việc xảy ra với một lô đều được ghi lại theo cách không sửa được về sau để hồ sơ truy xuất là bằng chứng đáng tin, không phải bản kê do một bên tự viết",
+        "Giả sử một lô vừa được tạo, Khi hệ thống ghi sự kiện thu hoạch, Thì sự kiện chứa hash tính từ nội dung của chính nó và hash của sự kiện liền trước trong cùng lô\nGiả sử đây là sự kiện đầu tiên của lô, Khi tính hash, Thì phần hash trước dùng giá trị khởi đầu cố định đã quy ước\nGiả sử cùng một nội dung được băm hai lần, Khi so hai hash, Thì bằng nhau kể cả khi thứ tự khoá trong JSON khác nhau\nGiả sử tạo lô thất bại giữa chừng, Khi giao dịch bị huỷ, Thì không có sự kiện nào được ghi — không có lô thiếu sự kiện, không có sự kiện thiếu lô",
+        "S-08, K-01",
+        "ghi sự kiện và thay đổi trạng thái lô nằm trong cùng một giao dịch",
+        "cả team"
+      ]
+    },
+    {
+      "row": 10,
+      "values": [
+        "S-11",
+        "Story",
+        "E-04",
+        "Không đường nào trong ứng dụng sửa hay xoá được sự kiện đã ghi",
+        "Ready",
+        "Must",
+        "1",
+        "2",
+        "Todo",
+        "Sự kiện chuỗi cung ứng và chuỗi bản ghi không sửa được",
+        "Là cán bộ kiểm tra tôi muốn chắc chắn không ai, kể cả lập trình viên, sửa được sự kiện qua ứng dụng để lời cam kết \"không sửa được\" không phụ thuộc vào việc mọi người nhớ quy ước",
+        "Giả sử tài khoản ứng dụng chạy lệnh sửa hoặc xoá trên bảng sự kiện, Khi cơ sở dữ liệu nhận lệnh, Thì từ chối vì thiếu quyền\nGiả sử ai đó gọi API sửa hoặc xoá một sự kiện, Khi máy chủ nhận yêu cầu, Thì không có endpoint nào phục vụ việc đó\nGiả sử người mới vào dự án đọc README, Khi tìm phần quy ước, Thì thấy rõ bảng sự kiện là chỉ-thêm và vì sao",
+        "S-10",
+        "quyền hạn chế ở cơ sở dữ liệu, không chỉ ở mã nguồn",
+        "cả team"
+      ]
+    },
+    {
+      "row": 11,
+      "values": [
+        "S-12",
+        "Story",
+        "E-04",
+        "Kiểm tra toàn vẹn chuỗi sự kiện của một lô chỉ ra đúng chỗ đứt mạch",
+        "Ready",
+        "Must",
+        "3",
+        "2",
+        "Todo",
+        "Sự kiện chuỗi cung ứng và chuỗi bản ghi không sửa được",
+        "Là cán bộ kiểm tra tôi muốn hệ thống tự phát hiện khi hồ sơ bị sửa lén để tôi biết dữ liệu nào còn đáng tin",
+        "Giả sử chuỗi sự kiện của một lô nguyên vẹn, Khi chạy kiểm tra, Thì báo lô hợp lệ\nGiả sử ai đó sửa nội dung một sự kiện giữa chuỗi bằng SQL trực tiếp, Khi chạy kiểm tra, Thì hệ thống chỉ ra đúng sự kiện bị sửa và mọi sự kiện sau nó đều bị đánh dấu nghi vấn\nGiả sử ai đó xoá một sự kiện giữa chuỗi, Khi chạy kiểm tra, Thì hệ thống phát hiện đứt mạch tại đúng vị trí đó\nGiả sử một lô mới chỉ có một sự kiện, Khi chạy kiểm tra, Thì vẫn báo hợp lệ chứ không báo lỗi",
+        "S-11",
+        "kiểm tra một lô có 1000 sự kiện xong dưới 1 giây",
+        "cả team"
+      ]
+    },
+    {
+      "row": 12,
+      "values": [
+        "S-24",
+        "Story",
+        "E-04",
+        "Bàn giao quá hạn chưa xác nhận bị đánh dấu cho cả hai bên",
+        "Ready",
+        "Should",
+        "1",
+        "3",
+        "Todo",
+        "Sự kiện chuỗi cung ứng và chuỗi bản ghi không sửa được",
+        "Là vùng trồng tôi muốn biết khi bàn giao của tôi bị bên nhận bỏ quên để gọi điện nhắc thay vì chờ mãi",
+        "Giả sử bàn giao chờ quá 48 giờ, Khi job rà soát chạy, Thì bàn giao được gắn nhãn quá hạn và hiện nổi bật ở danh sách của cả hai bên\nGiả sử bên nhận xác nhận sau khi đã quá hạn, Khi xác nhận, Thì vẫn thành công và sự kiện ghi rõ xác nhận muộn\nGiả sử bàn giao quá hạn, Khi hệ thống rà soát, Thì chỉ đánh dấu chứ không tự huỷ",
+        "S-16",
+        "ngưỡng 48 giờ là tham số cấu hình",
+        "cả team"
+      ]
+    },
+    {
+      "row": 13,
+      "values": [
+        "S-61",
+        "Story",
+        "E-04",
+        "Hợp tác xã ghi nhận công đoạn sơ chế thành sự kiện có tham số",
+        "Later",
+        "Should",
+        "3",
+        null,
+        "Todo",
+        "Sự kiện chuỗi cung ứng và chuỗi bản ghi không sửa được",
+        "Là hợp tác xã sơ chế tôi muốn ghi lại lô đã qua rửa, phân loại, đóng gói với thông số của từng bước để hồ sơ truy xuất có cả quá trình chế biến, không chỉ đường đi",
+        "Danh mục công đoạn cấu hình được; mỗi công đoạn ghi thành sự kiện có tham số (nhiệt độ nước rửa, loại bao bì, ca làm việc); hiện trên dòng thời gian và trang công khai ở mức tóm tắt. Chưa refine chi tiết — tier Later, phần đệm chưa xếp sprint, ước lượng thô 3 SP",
+        "S-25",
+        "chưa refine — tham số lưu dạng JSON có lược đồ theo công đoạn",
+        "chưa phân"
+      ]
+    },
+    {
+      "row": 14,
+      "values": [
+        "S-13",
+        "Story",
+        "E-04",
+        "Xem dòng thời gian sự kiện của một lô",
+        "Ready",
+        "Must",
+        "2",
+        "2",
+        "Todo",
+        "Sự kiện chuỗi cung ứng và chuỗi bản ghi không sửa được",
+        "Là nhà phân phối tôi muốn xem lô này đã đi qua những bước nào và do ai thực hiện để biết hàng mình nhận có nguồn gốc rõ ràng",
+        "Giả sử một lô đã qua nhiều bước, Khi tôi mở trang chi tiết lô, Thì thấy các sự kiện xếp theo thứ tự thời gian kèm tên tổ chức thực hiện từng bước\nGiả sử lô vừa được tạo và chỉ có một sự kiện, Khi mở trang, Thì thấy đúng một dòng, không hiện trang trống\nGiả sử chuỗi sự kiện của lô có vấn đề toàn vẹn, Khi tôi mở trang, Thì thấy cảnh báo rõ ràng ở đầu dòng thời gian\nGiả sử lô có 200 sự kiện, Khi mở trang, Thì tải xong dưới 2 giây",
+        "S-12",
+        "không truy vấn con cho từng sự kiện để lấy tên tổ chức",
+        "cả team"
+      ]
+    },
+    {
+      "row": 15,
+      "values": [
+        "S-15",
+        "Story",
+        "E-04",
+        "Bàn giao lô sang tổ chức khác ở trạng thái chờ xác nhận",
+        "Ready",
+        "Must",
+        "2",
+        "2",
+        "Todo",
+        "Sự kiện chuỗi cung ứng và chuỗi bản ghi không sửa được",
+        "Là vùng trồng tôi muốn bàn giao lô cho hợp tác xã và việc đó được ghi lại để trách nhiệm về lô chuyển đi rõ ràng, có dấu vết",
+        "Giả sử tôi đang giữ một lô, Khi tôi tạo bàn giao sang tổ chức khác, Thì sự kiện bàn giao được ghi ở trạng thái chờ xác nhận và lô vẫn thuộc quyền giữ của tôi\nGiả sử lô đang có bàn giao chờ, Khi tôi tạo bàn giao thứ hai cho cùng lô, Thì bị chặn\nGiả sử tôi chọn chính tổ chức mình làm bên nhận, Khi lưu, Thì bị chặn\nGiả sử bàn giao đang chờ, Khi bên nhận xem danh sách chờ của họ, Thì thấy lô đó kèm tên tổ chức tôi",
+        "S-13",
+        "bàn giao là sự kiện ghi thêm vào chuỗi qua hàm ở T-25, không sửa sự kiện cũ",
+        "cả team"
+      ]
+    },
+    {
+      "row": 16,
+      "values": [
+        "S-23",
+        "Story",
+        "E-02",
+        "Lô có nguồn gốc từ tổ chức khác thì xem được phần lịch sử trước đó",
+        "Ready",
+        "Should",
+        "2",
+        "3",
+        "Todo",
+        "Tài khoản, tổ chức và phân quyền",
+        "Là nhà phân phối tôi muốn xem được các bước mà vùng trồng và hợp tác xã đã làm với lô tôi đang giữ để trả lời khách mà không phải gọi điện hỏi từng bên",
+        "Giả sử lô tôi giữ có tổ tiên thuộc tổ chức khác, Khi tôi mở dòng thời gian hoặc nguồn gốc, Thì thấy được các sự kiện của tổ tiên kèm tên tổ chức thực hiện\nGiả sử tổ chức đó có lô khác không liên quan tới tôi, Khi tôi gọi API xem lô đó, Thì trả về 403\nGiả sử lô đã bàn giao đi khỏi tôi, Khi tôi xem, Thì vẫn thấy được phần lịch sử tới lúc bàn giao nhưng không thấy bước sau đó",
+        "S-21",
+        "quy tắc quyền viết ở một chỗ, dùng cho cả dòng thời gian, nguồn gốc và chi tiết lô",
+        "cả team"
+      ]
+    },
+    {
+      "row": 17,
+      "values": [
+        "S-31",
+        "Story",
+        "E-02",
+        "Nhật ký thao tác: ai làm gì, lúc nào, từ địa chỉ nào",
+        "Next",
+        "Should",
+        "2",
+        "4",
+        "Todo",
+        "Tài khoản, tổ chức và phân quyền",
+        "Là quản trị hệ thống tôi muốn xem lại ai đã thực hiện thao tác nào để làm rõ trách nhiệm khi có tranh cãi mà không phải đọc chuỗi sự kiện của từng lô",
+        "Giả sử một người dùng đăng nhập, tạo lô, tách lô, Khi quản trị mở nhật ký, Thì thấy ba dòng kèm người, tổ chức, thời điểm, địa chỉ IP và mã đối tượng\nGiả sử lần đăng nhập thất bại, Khi xem nhật ký, Thì có dòng ghi nhận kèm lý do\nƯớc lượng thô 2 SP — ghi ở middleware, không rải trong từng handler",
+        "S-25",
+        "nhật ký chỉ-thêm như bảng sự kiện; không ghi nội dung mật khẩu hay token",
+        "chưa phân"
+      ]
+    },
+    {
+      "row": 18,
+      "values": [
+        "S-63",
+        "Story",
+        "E-02",
+        "Quản trị tổ chức mời thành viên và gán vai trò",
+        "Later",
+        "Should",
+        "3",
+        null,
+        "Todo",
+        "Tài khoản, tổ chức và phân quyền",
+        "Là quản trị của một tổ chức tôi muốn tự mời nhân viên vào tổ chức mình và gán vai trò để không phải nhờ quản trị hệ thống tạo từng tài khoản",
+        "Gửi lời mời qua email có hạn dùng; người nhận đặt mật khẩu và vào đúng tổ chức; quản trị tổ chức vô hiệu hoá được thành viên đã nghỉ. Chưa refine chi tiết — tier Later, phần đệm chưa xếp sprint, ước lượng thô 3 SP",
+        "S-04",
+        "chưa refine — link mời dùng một lần, hết hạn sau 72 giờ",
+        "chưa phân"
+      ]
+    },
+    {
+      "row": 19,
+      "values": [
+        "S-16",
+        "Story",
+        "E-04",
+        "Bên nhận xác nhận hoặc từ chối bàn giao kèm lý do",
+        "Ready",
+        "Must",
+        "2",
+        "2",
+        "Todo",
+        "Sự kiện chuỗi cung ứng và chuỗi bản ghi không sửa được",
+        "Là hợp tác xã sơ chế tôi muốn việc nhận lô phải có xác nhận của tôi để không ai đẩy trách nhiệm một lô hàng sang tôi mà tôi chưa thực sự nhận",
+        "Giả sử có bàn giao chờ tôi, Khi tôi xác nhận, Thì quyền giữ lô chuyển sang tôi và một sự kiện xác nhận được ghi tiếp vào chuỗi\nGiả sử tôi từ chối, Khi từ chối kèm lý do, Thì lô vẫn ở chỗ bên giao và lý do được ghi vào chuỗi sự kiện\nGiả sử tôi từ chối mà để trống lý do, Khi bấm, Thì bị chặn\nGiả sử một người khác của tổ chức khác gọi API xác nhận bàn giao không dành cho họ, Khi máy chủ nhận, Thì trả về 403",
+        "S-15",
+        "chuyển quyền giữ và ghi sự kiện nằm trong cùng một giao dịch",
+        "cả team"
+      ]
+    },
+    {
+      "row": 20,
+      "values": [
+        "S-07",
+        "Story",
+        "E-03",
+        "Khai báo danh mục sản phẩm và đơn vị tính",
+        "Ready",
+        "Must",
+        "1",
+        "2",
+        "Todo",
+        "Vùng trồng, sản phẩm và lô hàng",
+        "Là quản trị hệ thống tôi muốn có danh mục sản phẩm dùng chung để mọi tổ chức gọi cùng một loại nông sản bằng cùng một tên",
+        "Giả sử tôi là quản trị, Khi thêm sản phẩm với tên và đơn vị tính, Thì sản phẩm xuất hiện trong danh sách chọn của mọi tổ chức\nGiả sử tôi thêm sản phẩm trùng tên, Khi lưu, Thì bị chặn kèm thông báo rõ\nGiả sử tôi là vùng trồng, Khi mở danh mục, Thì chỉ xem được, không sửa được",
+        "S-05",
+        "đơn vị tính chọn từ danh sách đóng (kg, tấn, thùng), không nhập tự do",
+        "cả team"
+      ]
+    },
+    {
+      "row": 21,
+      "values": [
+        "S-08",
+        "Story",
+        "E-03",
+        "Ghi nhận lô thu hoạch với mã lô sinh tự động",
+        "Ready",
+        "Must",
+        "3",
+        "2",
+        "Todo",
+        "Vùng trồng, sản phẩm và lô hàng",
+        "Là vùng trồng tôi muốn ghi nhận mỗi mẻ thu hoạch thành một lô có mã riêng để mọi bước sau này đều tham chiếu được về đúng mẻ này",
+        "Giả sử đã có thửa và sản phẩm, Khi ghi nhận thu hoạch với khối lượng và ngày hợp lệ, Thì hệ thống tạo lô mới kèm mã lô sinh tự động và hiện mã đó cỡ lớn cho người dùng\nGiả sử hai người cùng ghi nhận thu hoạch trong cùng một khoảnh khắc, Khi cả hai lưu, Thì mỗi người nhận một mã lô khác nhau\nGiả sử tôi gõ lại mã lô vừa nhận vào ô tìm kiếm, Khi tìm, Thì ra đúng lô đó dù tôi gõ chữ thường hay chữ hoa\nGiả sử lô vừa tạo, Khi xem chi tiết, Thì tổ chức đang giữ là tổ chức của tôi và khối lượng còn lại bằng khối lượng thu hoạch",
+        "S-06, S-07",
+        "mã lô sinh ngẫu nhiên đủ dài, không dùng số thứ tự tăng dần để đối thủ không suy ra sản lượng",
+        "cả team"
+      ]
+    },
+    {
+      "row": 22,
+      "values": [
+        "S-09",
+        "Story",
+        "E-03",
+        "Dữ liệu thu hoạch không hợp lệ bị chặn ở máy chủ",
+        "Ready",
+        "Should",
+        "1",
+        "2",
+        "Todo",
+        "Vùng trồng, sản phẩm và lô hàng",
+        "Là cán bộ kiểm tra tôi muốn hệ thống không nhận dữ liệu thu hoạch vô lý để hồ sơ truy xuất không chứa số liệu không ai tin được",
+        "Giả sử ngày thu hoạch ở tương lai, Khi lưu, Thì bị chặn kèm thông báo rõ lý do\nGiả sử khối lượng bằng 0 hoặc âm, Khi lưu, Thì bị chặn\nGiả sử thửa được chọn thuộc tổ chức khác (gửi thẳng qua API), Khi lưu, Thì trả về 403\nGiả sử người dùng bấm lưu hai lần liên tiếp, Khi form đang gửi, Thì lần bấm thứ hai bị bỏ qua và chỉ một lô được tạo",
+        "S-08",
+        "mọi kiểm tra chạy ở máy chủ; kiểm tra ở trình duyệt chỉ để báo sớm",
+        "cả team"
+      ]
+    },
+    {
+      "row": 23,
+      "values": [
+        "S-14",
+        "Story",
+        "E-03",
+        "Danh sách lô tổ chức tôi đang giữ, tìm theo mã lô",
+        "Ready",
+        "Should",
+        "2",
+        "2",
+        "Todo",
+        "Vùng trồng, sản phẩm và lô hàng",
+        "Là hợp tác xã sơ chế tôi muốn thấy mọi lô đang nằm ở chỗ tôi và tìm nhanh theo mã để không phải nhớ mã lô trong đầu",
+        "Giả sử tổ chức tôi đang giữ nhiều lô, Khi mở trang danh sách, Thì thấy lô sắp theo ngày mới nhất trước, mỗi trang 20 lô\nGiả sử tôi gõ một phần mã lô, Khi tìm, Thì ra các lô có mã chứa chuỗi đó\nGiả sử tôi lọc theo sản phẩm, Khi áp bộ lọc, Thì chỉ còn lô của sản phẩm đó\nGiả sử một lô đã bàn giao xong cho tổ chức khác, Khi tôi xem danh sách, Thì lô đó không còn trong danh sách đang giữ của tôi",
+        "S-08",
+        "trang tải dưới 1 giây với 5000 lô",
+        "cả team"
+      ]
+    },
+    {
+      "row": 24,
+      "values": [
+        "S-25",
+        "Story",
+        "E-03",
+        "Trang chi tiết lô: sản phẩm, khối lượng còn lại, nơi giữ, lô mẹ và lô con trực tiếp",
+        "Ready",
+        "Should",
+        "2",
+        "3",
+        "Todo",
+        "Vùng trồng, sản phẩm và lô hàng",
+        "Là hợp tác xã sơ chế tôi muốn một trang tổng hợp mọi thứ về một lô để không phải nhảy qua bốn màn hình mới hiểu lô này là gì",
+        "Giả sử mở một lô bất kỳ, Khi trang tải, Thì thấy sản phẩm, thửa gốc, khối lượng ban đầu và còn lại, tổ chức đang giữ, trạng thái, và các nút thao tác hợp với vai trò của tôi\nGiả sử lô có lô mẹ hoặc lô con trực tiếp, Khi xem, Thì thấy danh sách liên kết bấm được sang từng lô\nGiả sử tôi không có quyền xem lô, Khi mở, Thì bị từ chối",
+        "S-23",
+        "trang tải dưới 1 giây; mọi truy vấn gom vào tối đa ba câu lệnh",
+        "cả team"
+      ]
+    },
+    {
+      "row": 25,
+      "values": [
+        "S-30",
+        "Story",
+        "E-03",
+        "Nhà phân phối chia lô về từng cửa hàng của mình",
+        "Next",
+        "Should",
+        "3",
+        "4",
+        "Todo",
+        "Vùng trồng, sản phẩm và lô hàng",
+        "Là nhà phân phối tôi muốn ghi nhận lô đang nằm ở cửa hàng nào trong hệ thống của tôi để thu hồi chỉ đúng cửa hàng thay vì lục cả chuỗi",
+        "Giả sử tổ chức tôi có nhiều địa điểm, Khi khai báo địa điểm với tên và địa chỉ, Thì địa điểm thuộc tổ chức tôi\nGiả sử tôi chuyển một lô về một địa điểm, Khi lưu, Thì lô ghi rõ địa điểm hiện tại và sự kiện được ghi vào chuỗi\nGiả sử chia một lô cho nhiều cửa hàng, Khi lưu, Thì đó là phép tách ở S-17 với mỗi lô con gắn một địa điểm\nƯớc lượng thô 3 SP",
+        "S-25",
+        "địa điểm là bảng con của tổ chức, không phải tổ chức riêng — chuyển lô nội bộ không cần xác nhận hai phía",
+        "chưa phân"
+      ]
+    },
+    {
+      "row": 26,
+      "values": [
+        "S-32",
+        "Story",
+        "E-03",
+        "Nhập danh mục sản phẩm và thửa từ tệp CSV",
+        "Next",
+        "Could",
+        "2",
+        "4",
+        "Todo",
+        "Vùng trồng, sản phẩm và lô hàng",
+        "Là quản trị hệ thống tôi muốn nhập hàng trăm sản phẩm và thửa từ tệp để không phải gõ tay khi đưa một hợp tác xã mới lên hệ thống",
+        "Giả sử tệp CSV đúng mẫu, Khi nhập, Thì mọi dòng được tạo và báo số dòng thành công\nGiả sử một dòng sai, Khi nhập, Thì không dòng nào được tạo và báo cáo nêu rõ dòng và cột sai\nƯớc lượng thô 2 SP",
+        "S-25",
+        "giới hạn kích thước tệp; xử lý trong một giao dịch",
+        "chưa phân"
+      ]
+    },
+    {
+      "row": 27,
+      "values": [
+        "S-62",
+        "Story",
+        "E-03",
+        "Vùng trồng khai vật tư đã dùng cho lô thu hoạch",
+        "Later",
+        "Should",
+        "3",
+        null,
+        "Todo",
+        "Vùng trồng, sản phẩm và lô hàng",
+        "Là vùng trồng tôi muốn khai phân bón và thuốc bảo vệ thực vật đã dùng cho lô để cán bộ kiểm tra đối chiếu được thời gian cách ly khi cần",
+        "Khai được nhiều vật tư kèm ngày dùng và liều lượng cho một lô trước hoặc sau khi thu hoạch; mỗi lần khai là một sự kiện; cán bộ kiểm tra thấy trong hồ sơ, người tiêu dùng không thấy. Chưa refine chi tiết — tier Later, phần đệm chưa xếp sprint, ước lượng thô 3 SP",
+        "S-08",
+        "chưa refine — danh mục vật tư do quản trị quản lý, không nhập tự do",
+        "chưa phân"
+      ]
+    },
+    {
+      "row": 28,
+      "values": [
+        "S-17",
+        "Story",
+        "E-05",
+        "Tách một lô thành nhiều lô con",
+        "Ready",
+        "Must",
+        "3",
+        "3",
+        "Todo",
+        "Phả hệ lô hàng: tách và gộp",
+        "Là hợp tác xã sơ chế tôi muốn chia một lô lớn thành nhiều lô con để đóng gói theo quy cách khác nhau mà vẫn giữ được nguồn gốc",
+        "Giả sử tôi đang giữ một lô còn 100 kg, Khi tách thành ba lô con 30, 30, 40 kg, Thì ba lô con được tạo với mã riêng, mỗi lô ghi rõ lô mẹ, và lô mẹ còn lại 0 kg\nGiả sử tôi tách 100 kg thành 30 và 30, Khi lưu, Thì lô mẹ còn lại 40 kg và vẫn tách tiếp được\nGiả sử tạo lô con thứ hai thất bại giữa chừng, Khi giao dịch bị huỷ, Thì không có lô con nào được tạo và lô mẹ giữ nguyên khối lượng\nGiả sử lô không do tổ chức tôi giữ, Khi tôi gọi API tách, Thì trả về 403",
+        "S-16",
+        "tách nhiều lô con là một giao dịch — hoặc tạo hết, hoặc không tạo lô nào",
+        "cả team"
+      ]
+    },
+    {
+      "row": 29,
+      "values": [
+        "S-18",
+        "Story",
+        "E-05",
+        "Tổng khối lượng lô con không vượt lô mẹ, kể cả khi hai người tách cùng lúc",
+        "Ready",
+        "Must",
+        "2",
+        "3",
+        "Todo",
+        "Phả hệ lô hàng: tách và gộp",
+        "Là cán bộ kiểm tra tôi muốn tổng khối lượng các lô con không bao giờ vượt lô mẹ để phát hiện việc khai khống sản lượng",
+        "Giả sử lô mẹ còn 40 kg, Khi tách với tổng 50 kg, Thì bị chặn kèm thông báo nêu phần còn lại\nGiả sử hai người cùng tách một lô mẹ còn 40 kg, mỗi người 30 kg, Khi cả hai lưu gần như cùng lúc, Thì chỉ một người thành công, người kia nhận lỗi phần còn lại không đủ\nGiả sử tách nhiều lần liên tiếp, Khi cộng dồn, Thì tổng khối lượng mọi lô con bằng đúng khối lượng đã trừ khỏi lô mẹ, không lệch một gram",
+        "S-17",
+        "kiểm tra khối lượng chống được hai giao dịch đồng thời — khoá dòng lô mẹ, không kiểm bằng đọc rồi ghi",
+        "cả team"
+      ]
+    },
+    {
+      "row": 30,
+      "values": [
+        "S-19",
+        "Story",
+        "E-05",
+        "Gộp nhiều lô cùng sản phẩm thành một lô lớn",
+        "Ready",
+        "Must",
+        "3",
+        "3",
+        "Todo",
+        "Phả hệ lô hàng: tách và gộp",
+        "Là nhà phân phối tôi muốn gộp nhiều lô nhỏ cùng loại thành một lô lớn để vận chuyển gọn mà vẫn truy được từng nguồn",
+        "Giả sử tôi đang giữ ba lô cùng sản phẩm, Khi gộp toàn bộ, Thì một lô mới được tạo ghi rõ cả ba lô mẹ, và ba lô mẹ còn lại 0 kg\nGiả sử tôi gộp một phần của mỗi lô, Khi lưu, Thì lô mới có khối lượng bằng tổng phần lấy và mỗi lô mẹ trừ đúng phần đó\nGiả sử hai lô khác sản phẩm, Khi gộp, Thì bị chặn kèm lý do\nGiả sử một trong các lô không do tổ chức tôi giữ, Khi gộp, Thì bị chặn",
+        "S-18",
+        "gộp là một giao dịch; kiểm phần còn lại của từng lô mẹ có khoá dòng như T-42",
+        "cả team"
+      ]
+    },
+    {
+      "row": 31,
+      "values": [
+        "S-20",
+        "Story",
+        "E-05",
+        "Sự kiện tách và gộp ghi vào chuỗi của mọi lô liên quan",
+        "Ready",
+        "Must",
+        "2",
+        "3",
+        "Todo",
+        "Phả hệ lô hàng: tách và gộp",
+        "Là cán bộ kiểm tra tôi muốn thấy việc tách hoặc gộp trên dòng thời gian của cả lô mẹ lẫn lô con để đi từ bất kỳ lô nào cũng thấy được mối liên hệ",
+        "Giả sử một lô mẹ vừa tách thành ba lô con, Khi xem dòng thời gian lô mẹ, Thì thấy một sự kiện tách nêu ba mã lô con; xem lô con thì thấy sự kiện khai sinh nêu mã lô mẹ\nGiả sử ba lô vừa gộp, Khi xem dòng thời gian lô mới, Thì thấy sự kiện gộp nêu cả ba lô mẹ và khối lượng lấy từ mỗi lô\nGiả sử vừa tách hoặc gộp xong, Khi chạy kiểm tra toàn vẹn mọi lô liên quan, Thì tất cả đều hợp lệ",
+        "S-19",
+        "ghi mọi sự kiện trong cùng giao dịch với phép tách hoặc gộp",
+        "cả team"
+      ]
+    },
+    {
+      "row": 32,
+      "values": [
+        "S-21",
+        "Story",
+        "E-05",
+        "Truy ngược nguồn gốc: từ lô hiện tại về tới các lô thu hoạch gốc",
+        "Ready",
+        "Must",
+        "3",
+        "3",
+        "Todo",
+        "Phả hệ lô hàng: tách và gộp",
+        "Là nhà phân phối tôi muốn biết lô mình đang giữ bắt nguồn từ những vùng trồng nào để trả lời được khi khách hỏi về xuất xứ",
+        "Giả sử lô hiện tại là kết quả gộp của hai lô đến từ hai vùng trồng khác nhau, Khi truy ngược, Thì thấy cả hai lô thu hoạch gốc kèm tên vùng trồng và thửa\nGiả sử lô đi qua ba tầng tách và gộp, Khi truy ngược, Thì kết quả khớp đáp án đếm tay trong bộ dữ liệu mẫu\nGiả sử lô chưa từng tách hay gộp, Khi truy ngược, Thì trả về chính nó\nGiả sử dữ liệu lỗi tạo ra chu trình cha–con, Khi truy ngược, Thì dừng và báo lỗi thay vì lặp vô hạn",
+        "S-20, S-22",
+        "duyệt đồ thị đánh dấu lô đã thăm; đồ thị 1000 lô xong dưới 2 giây",
+        "cả team"
+      ]
+    },
+    {
+      "row": 33,
+      "values": [
+        "S-22",
+        "Story",
+        "E-05",
+        "Bộ dữ liệu mẫu phả hệ ba tầng có đáp án đếm tay",
+        "Ready",
+        "Must",
+        "2",
+        "3",
+        "Todo",
+        "Phả hệ lô hàng: tách và gộp",
+        "Là thành viên phát triển tôi muốn có một đồ thị lô mẫu với đáp án tính sẵn bằng tay để mọi thuật toán phả hệ được kiểm bằng đáp án độc lập, không phải bằng chính mã của mình",
+        "Giả sử cơ sở dữ liệu trống, Khi chạy script seed, Thì có ít nhất 12 lô qua ba tầng, có cả tách lẫn gộp, thuộc ba tổ chức\nGiả sử chạy script lần thứ hai, Khi kết thúc, Thì dữ liệu giống hệt lần đầu, không nhân đôi\nGiả sử mở tệp đáp án, Khi tra một lô bất kỳ, Thì thấy tập tổ tiên và tập hậu duệ của nó đã được hai người đếm độc lập và khớp nhau",
+        "S-19",
+        "đáp án viết tay trước khi có mã truy vấn, không sinh bằng mã",
+        "cả team"
+      ]
+    },
+    {
+      "row": 34,
+      "values": [
+        "S-26",
+        "Story",
+        "E-05",
+        "Truy xuôi: từ lô gốc liệt kê mọi hậu duệ qua nhiều tầng tách và gộp",
+        "Next",
+        "Must",
+        "5",
+        "4",
+        "Todo",
+        "Phả hệ lô hàng: tách và gộp",
+        "Là cán bộ kiểm tra tôi muốn biết một lô đã sinh ra những lô con nào qua mọi tầng để khoanh vùng khi có sự cố",
+        "Giả sử lô gốc đã tách và các lô con lại gộp với lô khác, Khi truy xuôi, Thì kết quả gồm mọi hậu duệ kể cả lô gộp có nguồn khác trộn vào, khớp đáp án đếm tay ở T-53\nGiả sử dữ liệu có chu trình, Khi truy xuôi, Thì dừng và báo lỗi như truy ngược\nGiả sử đồ thị 1000 lô, Khi truy xuôi từ gốc, Thì xong dưới 2 giây\nƯớc lượng thô 5 SP — đây là truy vấn nền của thu hồi, độ đúng quan trọng hơn tốc độ",
+        "S-21",
+        "thà liệt kê thừa còn hơn sót — sót một lô nghĩa là hàng có vấn đề vẫn nằm trên kệ",
+        "chưa phân"
+      ]
+    },
+    {
+      "row": 35,
+      "values": [
+        "S-27",
+        "Story",
+        "E-05",
+        "Mỗi hậu duệ kèm tổ chức đang giữ, địa điểm và khối lượng còn lại",
+        "Next",
+        "Must",
+        "3",
+        "4",
+        "Todo",
+        "Phả hệ lô hàng: tách và gộp",
+        "Là cán bộ kiểm tra tôi muốn kết quả truy xuôi nói luôn từng lô đang ở đâu và còn bao nhiêu để biết phải gọi cho ai",
+        "Giả sử kết quả truy xuôi có 20 lô, Khi xem, Thì mỗi lô kèm tổ chức đang giữ, địa điểm (nếu đã chia về cửa hàng ở S-30) và khối lượng còn lại\nGiả sử một hậu duệ đã bán hết (S-29), Khi xem, Thì lô đó hiện trạng thái đã tiêu thụ và khối lượng còn lại 0\nƯớc lượng thô 3 SP",
+        "S-26",
+        "gom thông tin trong một truy vấn sau khi có tập hậu duệ, không truy vấn từng lô",
+        "chưa phân"
+      ]
+    },
+    {
+      "row": 36,
+      "values": [
+        "S-28",
+        "Story",
+        "E-05",
+        "Sơ đồ phả hệ dạng cây, thu gọn được, bấm mở chi tiết lô",
+        "Next",
+        "Should",
+        "3",
+        "4",
+        "Todo",
+        "Phả hệ lô hàng: tách và gộp",
+        "Là nhà phân phối tôi muốn nhìn thấy sơ đồ phả hệ thay vì đọc danh sách để hiểu nhanh lô này liên quan tới những lô nào",
+        "Giả sử lô có cả tổ tiên lẫn hậu duệ, Khi mở thẻ Phả hệ, Thì thấy sơ đồ với lô hiện tại ở giữa, tổ tiên bên trái, hậu duệ bên phải\nGiả sử đồ thị nhiều tầng, Khi xem, Thì các nhánh sâu được thu gọn và mở ra khi bấm\nƯớc lượng thô 3 SP — vẽ bằng thư viện có sẵn, không tự viết bố cục đồ thị",
+        "S-27",
+        "dùng được trên màn hình điện thoại bằng cách cuộn ngang",
+        "chưa phân"
+      ]
+    },
+    {
+      "row": 37,
+      "values": [
+        "S-29",
+        "Story",
+        "E-05",
+        "Nhà phân phối ghi nhận lô đã bán hết cho người tiêu dùng",
+        "Next",
+        "Should",
+        "2",
+        "4",
+        "Todo",
+        "Phả hệ lô hàng: tách và gộp",
+        "Là nhà phân phối tôi muốn đánh dấu lô đã bán hết để danh sách thu hồi phân biệt được hàng còn trên kệ với hàng đã tới tay người mua",
+        "Giả sử tôi đang giữ một lô, Khi ghi nhận đã bán hết, Thì khối lượng còn lại về 0, trạng thái thành đã tiêu thụ và một sự kiện được ghi vào chuỗi\nGiả sử lô đã tiêu thụ, Khi tôi thử bàn giao hoặc tách, Thì bị chặn\nƯớc lượng thô 2 SP",
+        "S-25",
+        "đã tiêu thụ là trạng thái cuối, không quay lại được",
+        "chưa phân"
+      ]
+    },
+    {
+      "row": 38,
+      "values": [
+        "S-33",
+        "Story",
+        "E-06",
+        "Đánh dấu lô có sự cố và mở lệnh thu hồi kèm lý do",
+        "Next",
+        "Must",
+        "3",
+        "5",
+        "Todo",
+        "Thu hồi lô hàng",
+        "Là cán bộ kiểm tra tôi muốn đánh dấu một lô có sự cố và mở lệnh thu hồi để bắt đầu quy trình xử lý ngay",
+        "Giả sử tôi là cán bộ kiểm tra hoặc quản trị tổ chức đang giữ lô, Khi đánh dấu lô có sự cố kèm lý do, Thì một lệnh thu hồi được tạo với mã riêng và sự kiện được ghi vào chuỗi của lô\nGiả sử vai trò khác thử mở lệnh thu hồi, Khi gọi, Thì bị 403\nGiả sử lô đã có lệnh thu hồi đang mở, Khi mở lệnh mới, Thì bị chặn và trỏ tới lệnh đang mở\nƯớc lượng thô 3 SP",
+        "S-27",
+        "lý do bắt buộc, tối thiểu 20 ký tự",
+        "chưa phân"
+      ]
+    },
+    {
+      "row": 39,
+      "values": [
+        "S-34",
+        "Story",
+        "E-06",
+        "Lệnh thu hồi liệt kê đủ mọi lô hậu duệ, kể cả lô gộp từ nhiều nguồn",
+        "Next",
+        "Must",
+        "5",
+        "5",
+        "Todo",
+        "Thu hồi lô hàng",
+        "Là cán bộ kiểm tra tôi muốn thấy đủ mọi lô sinh ra từ lô có sự cố để không sót lô nào còn nằm trên kệ",
+        "Giả sử lô gốc đã đi qua bốn tầng tách và gộp ở ba tổ chức, Khi mở lệnh thu hồi, Thì danh sách khớp đáp án đếm tay ở S-39, không sót\nGiả sử một hậu duệ là lô gộp có nguồn khác trộn vào, Khi liệt kê, Thì lô gộp đó vẫn nằm trong danh sách và được đánh dấu là gộp từ nhiều nguồn\nGiả sử có lô mới được tách ra từ một hậu duệ sau khi lệnh đã mở, Khi làm mới danh sách, Thì lô mới xuất hiện\nƯớc lượng thô 5 SP",
+        "S-33, S-39",
+        "danh sách tính lại từ đồ thị mỗi lần xem, không lưu cứng lúc mở lệnh",
+        "chưa phân"
+      ]
+    },
+    {
+      "row": 40,
+      "values": [
+        "S-35",
+        "Story",
+        "E-06",
+        "Danh sách thu hồi chỉ ra từng lô đang ở đâu, còn bao nhiêu, đã bán bao nhiêu",
+        "Next",
+        "Must",
+        "3",
+        "5",
+        "Todo",
+        "Thu hồi lô hàng",
+        "Là nhà phân phối tôi muốn biết chính xác lô nào ở cửa hàng nào và còn bao nhiêu để thu hồi đúng chỗ thay vì lục cả kho",
+        "Giả sử lệnh thu hồi có 20 lô, Khi xem, Thì mỗi lô kèm tổ chức, địa điểm, khối lượng còn lại và khối lượng đã tiêu thụ\nGiả sử một phần đã bán cho người tiêu dùng, Khi xem tổng, Thì thấy rõ bao nhiêu còn thu hồi được và bao nhiêu đã ra thị trường\nƯớc lượng thô 3 SP",
+        "S-34, S-30",
+        "nhóm theo tổ chức để mỗi bên xem được phần của mình",
+        "chưa phân"
+      ]
+    },
+    {
+      "row": 41,
+      "values": [
+        "S-37",
+        "Story",
+        "E-06",
+        "Lệnh thu hồi hoàn tất khi mọi bên xác nhận, theo dõi được tiến độ",
+        "Next",
+        "Should",
+        "2",
+        "5",
+        "Todo",
+        "Thu hồi lô hàng",
+        "Là cán bộ kiểm tra tôi muốn thấy tiến độ từng bên và biết khi nào lệnh coi là xong để đóng hồ sơ đúng lúc",
+        "Giả sử lệnh có năm tổ chức liên quan và ba đã xác nhận, Khi xem, Thì thấy 3/5 kèm tên bên chưa xong\nGiả sử bên cuối cùng xác nhận, Khi lưu, Thì lệnh tự chuyển sang hoàn tất và ghi sự kiện\nƯớc lượng thô 2 SP",
+        "S-36",
+        "lệnh hoàn tất vẫn xem được, không xoá",
+        "chưa phân"
+      ]
+    },
+    {
+      "row": 42,
+      "values": [
+        "S-38",
+        "Story",
+        "E-06",
+        "Lô đang trong lệnh thu hồi bị chặn bàn giao, tách và gộp",
+        "Next",
+        "Should",
+        "2",
+        "5",
+        "Todo",
+        "Thu hồi lô hàng",
+        "Là cán bộ kiểm tra tôi muốn lô đang bị thu hồi không di chuyển được nữa để vùng ảnh hưởng không lan rộng trong lúc xử lý",
+        "Giả sử lô nằm trong lệnh thu hồi đang mở, Khi ai đó bàn giao, tách hoặc gộp nó, Thì bị chặn kèm mã lệnh thu hồi\nGiả sử lệnh đã hoàn tất, Khi thao tác, Thì vẫn bị chặn vì lô đã được đánh dấu có sự cố\nƯớc lượng thô 2 SP",
+        "S-34",
+        "kiểm ở tầng dịch vụ dùng chung của ba thao tác, không kiểm riêng từng nơi",
+        "chưa phân"
+      ]
+    },
+    {
+      "row": 43,
+      "values": [
+        "S-39",
+        "Story",
+        "E-06",
+        "Bộ dữ liệu thu hồi mẫu bốn tầng, ba tổ chức, có đáp án đếm tay",
+        "Next",
+        "Must",
+        "2",
+        "5",
+        "Todo",
+        "Thu hồi lô hàng",
+        "Là thành viên phát triển tôi muốn một kịch bản thu hồi mẫu có đáp án đếm tay để thuật toán liệt kê thu hồi được kiểm bằng đáp án độc lập",
+        "Giả sử chạy script, Khi xong, Thì có đồ thị bốn tầng qua ba tổ chức với ít nhất một lô gộp từ nhiều nguồn và một lô đã tiêu thụ\nGiả sử mở tệp đáp án, Khi tra lô gốc, Thì thấy danh sách hậu duệ và khối lượng còn lại từng lô do hai người đếm độc lập\nƯớc lượng thô 2 SP — mở rộng từ S-22",
+        "S-22, S-29",
+        "đáp án viết trước khi có mã, như S-22",
+        "chưa phân"
+      ]
+    },
+    {
+      "row": 44,
+      "values": [
+        "S-36",
+        "Story",
+        "E-11",
+        "Tổ chức liên quan nhận thông báo thu hồi và xác nhận đã xử lý phần của mình",
+        "Next",
+        "Should",
+        "3",
+        "5",
+        "Todo",
+        "Thông báo và cảnh báo",
+        "Là nhà phân phối tôi muốn được báo ngay khi có lệnh thu hồi chạm tới lô tôi giữ và báo lại khi tôi đã xử lý xong để cán bộ kiểm tra không phải gọi điện từng nơi",
+        "Giả sử lệnh thu hồi vừa mở, Khi tôi đăng nhập, Thì thấy cảnh báo nổi bật liệt kê lô của tôi trong lệnh\nGiả sử tôi đã gom hàng khỏi kệ, Khi xác nhận đã xử lý, Thì lệnh ghi nhận tổ chức tôi đã xong kèm thời điểm và ghi chú\nGiả sử tôi chưa xử lý xong, Khi xem, Thì phần của tôi vẫn hiện là đang chờ\nƯớc lượng thô 3 SP",
+        "S-35",
+        "xác nhận là sự kiện ghi thêm, không sửa được",
+        "chưa phân"
+      ]
+    },
+    {
+      "row": 45,
+      "values": [
+        "S-58",
+        "Story",
+        "E-11",
+        "Trung tâm thông báo trong ứng dụng: bàn giao chờ, thu hồi, vi phạm",
+        "Later",
+        "Should",
+        "3",
+        null,
+        "Todo",
+        "Thông báo và cảnh báo",
+        "Là hợp tác xã sơ chế tôi muốn một chỗ gom mọi việc đang chờ tôi để không phải đảo qua từng màn hình mỗi sáng",
+        "Biểu tượng chuông với số chưa đọc; danh sách thông báo gồm bàn giao chờ, lệnh thu hồi liên quan, vi phạm trên lô tôi giữ; bấm mở đúng trang; đánh dấu đã đọc. Chưa refine chi tiết — tier Later, phần đệm chưa xếp sprint, ước lượng thô 3 SP",
+        "S-16, S-36, S-45",
+        "chưa refine — thông báo sinh ở tầng dịch vụ, không từ giao diện",
+        "chưa phân"
+      ]
+    },
+    {
+      "row": 46,
+      "values": [
+        "S-59",
+        "Story",
+        "E-11",
+        "Gửi email thông báo thu hồi tới đầu mối của tổ chức",
+        "Later",
+        "Could",
+        "3",
+        null,
+        "Todo",
+        "Thông báo và cảnh báo",
+        "Là cán bộ kiểm tra tôi muốn lệnh thu hồi tới được người có trách nhiệm kể cả khi họ không mở ứng dụng để không mất một ngày chỉ vì không ai đăng nhập",
+        "Mỗi tổ chức có một địa chỉ email đầu mối; mở lệnh thu hồi thì gửi email tới mọi tổ chức liên quan qua dịch vụ gửi thư bên ngoài; gửi lại khi thất bại, tối đa ba lần. Chưa refine chi tiết — tier Later, phần đệm chưa xếp sprint, ước lượng thô 3 SP",
+        "S-36",
+        "chưa refine — email chỉ chứa mã lệnh và đường dẫn, không chứa danh sách lô",
+        "chưa phân"
+      ]
+    },
+    {
+      "row": 47,
+      "values": [
+        "S-40",
+        "Story",
+        "E-07",
+        "Mở chuyến vận chuyển gắn nhiều lô và một thùng lạnh",
+        "Later",
+        "Must",
+        "3",
+        "6",
+        "Todo",
+        "Giám sát chuỗi lạnh",
+        "Là đơn vị vận chuyển lạnh tôi muốn khai báo một chuyến gồm các lô tôi đang chở và thùng lạnh dùng cho chuyến đó để dữ liệu nhiệt độ gắn được vào đúng các lô",
+        "Chuyến có mã, thùng lạnh, danh sách lô do tổ chức tôi giữ, trạng thái đang chạy hoặc đã kết thúc; sự kiện lên xe và xuống xe ghi vào chuỗi mỗi lô. Chưa refine chi tiết — tier Later, ước lượng thô 3 SP",
+        "S-16",
+        "chưa refine — một lô chỉ nằm trong một chuyến đang chạy tại một thời điểm",
+        "chưa phân"
+      ]
+    },
+    {
+      "row": 48,
+      "values": [
+        "S-41",
+        "Story",
+        "E-07",
+        "Ghi nhận nhiệt độ theo thời gian cho chuyến, bỏ qua số đo cũ hơn số đã lưu",
+        "Later",
+        "Must",
+        "3",
+        "6",
+        "Todo",
+        "Giám sát chuỗi lạnh",
+        "Là đơn vị vận chuyển lạnh tôi muốn nhiệt độ thùng hàng được ghi tự động suốt hành trình để chứng minh mình đã giữ đúng điều kiện bảo quản",
+        "Endpoint nhận số đo kèm mốc thời gian và mã thùng, lưu theo chuyến đang chạy; số đo có mốc thời gian cũ hơn số đã lưu hoặc trùng thì bỏ qua và trả về đã nhận. Chưa refine chi tiết — tier Later, ước lượng thô 3 SP",
+        "S-40",
+        "chưa refine — cần chốt tần suất ghi và cách xử lý khi thiết bị mất kết nối rồi bơm bù một loạt",
+        "chưa phân"
+      ]
+    },
+    {
+      "row": 49,
+      "values": [
+        "S-42",
+        "Story",
+        "E-07",
+        "Script cảm biến giả lập bơm dữ liệu theo kịch bản có đáp án",
+        "Later",
+        "Must",
+        "3",
+        "6",
+        "Todo",
+        "Giám sát chuỗi lạnh",
+        "Là thành viên phát triển tôi muốn một script giả lập cảm biến chạy theo kịch bản viết sẵn để kiểm thuật toán phát hiện vi phạm bằng đáp án biết trước",
+        "Script đọc tệp kịch bản (chuỗi thời điểm và nhiệt độ) rồi gọi endpoint ở S-41; kèm ít nhất năm kịch bản mẫu có đáp án số vi phạm: không vượt, vượt 10 phút, vượt 45 phút, hai lần vượt cách nhau 5 phút, vượt qua nửa đêm. Chưa refine chi tiết — tier Later, ước lượng thô 3 SP",
+        "S-41",
+        "chưa refine — script chạy được nhanh hơn thời gian thật để test không mất 45 phút",
+        "chưa phân"
+      ]
+    },
+    {
+      "row": 50,
+      "values": [
+        "S-43",
+        "Story",
+        "E-07",
+        "Phát hiện vi phạm ngưỡng có độ trễ 30 phút, không gộp hai lần vượt cách xa nhau",
+        "Later",
+        "Must",
+        "5",
+        "6",
+        "Todo",
+        "Giám sát chuỗi lạnh",
+        "Là cán bộ kiểm tra tôi muốn chỉ những lần vượt ngưỡng kéo dài mới bị tính là vi phạm để hệ thống không báo động liên tục vì mấy phút mở cửa xe",
+        "Nhiệt độ vượt ngưỡng liên tục quá 30 phút thì sinh một vi phạm ghi rõ bắt đầu, kết thúc, đỉnh; vượt ngắn rồi trở lại thì không; hai lần vượt cách nhau dưới 5 phút tính là một, cách xa hơn tính là hai; số vi phạm khớp đáp án của cả năm kịch bản ở S-42. Chưa refine chi tiết — tier Later, ước lượng thô 5 SP",
+        "S-42",
+        "chưa refine — thuật toán cửa sổ trượt chạy được theo luồng số đo đến dần, không chờ hết chuyến mới tính",
+        "chưa phân"
+      ]
+    },
+    {
+      "row": 51,
+      "values": [
+        "S-44",
+        "Story",
+        "E-07",
+        "Ngưỡng nhiệt độ và độ trễ cấu hình theo loại sản phẩm",
+        "Later",
+        "Should",
+        "3",
+        "6",
+        "Todo",
+        "Giám sát chuỗi lạnh",
+        "Là quản trị hệ thống tôi muốn đặt ngưỡng và độ trễ riêng cho từng loại sản phẩm để rau lá và thịt đông lạnh không dùng chung một con số",
+        "Mỗi sản phẩm có ngưỡng trên, ngưỡng dưới và độ trễ; chuyến chở nhiều sản phẩm áp ngưỡng chặt nhất; đổi cấu hình không tính lại vi phạm đã ghi. Chưa refine chi tiết — tier Later, ước lượng thô 3 SP",
+        "S-43",
+        "chưa refine — xem GD-8, hỏi người am hiểu ngành trước khi chốt giá trị mặc định",
+        "chưa phân"
+      ]
+    },
+    {
+      "row": 52,
+      "values": [
+        "S-45",
+        "Story",
+        "E-07",
+        "Vi phạm ghi thành sự kiện vào chuỗi của mọi lô trên chuyến và hiện trên dòng thời gian",
+        "Later",
+        "Must",
+        "3",
+        "6",
+        "Todo",
+        "Giám sát chuỗi lạnh",
+        "Là nhà phân phối tôi muốn thấy lô mình nhận có từng bị vi phạm chuỗi lạnh không để quyết định có nhận hàng hay không",
+        "Khi vi phạm kết thúc, một sự kiện vi phạm được ghi vào chuỗi của mọi lô đang trên chuyến; dòng thời gian hiện vi phạm kèm thời lượng và đỉnh; bàn giao lô có vi phạm hiện cảnh báo cho bên nhận trước khi xác nhận. Chưa refine chi tiết — tier Later, ước lượng thô 3 SP",
+        "S-43",
+        "chưa refine — cần chốt vi phạm có tự chặn bàn giao hay chỉ cảnh báo",
+        "chưa phân"
+      ]
+    },
+    {
+      "row": 53,
+      "values": [
+        "S-51",
+        "Story",
+        "E-07",
+        "Nén dữ liệu nhiệt độ cũ thành giá trị tổng hợp theo giờ",
+        "Later",
+        "Should",
+        "3",
+        "7",
+        "Todo",
+        "Giám sát chuỗi lạnh",
+        "Là quản trị hệ thống tôi muốn dữ liệu nhiệt độ cũ được gộp lại để cơ sở dữ liệu không phình tới mức không truy vấn nổi",
+        "Số đo cũ hơn 30 ngày được gộp thành nhỏ nhất, lớn nhất, trung bình theo giờ; các khoảng có vi phạm giữ nguyên số đo thô; job chạy đêm và ghi log số dòng đã gộp. Chưa refine chi tiết — tier Later, ước lượng thô 3 SP",
+        "S-43",
+        "chưa refine — cần chốt giữ dữ liệu thô bao lâu, 30 ngày là giả định",
+        "chưa phân"
+      ]
+    },
+    {
+      "row": 54,
+      "values": [
+        "S-46",
+        "Story",
+        "E-08",
+        "Sinh mã QR cho lô khi đóng gói, tải về tệp in được",
+        "Later",
+        "Must",
+        "3",
+        "7",
+        "Todo",
+        "Trang truy xuất công khai quét QR",
+        "Là hợp tác xã sơ chế tôi muốn in mã QR dán lên bao bì để người mua quét được",
+        "Nút sinh QR trên trang chi tiết lô tạo mã trỏ tới đường dẫn công khai của lô, tải về dạng PNG và SVG; mã in ở cỡ 3 cm quét được bằng điện thoại thông thường. Chưa refine chi tiết — tier Later, ước lượng thô 3 SP",
+        "S-25",
+        "chưa refine — đường dẫn công khai dùng mã lô, không dùng khoá số tự tăng",
+        "chưa phân"
+      ]
+    },
+    {
+      "row": 55,
+      "values": [
+        "S-47",
+        "Story",
+        "E-08",
+        "Người tiêu dùng quét QR xem vùng trồng, ngày thu hoạch và các mốc chính",
+        "Later",
+        "Must",
+        "5",
+        "7",
+        "Todo",
+        "Trang truy xuất công khai quét QR",
+        "Là người tiêu dùng tôi muốn quét mã trên bao bì để biết rau này trồng ở đâu để yên tâm khi mua",
+        "Trang không cần đăng nhập hiện tên vùng trồng, tỉnh, ngày thu hoạch, các mốc sơ chế, vận chuyển, phân phối theo thứ tự; lô gộp từ nhiều nguồn hiện mọi vùng trồng gốc; mã không tồn tại trả về trang \"không tìm thấy\" không lộ gì thêm. Chưa refine chi tiết — tier Later, ước lượng thô 5 SP",
+        "S-46",
+        "chưa refine — tải dưới 1 giây trên mạng di động; đọc được không cần cuộn ngang",
+        "chưa phân"
+      ]
+    },
+    {
+      "row": 56,
+      "values": [
+        "S-48",
+        "Story",
+        "E-08",
+        "Trang công khai chỉ trả về trường được đánh dấu công khai",
+        "Later",
+        "Must",
+        "3",
+        "7",
+        "Todo",
+        "Trang truy xuất công khai quét QR",
+        "Là nhà phân phối tôi muốn trang công khai không lộ khối lượng, giá và tên đối tác của tôi để đối thủ không đọc được cấu trúc kinh doanh",
+        "Danh sách trường công khai khai báo ở một chỗ, mặc định mọi trường là nội bộ; gọi thẳng API công khai cũng không lấy được trường nội bộ; test tự động so sánh phản hồi với danh sách cho phép. Chưa refine chi tiết — tier Later, ước lượng thô 3 SP",
+        "S-47",
+        "chưa refine — tên tổ chức trung gian hiện theo loại (hợp tác xã, đơn vị vận chuyển) chứ không hiện tên riêng, trừ vùng trồng",
+        "chưa phân"
+      ]
+    },
+    {
+      "row": 57,
+      "values": [
+        "S-49",
+        "Story",
+        "E-08",
+        "Trang công khai cảnh báo nếu lô bị thu hồi hoặc từng vi phạm chuỗi lạnh",
+        "Later",
+        "Should",
+        "3",
+        "7",
+        "Todo",
+        "Trang truy xuất công khai quét QR",
+        "Là người tiêu dùng tôi muốn được báo ngay trên trang quét nếu lô này đang bị thu hồi để không ăn hàng có vấn đề",
+        "Lô trong lệnh thu hồi đang mở hiện cảnh báo đỏ ở đầu trang kèm hướng dẫn; lô từng vi phạm chuỗi lạnh hiện ghi chú trung tính, không lộ số đo. Chưa refine chi tiết — tier Later, ước lượng thô 3 SP",
+        "S-48, S-33, S-45",
+        "chưa refine — cần người quyết sản phẩm chốt lời cảnh báo, đây là câu chữ có hệ quả pháp lý",
+        "chưa phân"
+      ]
+    },
+    {
+      "row": 58,
+      "values": [
+        "S-50",
+        "Story",
+        "E-08",
+        "Cache trang công khai và giới hạn tần suất chống dò quét mã lô",
+        "Later",
+        "Should",
+        "3",
+        "7",
+        "Todo",
+        "Trang truy xuất công khai quét QR",
+        "Là quản trị hệ thống tôi muốn trang công khai không sập khi nhiều người quét cùng lúc và không bị dò quét hàng loạt để người tiêu dùng không mất niềm tin và mã lô không bị liệt kê",
+        "Phản hồi trang công khai được cache 60 giây; một địa chỉ IP gọi quá 30 mã lô khác nhau trong một phút bị chặn tạm; mã không tồn tại cũng bị đếm vào giới hạn. Chưa refine chi tiết — tier Later, ước lượng thô 3 SP",
+        "S-48",
+        "chưa refine — cache phải vô hiệu ngay khi lô bị thu hồi để cảnh báo ở S-49 không bị chậm",
+        "chưa phân"
+      ]
+    },
+    {
+      "row": 59,
+      "values": [
+        "S-60",
+        "Story",
+        "E-08",
+        "Bản đồ vị trí vùng trồng và điểm phân phối trên trang công khai",
+        "Later",
+        "Could",
+        "3",
+        null,
+        "Todo",
+        "Trang truy xuất công khai quét QR",
+        "Là người tiêu dùng tôi muốn thấy trên bản đồ rau này trồng ở đâu và đi qua những đâu để hình dung được hành trình",
+        "Trang công khai hiện bản đồ với điểm vùng trồng (toạ độ ở S-06) và các điểm dừng chính theo thứ tự; điểm là cấp xã hoặc huyện, không hiện toạ độ chính xác của thửa. Chưa refine chi tiết — tier Later, phần đệm chưa xếp sprint, ước lượng thô 3 SP",
+        "S-47",
+        "chưa refine — thư viện bản đồ mã nguồn mở, không dùng dịch vụ tính phí",
+        "chưa phân"
+      ]
+    },
+    {
+      "row": 60,
+      "values": [
+        "S-52",
+        "Story",
+        "E-09",
+        "Cán bộ kiểm tra tra cứu lô theo mã, vùng trồng và khoảng thời gian trên mọi tổ chức",
+        "Later",
+        "Should",
+        "3",
+        "8",
+        "Todo",
+        "Báo cáo và hồ sơ kiểm tra",
+        "Là cán bộ kiểm tra tôi muốn tìm lô theo mã, theo vùng trồng hoặc theo khoảng ngày thu hoạch để kiểm tra nhanh khi có phản ánh",
+        "Vai trò kiểm tra tìm được trên mọi tổ chức ở chế độ chỉ đọc; tìm theo mã ra đúng lô; tìm theo vùng trồng và khoảng ngày ra danh sách phân trang; mọi lượt tra cứu ghi vào nhật ký S-31. Chưa refine chi tiết — tier Later, ước lượng thô 3 SP",
+        "S-31",
+        "chưa refine — cần chốt cán bộ kiểm tra thuộc cơ quan nào được xem tổ chức nào",
+        "chưa phân"
+      ]
+    },
+    {
+      "row": 61,
+      "values": [
+        "S-53",
+        "Story",
+        "E-09",
+        "Xuất hồ sơ truy xuất đầy đủ của một lô ra PDF kèm kết quả kiểm toàn vẹn",
+        "Later",
+        "Should",
+        "3",
+        "8",
+        "Todo",
+        "Báo cáo và hồ sơ kiểm tra",
+        "Là cán bộ kiểm tra tôi muốn xuất hồ sơ truy xuất ra tệp để đính kèm vào biên bản kiểm tra",
+        "Tệp PDF có thông tin lô, dòng thời gian, phả hệ tổ tiên và hậu duệ, vi phạm chuỗi lạnh, lệnh thu hồi nếu có, và kết quả kiểm tra toàn vẹn kèm thời điểm xuất và hash cuối chuỗi. Chưa refine chi tiết — tier Later, ước lượng thô 3 SP",
+        "S-52",
+        "chưa refine — in hash cuối chuỗi lên tệp để ai cầm tệp đối chiếu được với hệ thống",
+        "chưa phân"
+      ]
+    },
+    {
+      "row": 62,
+      "values": [
+        "S-54",
+        "Story",
+        "E-09",
+        "Thống kê vi phạm chuỗi lạnh theo đơn vị vận chuyển",
+        "Later",
+        "Could",
+        "3",
+        "8",
+        "Todo",
+        "Báo cáo và hồ sơ kiểm tra",
+        "Là nhà phân phối tôi muốn biết đơn vị vận chuyển nào hay vi phạm nhiệt độ để chọn đối tác tốt hơn",
+        "Bảng theo kỳ: số chuyến, số vi phạm, tổng thời lượng vi phạm, tỉ lệ chuyến có vi phạm cho mỗi đơn vị vận chuyển từng chở hàng của tôi. Chưa refine chi tiết — tier Later, ước lượng thô 3 SP",
+        "S-45",
+        "chưa refine — chỉ thống kê chuyến có lô của tổ chức đang xem, không lộ chuyến của tổ chức khác",
+        "chưa phân"
+      ]
+    },
+    {
+      "row": 63,
+      "values": [
+        "S-55",
+        "Story",
+        "E-10",
+        "Job kiểm tra toàn vẹn định kỳ mọi lô và cảnh báo khi phát hiện đứt mạch",
+        "Later",
+        "Must",
+        "3",
+        "8",
+        "Todo",
+        "Vận hành và bảo vệ dữ liệu",
+        "Là quản trị hệ thống tôi muốn hệ thống tự kiểm tra toàn vẹn hằng đêm để phát hiện sửa lén sớm thay vì chờ tới lúc có kiểm tra",
+        "Job đêm chạy hàm S-12 cho mọi lô có sự kiện mới hoặc theo vòng quay 7 ngày với lô cũ, ghi kết quả, và tạo cảnh báo cho quản trị khi có lô đứt mạch; trang quản trị hiện lần chạy gần nhất và số lô lỗi. Chưa refine chi tiết — tier Later, ước lượng thô 3 SP",
+        "S-24",
+        "chưa refine — chạy theo lô nhỏ để không khoá bảng sự kiện lâu",
+        "chưa phân"
+      ]
+    },
+    {
+      "row": 64,
+      "values": [
+        "S-56",
+        "Story",
+        "E-10",
+        "Nông hộ yêu cầu xoá dữ liệu định danh mà chuỗi hash vẫn nguyên vẹn",
+        "Later",
+        "Must",
+        "5",
+        "8",
+        "Todo",
+        "Vận hành và bảo vệ dữ liệu",
+        "Là nông hộ tôi muốn yêu cầu xoá thông tin định danh của mình để thực hiện quyền theo Nghị định 13/2023/NĐ-CP",
+        "Sau khi xoá, không truy được họ tên, số điện thoại, địa chỉ của nông hộ từ mọi màn hình và API, nhưng chuỗi hash của mọi lô liên quan vẫn kiểm tra được là nguyên vẹn và hồ sơ truy xuất vẫn dùng được với vùng trồng ẩn danh. Chưa refine chi tiết — tier Later, ước lượng thô 5 SP",
+        "S-55",
+        "chưa refine — hướng dự kiến: tách dữ liệu định danh ra bảng riêng, sự kiện chỉ tham chiếu mã, nội dung băm không chứa định danh. **Skill không đưa tư vấn pháp lý** — phạm vi dữ liệu phải xoá cần người có thẩm quyền xác nhận",
+        "chưa phân"
+      ]
+    },
+    {
+      "row": 65,
+      "values": [
+        "S-57",
+        "Story",
+        "E-10",
+        "Sao lưu cơ sở dữ liệu hằng đêm và diễn tập khôi phục",
+        "Later",
+        "Should",
+        "3",
+        "8",
+        "Todo",
+        "Vận hành và bảo vệ dữ liệu",
+        "Là quản trị hệ thống tôi muốn có bản sao lưu hằng đêm và biết chắc khôi phục được để một sự cố máy chủ không xoá sạch hồ sơ truy xuất của cả chuỗi",
+        "Script sao lưu chạy đêm, giữ 14 bản gần nhất ngoài máy chủ ứng dụng; tài liệu khôi phục từng bước; diễn tập khôi phục lên môi trường tạm ít nhất một lần và ghi thời gian mất. Chưa refine chi tiết — tier Later, ước lượng thô 3 SP",
+        "S-03",
+        "chưa refine — bản sao lưu mã hoá vì chứa dữ liệu định danh",
+        "chưa phân"
+      ]
+    }
+  ],
+  "Tasks": [
+    {
+      "row": 1,
+      "values": [
+        "ID",
+        "Parent",
+        "Title",
+        "Sprint",
+        "Status",
+        "Story",
+        "AC",
+        "Deps",
+        "NFR",
+        "Owner"
+      ]
+    },
+    {
+      "row": 2,
+      "values": [
+        "T-01",
+        "S-01",
+        "Khởi tạo dự án và `docker-compose.yml` có PostgreSQL",
+        "1",
+        "Todo",
+        "Khởi tạo dự án theo stack đã chọn, viết `docker-compose.yml` gồm ứng dụng và PostgreSQL, tệp `.env.example` liệt kê mọi biến cần có. Bắt đầu từ thư mục gốc rỗng; xong khi `docker compose up` chạy được cả hai container.",
+        "`docker compose up` trên máy sạch chạy lên ứng dụng và cơ sở dữ liệu không cần thao tác thêm",
+        "không",
+        "`.env` nằm trong `.gitignore`; chỉ commit `.env.example`",
+        "cả team"
+      ]
+    },
+    {
+      "row": 3,
+      "values": [
+        "T-02",
+        "S-01",
+        "Migration đầu tiên và lệnh khởi động ghi trong README",
+        "1",
+        "Todo",
+        "Cấu hình công cụ migration, tạo migration đầu tiên (bảng theo dõi phiên bản là đủ) để chốt quy ước đặt tên tệp và cột — mọi migration sau chép theo tệp này. Viết mục \"Chạy dự án\" trong README với đúng một lệnh.",
+        "Thành viên khác làm theo README trên máy của họ chạy được mà không phải hỏi ai; migration tiến và lùi được",
+        "T-01",
+        "quy ước đặt tên cột ghi ngay trong README để người sau không phải đoán",
+        "cả team"
+      ]
+    },
+    {
+      "row": 4,
+      "values": [
+        "T-03",
+        "S-02",
+        "Cấu hình pipeline chạy build, lint, test trên mỗi push",
+        "1",
+        "Todo",
+        "Viết tệp cấu hình CI chạy ba bước build, lint, test cho mọi push và pull request. Dùng cache phụ thuộc để lần chạy sau nhanh hơn. Kiểm bằng cách push một commit cố ý sai lint và xem pipeline đỏ.",
+        "Commit sai lint làm pipeline đỏ ở bước lint; commit sạch làm cả ba bước xanh",
+        "T-02",
+        "ba bước chạy song song nếu công cụ CI cho phép",
+        "cả team"
+      ]
+    },
+    {
+      "row": 5,
+      "values": [
+        "T-04",
+        "S-02",
+        "Bật luật bảo vệ nhánh chính: CI xanh và một người duyệt",
+        "1",
+        "Todo",
+        "Trên máy chủ git, bật bảo vệ nhánh chính: cấm push thẳng, yêu cầu CI xanh, yêu cầu một người duyệt. Ghi quy trình mở pull request vào README.",
+        "Push thẳng bị từ chối; pull request đỏ hoặc chưa duyệt không merge được",
+        "T-03",
+        "người tạo pull request không tự duyệt được",
+        "cả team"
+      ]
+    },
+    {
+      "row": 6,
+      "values": [
+        "T-05",
+        "S-03",
+        "Dockerfile đóng gói ứng dụng thành image",
+        "1",
+        "Todo",
+        "Viết Dockerfile nhiều tầng: tầng build và tầng chạy gọn nhất có thể. Gắn nhãn image bằng mã commit. Kiểm bằng cách chạy image trên máy cá nhân với biến môi trường từ `.env.example`.",
+        "Image chạy được độc lập với thư mục mã nguồn; nhãn image trùng mã commit",
+        "T-04",
+        "image không chứa công cụ build và không chứa tệp `.env`",
+        "cả team"
+      ]
+    },
+    {
+      "row": 7,
+      "values": [
+        "T-06",
+        "S-03",
+        "Bước triển khai trong pipeline đẩy image lên máy chủ và khởi động lại",
+        "1",
+        "Todo",
+        "Thêm bước triển khai chạy sau khi merge vào nhánh chính: đẩy image lên máy chủ riêng, chạy migration, khởi động lại container. Khoá SSH của pipeline lưu trong kho bí mật của CI, không nằm trong repo.",
+        "Merge một thay đổi nhìn thấy được trên trang chủ thì 10 phút sau staging hiện thay đổi đó",
+        "T-05",
+        "bước triển khai chỉ chạy trên nhánh chính, không chạy trên pull request",
+        "cả team"
+      ]
+    },
+    {
+      "row": 8,
+      "values": [
+        "T-07",
+        "S-03",
+        "Kiểm tra sức khoẻ sau triển khai, thất bại thì giữ bản cũ",
+        "1",
+        "Todo",
+        "Thêm endpoint `/health` trả về trạng thái kết nối cơ sở dữ liệu. Sau khi khởi động bản mới, pipeline gọi endpoint này; không đạt trong 60 giây thì đổi về image cũ và báo đỏ. Kiểm bằng cách cố ý triển khai một bản khởi động lỗi.",
+        "Bản lỗi không thay được bản đang chạy; pipeline nêu rõ lý do thất bại",
+        "T-06",
+        "`/health` không lộ phiên bản thư viện hay thông tin cấu hình",
+        "cả team"
+      ]
+    },
+    {
+      "row": 9,
+      "values": [
+        "T-08",
+        "S-04",
+        "Bảng `organizations`, `users`, `roles` kèm migration và seed 7 vai trò",
+        "1",
+        "Todo",
+        "Ba bảng: tổ chức có loại (vùng trồng, hợp tác xã, vận chuyển, phân phối, kiểm tra, quản trị), người dùng gắn tổ chức, vai trò. Seed bảy vai trò ở §1.1. Chép quy ước đặt tên từ migration đầu tiên ở T-02.",
+        "Migration tiến và lùi được; `users.email` có ràng buộc unique; chạy seed hai lần không tạo trùng",
+        "T-02",
+        "cột mật khẩu đủ dài cho hash argon2id; `organization_id` có chỉ mục vì mọi truy vấn đều lọc theo nó",
+        "cả team"
+      ]
+    },
+    {
+      "row": 10,
+      "values": [
+        "T-09",
+        "S-04",
+        "Form đăng nhập, kiểm tra mật khẩu argon2id, tạo phiên",
+        "1",
+        "Todo",
+        "Trang đăng nhập, xác thực bằng thư viện argon2id có sẵn của ngôn ngữ (không tự cài thuật toán), tạo phiên lưu phía máy chủ. Đây là form đầu tiên của dự án nên bố cục form ở đây là mẫu cho mọi form sau.",
+        "Đăng nhập đúng thì vào trang chính; sai thì báo lỗi chung; kiểm bằng test tích hợp cả hai ca",
+        "T-08",
+        "thông báo lỗi giống hệt nhau cho email sai và mật khẩu sai",
+        "cả team"
+      ]
+    },
+    {
+      "row": 11,
+      "values": [
+        "T-10",
+        "S-04",
+        "Đếm lần sai theo tài khoản và khoá 15 phút",
+        "1",
+        "Todo",
+        "Lưu số lần sai và thời điểm khoá trong bảng `users`, đặt lại về 0 khi đăng nhập thành công. Kiểm bằng test: sai 5 lần rồi nhập đúng vẫn bị từ chối, sau 15 phút (giả lập đồng hồ) thì vào được.",
+        "Lần thứ 6 bị khoá dù đúng mật khẩu; hết 15 phút thì đăng nhập lại được",
+        "T-09",
+        "thời gian khoá là tham số cấu hình, không ghi cứng",
+        "cả team"
+      ]
+    },
+    {
+      "row": 12,
+      "values": [
+        "T-11",
+        "S-05",
+        "Middleware gắn tổ chức vào ngữ cảnh yêu cầu, mặc định từ chối",
+        "1",
+        "Todo",
+        "Một lớp middleware đọc phiên, gắn `organization_id` và vai trò vào ngữ cảnh yêu cầu, và từ chối mọi route không khai báo quyền rõ ràng. Đặt cạnh middleware xác thực ở T-09.",
+        "Route không khai báo quyền trả về 403; route khai báo đúng thì qua",
+        "T-10",
+        "vai trò cán bộ kiểm tra được đọc mọi tổ chức, không được ghi",
+        "cả team"
+      ]
+    },
+    {
+      "row": 13,
+      "values": [
+        "T-12",
+        "S-05",
+        "Lớp truy vấn nền tự lọc theo `organization_id` cho mọi bảng nghiệp vụ",
+        "1",
+        "Todo",
+        "Viết một hàm truy vấn dùng chung tự thêm điều kiện tổ chức lấy từ ngữ cảnh, để không ai phải nhớ thêm `WHERE` bằng tay. Mọi truy vấn nghiệp vụ sau này đi qua hàm này. Kiểm bằng test đơn vị: truy vấn không qua hàm này bị lint cảnh báo.",
+        "Gọi hàm truy vấn không có ngữ cảnh tổ chức thì ném lỗi thay vì trả về toàn bộ bảng",
+        "T-11",
+        "bảng dùng chung như `products` khai báo rõ là không lọc theo tổ chức",
+        "cả team"
+      ]
+    },
+    {
+      "row": 14,
+      "values": [
+        "T-13",
+        "S-05",
+        "Test tích hợp: gọi API dữ liệu của tổ chức khác nhận 403",
+        "1",
+        "Todo",
+        "Kịch bản test tạo hai tổ chức, mỗi bên một thửa, rồi dùng phiên của bên này đọc thửa của bên kia qua API. Chạy trong CI. Kịch bản này là mẫu cho mọi test cách ly sau (S-23, S-52).",
+        "Đọc chéo trả về 403; đọc của mình trả về 200; cả hai khẳng định trong CI",
+        "T-12",
+        "test tự dựng và dọn dữ liệu, không phụ thuộc thứ tự chạy",
+        "cả team"
+      ]
+    },
+    {
+      "row": 15,
+      "values": [
+        "T-14",
+        "S-06",
+        "Bảng `farms` gắn tổ chức kèm migration",
+        "1",
+        "Todo",
+        "Bảng thửa có tên, diện tích, toạ độ, khoá ngoại tới `organizations`. Theo mẫu migration ở T-08.",
+        "Migration tiến và lùi được; có chỉ mục trên `organization_id`",
+        "T-08",
+        "diện tích có ràng buộc lớn hơn 0 ngay ở cơ sở dữ liệu",
+        "cả team"
+      ]
+    },
+    {
+      "row": 16,
+      "values": [
+        "T-15",
+        "S-06",
+        "Form tạo, sửa thửa và danh sách thửa của tổ chức",
+        "1",
+        "Todo",
+        "Trang danh sách và form tạo/sửa thửa, dùng lại bố cục form ở T-09 và hàm truy vấn lọc tổ chức ở T-12. Lỗi nhập liệu hiện tại ô sai.",
+        "Tạo, sửa, xem danh sách đều chạy trên staging; nhập diện tích 0 bị chặn",
+        "T-14",
+        "form chặn bấm gửi hai lần liên tiếp",
+        "cả team"
+      ]
+    },
+    {
+      "row": 17,
+      "values": [
+        "T-16",
+        "S-07",
+        "Bảng `products` có đơn vị tính kèm migration",
+        "2",
+        "Todo",
+        "Bảng sản phẩm dùng chung, không có `organization_id`, khai báo rõ với lớp truy vấn ở T-12 là bảng không lọc theo tổ chức. Theo mẫu migration ở T-14.",
+        "Migration tiến và lùi được; tên sản phẩm có ràng buộc unique",
+        "T-14",
+        "đơn vị tính là kiểu liệt kê ở cơ sở dữ liệu",
+        "cả team"
+      ]
+    },
+    {
+      "row": 18,
+      "values": [
+        "T-17",
+        "S-07",
+        "Màn hình danh mục sản phẩm dùng chung cho mọi tổ chức",
+        "2",
+        "Todo",
+        "Trang danh sách và form thêm/sửa sản phẩm, chỉ vai trò quản trị được ghi. Dùng lại bố cục ở T-15.",
+        "Quản trị thêm được; vùng trồng chỉ thấy danh sách, nút thêm không hiện và API ghi trả về 403",
+        "T-16",
+        "quyền ghi kiểm ở máy chủ, ẩn nút chỉ là tiện lợi",
+        "cả team"
+      ]
+    },
+    {
+      "row": 19,
+      "values": [
+        "T-18",
+        "S-08",
+        "Bảng `batches` gắn thửa, sản phẩm, tổ chức đang giữ, kèm migration",
+        "2",
+        "Todo",
+        "Bảng lô hàng có mã, thửa, sản phẩm, khối lượng ban đầu, khối lượng còn lại, tổ chức đang giữ, trạng thái. Theo mẫu migration ở T-16.",
+        "Migration tiến và lùi được; `batches.code` có ràng buộc unique; khối lượng còn lại có ràng buộc không âm",
+        "T-16",
+        "chỉ mục trên tổ chức đang giữ và trên mã lô",
+        "cả team"
+      ]
+    },
+    {
+      "row": 20,
+      "values": [
+        "T-19",
+        "S-08",
+        "Hàm sinh mã lô ngắn, không ký tự dễ nhầm, test 10000 mã không trùng",
+        "2",
+        "Todo",
+        "Hàm sinh mã 8 ký tự từ bảng chữ đã bỏ `0 O 1 I L`, dùng nguồn ngẫu nhiên an toàn. Khi trùng (ràng buộc unique bắt được) thì sinh lại. Test sinh 10000 mã trong một vòng lặp và khẳng định không trùng.",
+        "Test 10000 mã chạy xanh; mã không chứa ký tự trong danh sách cấm",
+        "T-18",
+        "bảng chữ và độ dài khai báo ở một hằng số duy nhất",
+        "cả team"
+      ]
+    },
+    {
+      "row": 21,
+      "values": [
+        "T-20",
+        "S-08",
+        "Màn hình ghi nhận thu hoạch, hiện mã lô cỡ chữ lớn",
+        "2",
+        "Todo",
+        "Form chọn thửa, sản phẩm, khối lượng, ngày; sau khi lưu hiện mã lô ở cỡ chữ lớn kèm nút sao chép. Dùng lại bố cục form ở T-15.",
+        "Ghi nhận xong thì mã lô hiện rõ và sao chép được; kiểm trên staging bằng điện thoại",
+        "T-19",
+        "người dùng thường ở ngoài đồng dùng điện thoại dưới nắng — chữ to, tương phản cao",
+        "cả team"
+      ]
+    },
+    {
+      "row": 22,
+      "values": [
+        "T-21",
+        "S-09",
+        "Kiểm tra phía máy chủ: ngày tương lai, khối lượng không dương, thửa của tổ chức khác",
+        "2",
+        "Todo",
+        "Thêm lớp kiểm tra đầu vào cho endpoint tạo lô, trả về danh sách lỗi theo từng trường. Viết test đơn vị cho từng ca. Lớp kiểm tra này là mẫu cho mọi endpoint ghi sau.",
+        "Ba ca sai đều bị từ chối với mã lỗi và tên trường rõ ràng; ca đúng vẫn tạo được",
+        "T-20",
+        "thông báo lỗi tiếng Việt, không lộ chi tiết kỹ thuật",
+        "cả team"
+      ]
+    },
+    {
+      "row": 23,
+      "values": [
+        "T-22",
+        "S-09",
+        "Hiện lỗi tại đúng ô nhập và chặn bấm gửi hai lần",
+        "2",
+        "Todo",
+        "Form đọc danh sách lỗi từ máy chủ và hiện cạnh ô tương ứng; vô hiệu hoá nút gửi trong lúc đang chờ phản hồi. Áp cho form ở T-20 và T-15.",
+        "Nhập sai thấy lỗi ngay cạnh ô; bấm hai lần chỉ tạo một lô",
+        "T-21",
+        "cách hiện lỗi dùng chung, không viết lại cho từng form",
+        "cả team"
+      ]
+    },
+    {
+      "row": 24,
+      "values": [
+        "T-23",
+        "S-10",
+        "Bảng `batch_events` chỉ cho ghi thêm, kèm migration",
+        "2",
+        "Todo",
+        "Bảng sự kiện gắn với lô: loại sự kiện, nội dung dạng JSON, tổ chức và người thực hiện, thời điểm, hash của chính nó, hash sự kiện trước. Theo mẫu migration ở T-18.",
+        "Migration tiến và lùi được; chỉ mục trên (lô, thời điểm) để truy vấn dòng thời gian nhanh",
+        "T-18",
+        "cột hash đủ dài cho thuật toán đã chọn ở K-01",
+        "cả team"
+      ]
+    },
+    {
+      "row": 25,
+      "values": [
+        "T-24",
+        "S-10",
+        "Hàm băm có chuẩn hoá nội dung, test băm hai lần ra cùng hash",
+        "2",
+        "Todo",
+        "Hàm nhận nội dung sự kiện, chuẩn hoá (sắp xếp khoá, định dạng số và ngày cố định, không khoảng trắng thừa) rồi băm cùng hash trước. Đây là chỗ dễ sai nhất của cả hệ thống — xem R-02. Test: băm hai lần cùng nội dung với thứ tự khoá khác nhau ra cùng hash; đổi một ký tự thì hash đổi.",
+        "Hai test trên xanh; thuật toán và cách chuẩn hoá khai báo ở một chỗ duy nhất",
+        "T-23",
+        "không tự cài thuật toán băm, dùng thư viện chuẩn của ngôn ngữ",
+        "cả team"
+      ]
+    },
+    {
+      "row": 26,
+      "values": [
+        "T-25",
+        "S-10",
+        "Ghi sự kiện thu hoạch trong cùng giao dịch với tạo lô",
+        "2",
+        "Todo",
+        "Sửa luồng tạo lô ở T-20 để tạo lô và ghi sự kiện thu hoạch trong một giao dịch, dùng hàm băm ở T-24. Đây là hàm ghi sự kiện dùng chung — mọi sự kiện sau (bàn giao, tách, gộp) đi qua hàm này.",
+        "Tạo lô thì có đúng một sự kiện thu hoạch; cố ý ném lỗi sau khi tạo lô thì cả lô lẫn sự kiện đều không tồn tại",
+        "T-24",
+        "hàm ghi sự kiện nhận giao dịch từ bên gọi, không tự mở giao dịch riêng",
+        "cả team"
+      ]
+    },
+    {
+      "row": 27,
+      "values": [
+        "T-26",
+        "S-11",
+        "Migration thu hồi quyền sửa và xoá trên `batch_events` của tài khoản ứng dụng",
+        "2",
+        "Todo",
+        "Tạo tài khoản cơ sở dữ liệu riêng cho ứng dụng (khác tài khoản chạy migration) và thu hồi UPDATE, DELETE trên `batch_events`. Cập nhật `docker-compose.yml` ở T-01 để ứng dụng dùng tài khoản này.",
+        "Ứng dụng vẫn ghi được sự kiện; lệnh sửa và xoá bằng tài khoản ứng dụng bị từ chối",
+        "T-25",
+        "tài khoản migration không dùng để chạy ứng dụng",
+        "cả team"
+      ]
+    },
+    {
+      "row": 28,
+      "values": [
+        "T-27",
+        "S-11",
+        "Test khẳng định lệnh sửa và xoá bị cơ sở dữ liệu từ chối; ghi quy ước vào README",
+        "2",
+        "Todo",
+        "Test tích hợp chạy lệnh sửa và xoá trực tiếp bằng tài khoản ứng dụng và khẳng định bị từ chối. Thêm mục \"Bảng chỉ thêm\" vào README giải thích quy ước và lý do.",
+        "Test xanh trong CI; README có mục quy ước",
+        "T-26",
+        "test này chạy trong mọi lần CI để phát hiện ai đó vô tình cấp lại quyền",
+        "cả team"
+      ]
+    },
+    {
+      "row": 29,
+      "values": [
+        "T-28",
+        "S-12",
+        "Hàm kiểm tra chuỗi một lô trả về vị trí sự kiện đầu tiên sai",
+        "2",
+        "Todo",
+        "Đọc sự kiện của lô theo thứ tự, tính lại hash từng cái bằng hàm ở T-24 và so với hash đã lưu, đồng thời kiểm hash trước có khớp không. Trả về hợp lệ, hoặc vị trí đứt mạch đầu tiên kèm loại lỗi (sửa hay thiếu).",
+        "Chuỗi nguyên vẹn trả về hợp lệ; chuỗi bị sửa trả về đúng vị trí; chuỗi bị xoá một sự kiện trả về vị trí đứt mạch",
+        "T-25",
+        "đọc theo lô lớn, không đọc từng bản ghi một",
+        "cả team"
+      ]
+    },
+    {
+      "row": 30,
+      "values": [
+        "T-29",
+        "S-12",
+        "Màn hình cán bộ kiểm tra chạy kiểm tra một lô và xem kết quả",
+        "2",
+        "Todo",
+        "Trang nhập mã lô, bấm kiểm tra, hiện kết quả: hợp lệ, hoặc vị trí và loại lỗi. Chỉ vai trò cán bộ kiểm tra và quản trị thấy trang này.",
+        "Lô nguyên vẹn hiện dấu hợp lệ; lô bị sửa hiện đúng sự kiện sai",
+        "T-28",
+        "kết quả kiểm tra được ghi lại kèm thời điểm để đối chiếu về sau",
+        "cả team"
+      ]
+    },
+    {
+      "row": 31,
+      "values": [
+        "T-30",
+        "S-12",
+        "Kịch bản sửa lén bằng SQL ba ca (sửa, xoá, nguyên vẹn) chạy trong CI",
+        "2",
+        "Todo",
+        "Kịch bản dựng lô có 10 sự kiện, rồi lần lượt: sửa lén một bản ghi giữa chuỗi bằng SQL với tài khoản migration, xoá một bản ghi, và để nguyên; sau mỗi ca chạy kiểm tra và khẳng định kết quả. Đây là bằng chứng cho AC của S-12 — không có kịch bản này thì không ai biết cơ chế có hoạt động không.",
+        "Ba ca đúng kết quả trong CI; kịch bản chạy lại được không cần dọn tay",
+        "T-29",
+        "kịch bản dùng tài khoản migration để sửa lén, mô phỏng đúng người có quyền cao",
+        "cả team"
+      ]
+    },
+    {
+      "row": 32,
+      "values": [
+        "T-31",
+        "S-13",
+        "Truy vấn sự kiện kèm tên tổ chức trong một lượt, không truy vấn con",
+        "2",
+        "Todo",
+        "Một truy vấn nối bảng sự kiện với tổ chức, lọc theo quyền xem qua hàm ở T-12, dùng chỉ mục ở T-23. Đo thời gian với 200 sự kiện.",
+        "Trả về đúng thứ tự; chạy dưới 200ms với 200 sự kiện; log truy vấn cho thấy đúng một câu lệnh",
+        "T-28",
+        "phân trang khi lô có hơn 500 sự kiện",
+        "cả team"
+      ]
+    },
+    {
+      "row": 33,
+      "values": [
+        "T-32",
+        "S-13",
+        "Màn hình dòng thời gian dọc, cảnh báo toàn vẹn ở đầu nếu có",
+        "2",
+        "Todo",
+        "Hiển thị dòng thời gian dọc, mỗi mốc là một sự kiện với loại, thời điểm, tổ chức. Gọi hàm kiểm tra ở T-28 và hiện cảnh báo ở đầu nếu chuỗi có vấn đề.",
+        "Dòng thời gian hiện đủ sự kiện; lô có vấn đề toàn vẹn hiện cảnh báo rõ; đọc được trên điện thoại",
+        "T-31",
+        "người dùng thường ở kho hoặc ngoài đồng — bố cục một cột",
+        "cả team"
+      ]
+    },
+    {
+      "row": 34,
+      "values": [
+        "T-33",
+        "S-14",
+        "Truy vấn phân trang lô theo tổ chức đang giữ, lọc theo sản phẩm",
+        "2",
+        "Todo",
+        "Truy vấn qua hàm ở T-12, có phân trang và bộ lọc sản phẩm, tìm theo mã không phân biệt hoa thường. Dùng chỉ mục ở T-18.",
+        "Đúng kết quả với ba bộ lọc; chạy dưới 300ms với 5000 lô trong bảng",
+        "T-20",
+        "phân trang theo con trỏ, không theo số trang, để không lệch khi có lô mới",
+        "cả team"
+      ]
+    },
+    {
+      "row": 35,
+      "values": [
+        "T-34",
+        "S-14",
+        "Màn hình danh sách có ô tìm theo mã lô và bộ lọc sản phẩm",
+        "2",
+        "Todo",
+        "Trang danh sách là trang chính sau đăng nhập. Mỗi dòng liên kết tới trang chi tiết lô. Dùng lại bố cục danh sách ở T-15.",
+        "Tìm và lọc hoạt động trên staging; bấm một dòng mở đúng lô",
+        "T-33",
+        "ô tìm kiếm có độ trễ nhỏ trước khi gọi máy chủ để không gọi mỗi phím",
+        "cả team"
+      ]
+    },
+    {
+      "row": 36,
+      "values": [
+        "T-35",
+        "S-15",
+        "Loại sự kiện bàn giao ở trạng thái chờ, lô vẫn thuộc bên giao",
+        "2",
+        "Todo",
+        "Thêm loại sự kiện bàn giao và bảng `handovers` theo dõi trạng thái chờ/đã nhận/từ chối. Ghi sự kiện qua hàm ở T-25. Chặn tạo bàn giao thứ hai khi đang có bàn giao chờ.",
+        "Tạo bàn giao thì có sự kiện chờ và lô chưa đổi chủ; tạo lần hai bị chặn",
+        "T-33",
+        "ràng buộc unique một bàn giao chờ mỗi lô ở cơ sở dữ liệu, không chỉ kiểm ở mã",
+        "cả team"
+      ]
+    },
+    {
+      "row": 37,
+      "values": [
+        "T-36",
+        "S-15",
+        "Màn hình tạo bàn giao chọn tổ chức nhận",
+        "2",
+        "Todo",
+        "Nút \"Bàn giao\" trên trang chi tiết lô mở form chọn tổ chức nhận từ danh sách tổ chức (trừ tổ chức mình) và ghi chú. Dùng lại cách hiện lỗi ở T-22.",
+        "Tạo bàn giao xong thì lô hiện nhãn \"đang chờ xác nhận\"",
+        "T-35",
+        "danh sách tổ chức nhận chỉ hiện tên, không lộ thông tin khác",
+        "cả team"
+      ]
+    },
+    {
+      "row": 38,
+      "values": [
+        "T-37",
+        "S-16",
+        "Xác nhận chuyển quyền giữ và ghi sự kiện trong cùng giao dịch; từ chối ghi lý do",
+        "2",
+        "Todo",
+        "Hai endpoint xác nhận và từ chối, chỉ bên nhận gọi được. Xác nhận đổi tổ chức đang giữ của lô, cập nhật `handovers`, ghi sự kiện — cùng một giao dịch. Test: ném lỗi sau khi đổi chủ thì mọi thứ được hoàn tác.",
+        "Xác nhận đổi chủ và có đủ hai sự kiện; từ chối giữ nguyên chủ và có sự kiện từ chối kèm lý do",
+        "T-35",
+        "kiểm quyền bên nhận ở máy chủ qua middleware T-11",
+        "cả team"
+      ]
+    },
+    {
+      "row": 39,
+      "values": [
+        "T-38",
+        "S-16",
+        "Màn hình lô chờ tôi xác nhận có nút xác nhận và từ chối",
+        "2",
+        "Todo",
+        "Trang liệt kê bàn giao đang chờ tổ chức mình, có nút xác nhận và nút từ chối mở ô nhập lý do bắt buộc. Số bàn giao chờ hiện trên thanh điều hướng.",
+        "Bàn giao mới hiện trong danh sách; xác nhận hoặc từ chối xong thì mất khỏi danh sách và lô đổi đúng trạng thái",
+        "T-37",
+        "lý do từ chối tối thiểu 10 ký tự",
+        "cả team"
+      ]
+    },
+    {
+      "row": 40,
+      "values": [
+        "T-39",
+        "S-17",
+        "Bảng `batch_relations` cha–con kèm khối lượng chuyển, migration",
+        "3",
+        "Todo",
+        "Bảng quan hệ: lô cha, lô con, khối lượng chuyển từ cha sang con, loại quan hệ (tách hoặc gộp). Một lô con của phép gộp có nhiều dòng cha. Theo mẫu migration ở T-23.",
+        "Migration tiến và lùi được; chỉ mục trên cả cột cha lẫn cột con vì truy ngược và truy xuôi đi hai chiều",
+        "T-37",
+        "ràng buộc unique trên cặp (cha, con)",
+        "cả team"
+      ]
+    },
+    {
+      "row": 41,
+      "values": [
+        "T-40",
+        "S-17",
+        "Giao dịch tách: tạo lô con, trừ phần còn lại của lô mẹ, hoặc tất cả hoặc không",
+        "3",
+        "Todo",
+        "Hàm tách nhận lô mẹ và danh sách khối lượng lô con: mở giao dịch, tạo từng lô con bằng hàm sinh mã ở T-19, ghi quan hệ ở T-39, trừ khối lượng còn lại của lô mẹ. Test: ném lỗi ở lô con thứ hai thì mọi thứ được hoàn tác.",
+        "Tách đúng với ba ca ở AC của S-17; test hoàn tác xanh",
+        "T-39",
+        "lô con kế thừa sản phẩm và thửa của lô mẹ, không cho nhập khác",
+        "cả team"
+      ]
+    },
+    {
+      "row": 42,
+      "values": [
+        "T-41",
+        "S-17",
+        "Màn hình tách nhập nhiều dòng lô con",
+        "3",
+        "Todo",
+        "Nút \"Tách\" trên trang chi tiết lô mở form có danh sách dòng khối lượng, thêm và bớt dòng được, hiện tổng đang nhập so với phần còn lại của lô mẹ. Sau khi tách hiện danh sách mã lô con.",
+        "Tách xong hiện đủ mã lô con; tổng vượt phần còn lại thì nút lưu bị vô hiệu",
+        "T-40",
+        "mã lô con hiện cỡ lớn như ở T-20 vì sẽ được in dán lên thùng",
+        "cả team"
+      ]
+    },
+    {
+      "row": 43,
+      "values": [
+        "T-42",
+        "S-18",
+        "Kiểm tổng khối lượng trong giao dịch có khoá dòng lô mẹ",
+        "3",
+        "Todo",
+        "Trong hàm tách ở T-40, đọc lô mẹ bằng `SELECT … FOR UPDATE` trước khi kiểm tổng, để giao dịch thứ hai phải chờ và đọc được số đã trừ. Giải thích trong chú thích mã vì sao đọc-rồi-ghi thường không đủ.",
+        "Tách vượt phần còn lại bị từ chối; tách đúng trừ chính xác",
+        "T-41",
+        "khối lượng dùng kiểu số thập phân cố định, không dùng số thực dấu phẩy động",
+        "cả team"
+      ]
+    },
+    {
+      "row": 44,
+      "values": [
+        "T-43",
+        "S-18",
+        "Test hai giao dịch tách song song cùng lô mẹ chỉ một thành công",
+        "3",
+        "Todo",
+        "Test tích hợp mở hai kết nối, cùng tách một lô mẹ 40 kg mỗi bên 30 kg, chạy song song; khẳng định đúng một bên thành công và lô mẹ còn 10 kg. Đây là test khó viết nhất sprint — làm cùng người hướng dẫn.",
+        "Test xanh ổn định khi chạy 20 lần liên tiếp",
+        "T-42",
+        "test không dùng `sleep` để canh thời điểm; dùng rào chắn đồng bộ",
+        "cả team"
+      ]
+    },
+    {
+      "row": 45,
+      "values": [
+        "T-44",
+        "S-19",
+        "Giao dịch gộp: tạo lô mới, ghi nhiều quan hệ cha, trừ phần còn lại các lô mẹ",
+        "3",
+        "Todo",
+        "Hàm gộp nhận danh sách (lô mẹ, khối lượng lấy): khoá từng lô mẹ theo thứ tự mã để tránh khoá chéo, kiểm phần còn lại, tạo lô mới, ghi một dòng quan hệ cho mỗi lô mẹ. Theo mẫu hàm tách ở T-40.",
+        "Gộp đúng ở hai ca đầu của S-19; ném lỗi giữa chừng thì hoàn tác toàn bộ",
+        "T-43",
+        "khoá theo thứ tự cố định để hai phép gộp chéo nhau không treo",
+        "cả team"
+      ]
+    },
+    {
+      "row": 46,
+      "values": [
+        "T-45",
+        "S-19",
+        "Chặn gộp khác sản phẩm hoặc lô không do tổ chức mình giữ",
+        "3",
+        "Todo",
+        "Lớp kiểm tra đầu vào cho hàm gộp theo mẫu ở T-21: mọi lô cùng `product_id`, mọi lô do tổ chức hiện tại giữ, khối lượng lấy dương và không vượt phần còn lại.",
+        "Ba ca sai bị từ chối với thông báo nêu đúng lô vi phạm",
+        "T-44",
+        "thông báo nêu mã lô vi phạm để người dùng biết bỏ lô nào",
+        "cả team"
+      ]
+    },
+    {
+      "row": 47,
+      "values": [
+        "T-46",
+        "S-19",
+        "Màn hình gộp chọn nhiều lô và khối lượng lấy từ mỗi lô",
+        "3",
+        "Todo",
+        "Từ danh sách lô ở T-34, chọn nhiều lô cùng sản phẩm rồi bấm \"Gộp\": form hiện từng lô với ô khối lượng lấy (mặc định toàn bộ) và tổng. Sau khi gộp hiện mã lô mới.",
+        "Gộp xong hiện mã lô mới; chọn lô khác sản phẩm thì nút gộp bị vô hiệu kèm giải thích",
+        "T-45",
+        "bộ lọc sản phẩm ở T-34 được bật sẵn khi vào chế độ chọn nhiều",
+        "cả team"
+      ]
+    },
+    {
+      "row": 48,
+      "values": [
+        "T-47",
+        "S-20",
+        "Ghi sự kiện cho lô mẹ và từng lô con hoặc lô mới trong cùng giao dịch",
+        "3",
+        "Todo",
+        "Gọi hàm ghi sự kiện ở T-25 bên trong hàm tách T-40 và hàm gộp T-44: một sự kiện cho lô mẹ và một sự kiện khai sinh cho mỗi lô con, hoặc một sự kiện gộp cho lô mới và một sự kiện xuất cho mỗi lô mẹ.",
+        "Đếm số sự kiện sau tách bằng 1 + số lô con; sau gộp bằng 1 + số lô mẹ",
+        "T-46",
+        "nội dung sự kiện chứa mã lô liên quan để dòng thời gian liên kết được",
+        "cả team"
+      ]
+    },
+    {
+      "row": 49,
+      "values": [
+        "T-48",
+        "S-20",
+        "Test kiểm toàn vẹn mọi lô liên quan sau tách và sau gộp",
+        "3",
+        "Todo",
+        "Mở rộng kịch bản ở T-30: sau khi tách và gộp, chạy hàm kiểm tra ở T-28 cho mọi lô liên quan và khẳng định hợp lệ. Thêm ca: sửa lén sự kiện khai sinh của một lô con thì chỉ lô con đó báo lỗi.",
+        "Mọi lô hợp lệ sau tách và gộp; ca sửa lén chỉ ra đúng lô",
+        "T-47",
+        "chạy trong CI",
+        "cả team"
+      ]
+    },
+    {
+      "row": 50,
+      "values": [
+        "T-49",
+        "S-21",
+        "Hàm duyệt ngược theo BFS có tập đã thăm, gặp chu trình thì dừng và báo",
+        "3",
+        "Todo",
+        "Hàm nhận mã lô, đọc quan hệ ở T-39 theo chiều con→cha bằng BFS, giữ tập đã thăm, trả về danh sách tổ tiên theo tầng và danh sách lô gốc (không có cha). Gặp lô đã thăm trên đường đi hiện tại thì ném lỗi chu trình. Đọc quan hệ theo từng tầng, không đọc từng lô.",
+        "Khớp đáp án bộ dữ liệu mẫu; ca chu trình ném lỗi có tên lô gây chu trình",
+        "T-48",
+        "không dùng đệ quy để tránh tràn ngăn xếp với đồ thị sâu",
+        "cả team"
+      ]
+    },
+    {
+      "row": 51,
+      "values": [
+        "T-50",
+        "S-21",
+        "API và màn hình danh sách tổ tiên tới lô thu hoạch gốc kèm vùng trồng",
+        "3",
+        "Todo",
+        "Endpoint trả về kết quả của T-49 kèm thông tin vùng trồng của lô gốc; mục \"Nguồn gốc\" trên trang chi tiết lô hiện danh sách theo tầng. Quyền xem theo T-54 nếu đã có, chưa có thì theo tổ chức đang giữ.",
+        "Trang hiện đủ lô gốc và vùng trồng; lô không có quyền xem bị 403",
+        "T-49",
+        "kết quả cache theo lô trong 60 giây vì phả hệ quá khứ không đổi",
+        "cả team"
+      ]
+    },
+    {
+      "row": 52,
+      "values": [
+        "T-51",
+        "S-21",
+        "Test bằng bộ dữ liệu mẫu và ca chu trình cố ý",
+        "3",
+        "Todo",
+        "Test tự động nạp bộ dữ liệu ở T-52, chạy truy ngược cho từng lô và so với đáp án ở T-53. Thêm ca chèn một dòng quan hệ tạo chu trình bằng SQL rồi khẳng định hàm báo lỗi.",
+        "Mọi lô trong bộ mẫu khớp đáp án; ca chu trình báo lỗi đúng",
+        "T-50",
+        "chạy trong CI",
+        "cả team"
+      ]
+    },
+    {
+      "row": 53,
+      "values": [
+        "T-52",
+        "S-22",
+        "Script seed đồ thị ba tầng có cả tách lẫn gộp, chạy lại được",
+        "3",
+        "Todo",
+        "Script dùng chính hàm tách và gộp của ứng dụng để dựng đồ thị: 3 lô thu hoạch → tách thành 6 → gộp chéo thành 3 → tách thêm một tầng. Xoá dữ liệu mẫu cũ trước khi dựng lại. Vẽ sơ đồ đồ thị này vào README bằng chữ.",
+        "Chạy hai lần cho cùng kết quả; sơ đồ trong README khớp dữ liệu",
+        "T-46",
+        "script không chạy được trên môi trường có dữ liệu thật — kiểm biến môi trường trước",
+        "cả team"
+      ]
+    },
+    {
+      "row": 54,
+      "values": [
+        "T-53",
+        "S-22",
+        "Tệp đáp án đếm tay cho truy ngược và truy xuôi từng lô, dùng trong test",
+        "3",
+        "Todo",
+        "Tệp JSON: với mỗi lô trong bộ mẫu, danh sách tổ tiên và danh sách hậu duệ. **Hai người đếm độc lập** theo sơ đồ ở T-52 rồi đối chiếu — đây là cách duy nhất để đáp án không sai cùng kiểu với mã. Đáp án truy xuôi dùng ở Sprint 4.",
+        "Hai bản đếm khớp nhau; tệp nạp được trong test ở T-51",
+        "T-52",
+        "ghi tên hai người đếm và ngày vào đầu tệp",
+        "cả team"
+      ]
+    },
+    {
+      "row": 55,
+      "values": [
+        "T-54",
+        "S-23",
+        "Quy tắc quyền: xem được lô nếu đang giữ hoặc là tổ tiên của lô mình giữ",
+        "3",
+        "Todo",
+        "Hàm `canView(org, batch)` trả về đúng khi tổ chức đang giữ, từng giữ, hoặc lô là tổ tiên (theo T-49) của một lô tổ chức đang hoặc từng giữ. Nối vào middleware T-11 cho các route lô.",
+        "Ba ca ở AC của S-23 đúng qua test đơn vị",
+        "T-51",
+        "kết quả cache ngắn vì gọi rất thường xuyên",
+        "cả team"
+      ]
+    },
+    {
+      "row": 56,
+      "values": [
+        "T-55",
+        "S-23",
+        "Test ba tổ chức: thấy lịch sử tổ tiên, không thấy lô khác của họ",
+        "3",
+        "Todo",
+        "Mở rộng kịch bản cách ly ở T-13 với ba tổ chức và bộ dữ liệu mẫu T-52: khẳng định A thấy lịch sử tổ tiên thuộc B, không thấy lô khác của B, và C không thấy gì của A lẫn B.",
+        "Test xanh trong CI",
+        "T-54",
+        "test dùng dữ liệu mẫu nhưng tự dọn phần mình thêm",
+        "cả team"
+      ]
+    },
+    {
+      "row": 57,
+      "values": [
+        "T-56",
+        "S-24",
+        "Job định kỳ đánh dấu bàn giao chờ quá 48 giờ",
+        "3",
+        "Todo",
+        "Job chạy mỗi giờ (cơ chế lập lịch của ứng dụng hoặc cron trong container) cập nhật cờ quá hạn trên `handovers`. Đây là job nền đầu tiên của dự án — cách khai báo và ghi log của nó là mẫu cho S-55.",
+        "Bàn giao tạo 49 giờ trước (giả lập đồng hồ) được gắn cờ sau khi job chạy",
+        "T-38",
+        "job ghi log số bản ghi đã xử lý mỗi lần chạy",
+        "cả team"
+      ]
+    },
+    {
+      "row": 58,
+      "values": [
+        "T-57",
+        "S-24",
+        "Nhãn quá hạn trên danh sách bàn giao của bên giao và bên nhận",
+        "3",
+        "Todo",
+        "Hiện nhãn quá hạn ở danh sách chờ (T-38) và trang chi tiết lô của bên giao. Sự kiện xác nhận muộn ghi thêm trường muộn vào nội dung.",
+        "Nhãn hiện đúng ở cả hai bên; xác nhận muộn vẫn đổi chủ",
+        "T-56",
+        "nhãn có màu và chữ, không chỉ màu, để người mù màu đọc được",
+        "cả team"
+      ]
+    },
+    {
+      "row": 59,
+      "values": [
+        "T-58",
+        "S-25",
+        "Truy vấn tổng hợp chi tiết lô kèm lô mẹ và lô con trực tiếp",
+        "3",
+        "Todo",
+        "Một hàm gom thông tin lô, thửa, sản phẩm, tổ chức đang giữ và quan hệ trực tiếp từ T-39 (một tầng, không duyệt sâu). Kiểm quyền qua T-54.",
+        "Trả về đủ trường; log truy vấn cho thấy tối đa ba câu lệnh",
+        "T-55",
+        "không tải toàn bộ dòng thời gian ở đây — chỉ đếm số sự kiện",
+        "cả team"
+      ]
+    },
+    {
+      "row": 60,
+      "values": [
+        "T-59",
+        "S-25",
+        "Màn hình chi tiết liên kết sang dòng thời gian và danh sách tổ tiên",
+        "3",
+        "Todo",
+        "Gom các trang đã có thành một trang chi tiết có thẻ: Tổng quan, Dòng thời gian (T-32), Nguồn gốc (T-50). Nút Bàn giao, Tách, Gộp hiện theo vai trò và trạng thái lô.",
+        "Ba thẻ hoạt động; nút thao tác ẩn khi lô đang chờ bàn giao",
+        "T-58",
+        "ẩn nút chỉ là tiện lợi, quyền vẫn kiểm ở máy chủ",
+        "cả team"
+      ]
+    }
+  ],
+  "Rủi ro": [
+    {
+      "row": 1,
+      "values": [
+        "ID",
+        "Rủi ro",
+        "Ảnh hưởng",
+        "Khả năng",
+        "Giảm thiểu",
+        "Chủ"
+      ]
+    },
+    {
+      "row": 2,
+      "values": [
+        "R-01",
+        "Team bị cuốn vào blockchain vì nghe hấp dẫn, mất cả sprint mà không ra tính năng",
+        "Cao",
+        "Cao",
+        "GD-5 chốt cứng không dùng blockchain. K-01 bắt buộc viết **lý do loại blockchain bằng ngôn ngữ người không chuyên đọc được** — biến rủi ro thành sản phẩm học tập",
+        "cả team"
+      ]
+    },
+    {
+      "row": 3,
+      "values": [
+        "R-02",
+        "Hàm băm không chuẩn hoá nội dung, thứ tự khoá JSON đổi là hash đổi, chuỗi báo lỗi giả",
+        "Cao",
+        "Cao",
+        "T-24 nêu rõ phải chuẩn hoá trước khi băm và có test băm hai lần; T-30 có kịch bản ba ca gồm cả ca chuỗi nguyên vẹn",
+        "cả team"
+      ]
+    },
+    {
+      "row": 4,
+      "values": [
+        "R-03",
+        "Truy xuôi ở S-26 bỏ sót lô, dẫn tới thu hồi sót — lỗi nguy hiểm nhất của cả hệ thống",
+        "Cao",
+        "Trung bình",
+        "NFR của S-26 ghi rõ thà thừa còn hơn sót; bộ dữ liệu mẫu S-22 và S-39 có đáp án đếm tay **trước khi viết mã**",
+        "cả team"
+      ]
+    },
+    {
+      "row": 5,
+      "values": [
+        "R-04",
+        "Đồ thị phả hệ có chu trình do dữ liệu lỗi, thuật toán duyệt lặp vô hạn và treo máy chủ",
+        "Cao",
+        "Trung bình",
+        "T-49 bắt buộc tập đã thăm và không đệ quy; T-51 có ca kiểm thử cố ý tạo chu trình",
+        "cả team"
+      ]
+    },
+    {
+      "row": 6,
+      "values": [
+        "R-05",
+        "Đáp án đếm tay bị đếm sai, test xanh nhưng thuật toán sai cùng kiểu với đáp án",
+        "Cao",
+        "Trung bình",
+        "T-53 và S-39 yêu cầu **hai người đếm độc lập** rồi đối chiếu, ghi tên vào tệp đáp án",
+        "cả team"
+      ]
+    },
+    {
+      "row": 7,
+      "values": [
+        "R-06",
+        "Xoá dữ liệu cá nhân làm vỡ chuỗi hash, phát hiện quá muộn khi đã có nhiều dữ liệu",
+        "Cao",
+        "Trung bình",
+        "S-56 ghi rõ hướng tách bảng định danh. **Quyết cách làm trước Sprint 5** và áp ngay vào T-23 nếu quyết sớm hơn",
+        "người quyết sản phẩm"
+      ]
+    },
+    {
+      "row": 8,
+      "values": [
+        "R-07",
+        "Kiểm khối lượng tách bằng đọc-rồi-ghi, hai người tách cùng lúc làm lô con vượt lô mẹ",
+        "Cao",
+        "Cao",
+        "T-42 khoá dòng lô mẹ; T-43 là test song song bắt buộc, làm cùng người hướng dẫn",
+        "cả team"
+      ]
+    },
+    {
+      "row": 9,
+      "values": [
+        "R-08",
+        "Story `Next`/`Later` mang SP thô, refine ra to hơn dự tính và Sprint 5–8 tràn",
+        "Trung bình",
+        "Cao",
+        "Phần đệm chỉ kéo vào khi sprint dư; sprint hụt cắt `Should` trước; sau Sprint 3 thay GD-3 bằng velocity thật và tính lại kế hoạch",
+        "Scrum Master"
+      ]
+    },
+    {
+      "row": 10,
+      "values": [
+        "R-09",
+        "5 người mới chưa quen phối hợp, chờ review và merge nuốt capacity",
+        "Trung bình",
+        "Cao",
+        "Focus factor đã hạ xuống 0,5; mỗi sprint có 6–10 story để chia người không đụng file; Daily Scrum nêu rõ ai chờ ai",
+        "Scrum Master"
+      ]
+    },
+    {
+      "row": 11,
+      "values": [
+        "R-10",
+        "Không có DevOps nên staging hỏng giữa sprint không ai sửa nhanh",
+        "Trung bình",
+        "Trung bình",
+        "E-01 xong trọn trong Sprint 1; T-07 giữ bản cũ khi triển khai thất bại; S-57 diễn tập khôi phục",
+        "cả team"
+      ]
+    }
+  ],
+  "DoD-DoR": [
+    {
+      "row": 1,
+      "values": [
+        "Loại",
+        "Được phép chặn",
+        "Mục"
+      ]
+    },
+    {
+      "row": 2,
+      "values": [
+        "DoD",
+        "—",
+        "Code review đã duyệt bởi ít nhất một thành viên khác"
+      ]
+    },
+    {
+      "row": 3,
+      "values": [
+        "DoD",
+        "—",
+        "Unit test cho nhánh logic mới; độ phủ trên phần thay đổi không giảm"
+      ]
+    },
+    {
+      "row": 4,
+      "values": [
+        "DoD",
+        "—",
+        "CI xanh: build, lint, typecheck, test"
+      ]
+    },
+    {
+      "row": 5,
+      "values": [
+        "DoD",
+        "—",
+        "Không có secret trong mã nguồn; quét phụ thuộc sạch"
+      ]
+    },
+    {
+      "row": 6,
+      "values": [
+        "DoD",
+        "—",
+        "AC pass trên môi trường staging, không chỉ trên máy cá nhân"
+      ]
+    },
+    {
+      "row": 7,
+      "values": [
+        "DoD",
+        "—",
+        "Story chạm sự kiện của lô: kiểm tra toàn vẹn chuỗi vẫn báo hợp lệ sau khi chạy"
+      ]
+    },
+    {
+      "row": 8,
+      "values": [
+        "DoD",
+        "—",
+        "Story chạm đồ thị phả hệ: có ca kiểm thử với bộ dữ liệu mẫu có đáp án đếm tay và ca chu trình"
+      ]
+    },
+    {
+      "row": 9,
+      "values": [
+        "DoD",
+        "—",
+        "Story chạm khối lượng: có test hai giao dịch đồng thời"
+      ]
+    },
+    {
+      "row": 10,
+      "values": [
+        "DoD",
+        "—",
+        "Không log dữ liệu định danh nông hộ"
+      ]
+    },
+    {
+      "row": 11,
+      "values": [
+        "DoD",
+        "—",
+        "README cập nhật nếu đổi hành vi công khai hoặc thêm biến môi trường"
+      ]
+    },
+    {
+      "row": 12,
+      "values": [
+        "DoR",
+        "Có",
+        "Đủ nhỏ để Done trong 1 sprint"
+      ]
+    },
+    {
+      "row": 13,
+      "values": [
+        "DoR",
+        "Có",
+        "Dependency ngoài đã có cam kết"
+      ]
+    },
+    {
+      "row": 14,
+      "values": [
+        "DoR",
+        "Không",
+        "Có AC viết dạng Giả sử / Khi / Thì (hướng dẫn)"
+      ]
+    },
+    {
+      "row": 15,
+      "values": [
+        "DoR",
+        "Không",
+        "Đã ước lượng story point bởi chính team, không dùng SP thô của backlog (hướng dẫn)"
+      ]
+    },
+    {
+      "row": 16,
+      "values": [
+        "DoR",
+        "Không",
+        "Team hiểu story nói gì mà không cần hỏi lại người viết (hướng dẫn)"
+      ]
+    },
+    {
+      "row": 17,
+      "values": [
+        "DoR",
+        "Không",
+        "Story cho team thực tập đã chẻ task con ≤ nửa ngày (hướng dẫn)"
+      ]
+    }
+  ]
+}

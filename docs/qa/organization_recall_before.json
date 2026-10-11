@@ -1,0 +1,6 @@
+{
+  "frontend\\js\\recall.js": "2912e7ccdb7a85b90f9981bfa10736d2b6eb5f4efb59af0ee5c5e1e8730c782c",
+  "backend\\app\\routers\\recalls.py": "ccf18149dba2f0eaacc3db8c8a274eb10876632f5fbd2461f61dabf4a3ea1231",
+  "backend\\app\\services\\recall.py": "a3cea4e0d40d015f99101eff4451c8b0ff98b8f3bbb42d74b5973b0b30febef5",
+  "backend\\app\\recall_models.py": "8213fda3ba5f2214c96d152e9bfab0f8d2e95946813df817e7bb5895a7f067c5"
+}

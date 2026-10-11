@@ -1,0 +1,542 @@
+============================= test session starts =============================
+platform win32 -- Python 3.11.9, pytest-9.1.1, pluggy-1.6.0
+rootdir: D:\TTCS_K23C_N5\TTCS-K18C4-N5
+configfile: pytest.ini
+plugins: anyio-4.15.1
+collected 44 items
+
+backend\tests\test_audit_logs.py .FFFFFFF.FFF...F                        [ 36%]
+backend\tests\test_completion.py .............FFFFF......FFFF            [100%]
+
+================================== FAILURES ===================================
+____________________________ test_tao_farm_ghi_log ____________________________
+
+client = <starlette.testclient.TestClient object at 0x000001EB45B31790>
+session_factory = sessionmaker(class_='Session', autocommit=False, bind=Engine(sqlite:///C:/Users/Hoang/AppData/Local/Temp/ttcs_test_xq4m9i14.db), autoflush=False, expire_on_commit=True)
+
+    def test_tao_farm_ghi_log(
+        client: TestClient, session_factory: sessionmaker[Session]
+    ) -> None:
+        """``POST /farms`` -> 1 d\xf2ng log ``create`` / ``farm`` k\xe8m \u0111\xfang ng\u01b0\u1eddi th\u1ef1c hi\u1ec7n."""
+>       farm = _create_farm(client)
+               ^^^^^^^^^^^^^^^^^^^^
+
+backend\tests\test_audit_logs.py:124: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+client = <starlette.testclient.TestClient object at 0x000001EB45B31790>
+username = 'admin'
+
+    def _create_farm(client: TestClient, username: str = TEST_USERNAME_ADMIN) -> dict:
+        """T\u1ea1o m\u1ed9t v\xf9ng tr\u1ed3ng qua API v\xe0 tr\u1ea3 v\u1ec1 body JSON (\u0111\xe3 c\xf3 ``id``)."""
+        response = client.post("/farms", json=FARM_PAYLOAD, auth=_auth(username))
+>       assert response.status_code == 201, response.text
+E       AssertionError: {"detail":"Vai tr\xf2 'system_admin' kh\xf4ng c\xf3 quy\u1ec1n th\u1ef1c hi\u1ec7n h\xe0nh \u0111\u1ed9ng 'FARM_MANAGE'."}
+E       assert 403 == 201
+E        +  where 403 = <Response [403 Forbidden]>.status_code
+
+backend\tests\test_audit_logs.py:57: AssertionError
+------------------------------ Captured log call ------------------------------
+WARNING  agritrace.security:main.py:129 access_denied method=POST path=/farms client=testclient status=403
+____________________________ test_sua_farm_ghi_log ____________________________
+
+client = <starlette.testclient.TestClient object at 0x000001EB45A9A410>
+
+    def test_sua_farm_ghi_log(client: TestClient) -> None:
+        """``PUT /farms/{id}`` -> 1 d�ng log ``update`` / ``farm``."""
+>       farm = _create_farm(client)
+               ^^^^^^^^^^^^^^^^^^^^
+
+backend\tests\test_audit_logs.py:144: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+client = <starlette.testclient.TestClient object at 0x000001EB45A9A410>
+username = 'admin'
+
+    def _create_farm(client: TestClient, username: str = TEST_USERNAME_ADMIN) -> dict:
+        """T\u1ea1o m\u1ed9t v\xf9ng tr\u1ed3ng qua API v\xe0 tr\u1ea3 v\u1ec1 body JSON (\u0111\xe3 c\xf3 ``id``)."""
+        response = client.post("/farms", json=FARM_PAYLOAD, auth=_auth(username))
+>       assert response.status_code == 201, response.text
+E       AssertionError: {"detail":"Vai tr\xf2 'system_admin' kh\xf4ng c\xf3 quy\u1ec1n th\u1ef1c hi\u1ec7n h\xe0nh \u0111\u1ed9ng 'FARM_MANAGE'."}
+E       assert 403 == 201
+E        +  where 403 = <Response [403 Forbidden]>.status_code
+
+backend\tests\test_audit_logs.py:57: AssertionError
+------------------------------ Captured log call ------------------------------
+WARNING  agritrace.security:main.py:129 access_denied method=POST path=/farms client=testclient status=403
+___________ test_xoa_farm_ghi_log_va_khong_ghi_cho_batch_bi_xoa_kem ___________
+
+client = <starlette.testclient.TestClient object at 0x000001EB44533650>
+
+    def test_xoa_farm_ghi_log_va_khong_ghi_cho_batch_bi_xoa_kem(client: TestClient) -> None:
+        """Delete a farm only when it has no traceable batches; failed deletion creates no log."""
+>       farm = _create_farm(client)
+               ^^^^^^^^^^^^^^^^^^^^
+
+backend\tests\test_audit_logs.py:161: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+client = <starlette.testclient.TestClient object at 0x000001EB44533650>
+username = 'admin'
+
+    def _create_farm(client: TestClient, username: str = TEST_USERNAME_ADMIN) -> dict:
+        """T\u1ea1o m\u1ed9t v\xf9ng tr\u1ed3ng qua API v\xe0 tr\u1ea3 v\u1ec1 body JSON (\u0111\xe3 c\xf3 ``id``)."""
+        response = client.post("/farms", json=FARM_PAYLOAD, auth=_auth(username))
+>       assert response.status_code == 201, response.text
+E       AssertionError: {"detail":"Vai tr\xf2 'system_admin' kh\xf4ng c\xf3 quy\u1ec1n th\u1ef1c hi\u1ec7n h\xe0nh \u0111\u1ed9ng 'FARM_MANAGE'."}
+E       assert 403 == 201
+E        +  where 403 = <Response [403 Forbidden]>.status_code
+
+backend\tests\test_audit_logs.py:57: AssertionError
+------------------------------ Captured log call ------------------------------
+WARNING  agritrace.security:main.py:129 access_denied method=POST path=/farms client=testclient status=403
+___________________________ test_tao_batch_ghi_log ____________________________
+
+client = <starlette.testclient.TestClient object at 0x000001EB45CDBB10>
+
+    def test_tao_batch_ghi_log(client: TestClient) -> None:
+        """``POST /batches`` -> 1 d�ng log ``create`` / ``batch``."""
+>       farm = _create_farm(client)
+               ^^^^^^^^^^^^^^^^^^^^
+
+backend\tests\test_audit_logs.py:176: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+client = <starlette.testclient.TestClient object at 0x000001EB45CDBB10>
+username = 'admin'
+
+    def _create_farm(client: TestClient, username: str = TEST_USERNAME_ADMIN) -> dict:
+        """T\u1ea1o m\u1ed9t v\xf9ng tr\u1ed3ng qua API v\xe0 tr\u1ea3 v\u1ec1 body JSON (\u0111\xe3 c\xf3 ``id``)."""
+        response = client.post("/farms", json=FARM_PAYLOAD, auth=_auth(username))
+>       assert response.status_code == 201, response.text
+E       AssertionError: {"detail":"Vai tr\xf2 'system_admin' kh\xf4ng c\xf3 quy\u1ec1n th\u1ef1c hi\u1ec7n h\xe0nh \u0111\u1ed9ng 'FARM_MANAGE'."}
+E       assert 403 == 201
+E        +  where 403 = <Response [403 Forbidden]>.status_code
+
+backend\tests\test_audit_logs.py:57: AssertionError
+------------------------------ Captured log call ------------------------------
+WARNING  agritrace.security:main.py:129 access_denied method=POST path=/farms client=testclient status=403
+___________________________ test_sua_batch_ghi_log ____________________________
+
+client = <starlette.testclient.TestClient object at 0x000001EB45AE8390>
+
+    def test_sua_batch_ghi_log(client: TestClient) -> None:
+        """``PUT /batches/{id}`` -> 1 d�ng log ``update`` / ``batch``."""
+>       farm = _create_farm(client)
+               ^^^^^^^^^^^^^^^^^^^^
+
+backend\tests\test_audit_logs.py:187: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+client = <starlette.testclient.TestClient object at 0x000001EB45AE8390>
+username = 'admin'
+
+    def _create_farm(client: TestClient, username: str = TEST_USERNAME_ADMIN) -> dict:
+        """T\u1ea1o m\u1ed9t v\xf9ng tr\u1ed3ng qua API v\xe0 tr\u1ea3 v\u1ec1 body JSON (\u0111\xe3 c\xf3 ``id``)."""
+        response = client.post("/farms", json=FARM_PAYLOAD, auth=_auth(username))
+>       assert response.status_code == 201, response.text
+E       AssertionError: {"detail":"Vai tr\xf2 'system_admin' kh\xf4ng c\xf3 quy\u1ec1n th\u1ef1c hi\u1ec7n h\xe0nh \u0111\u1ed9ng 'FARM_MANAGE'."}
+E       assert 403 == 201
+E        +  where 403 = <Response [403 Forbidden]>.status_code
+
+backend\tests\test_audit_logs.py:57: AssertionError
+------------------------------ Captured log call ------------------------------
+WARNING  agritrace.security:main.py:129 access_denied method=POST path=/farms client=testclient status=403
+___________________________ test_xoa_batch_ghi_log ____________________________
+
+client = <starlette.testclient.TestClient object at 0x000001EB45CD38D0>
+
+    def test_xoa_batch_ghi_log(client: TestClient) -> None:
+        """S-11: deletion cannot orphan an immutable batch history, and failure is not audited as success."""
+>       farm = _create_farm(client)
+               ^^^^^^^^^^^^^^^^^^^^
+
+backend\tests\test_audit_logs.py:202: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+client = <starlette.testclient.TestClient object at 0x000001EB45CD38D0>
+username = 'admin'
+
+    def _create_farm(client: TestClient, username: str = TEST_USERNAME_ADMIN) -> dict:
+        """T\u1ea1o m\u1ed9t v\xf9ng tr\u1ed3ng qua API v\xe0 tr\u1ea3 v\u1ec1 body JSON (\u0111\xe3 c\xf3 ``id``)."""
+        response = client.post("/farms", json=FARM_PAYLOAD, auth=_auth(username))
+>       assert response.status_code == 201, response.text
+E       AssertionError: {"detail":"Vai tr\xf2 'system_admin' kh\xf4ng c\xf3 quy\u1ec1n th\u1ef1c hi\u1ec7n h\xe0nh \u0111\u1ed9ng 'FARM_MANAGE'."}
+E       assert 403 == 201
+E        +  where 403 = <Response [403 Forbidden]>.status_code
+
+backend\tests\test_audit_logs.py:57: AssertionError
+------------------------------ Captured log call ------------------------------
+WARNING  agritrace.security:main.py:129 access_denied method=POST path=/farms client=testclient status=403
+_________ test_chuoi_sau_thao_tac_duoc_ghi_theo_thu_tu_moi_nhat_truoc _________
+
+client = <starlette.testclient.TestClient object at 0x000001EB45BCBA50>
+
+    def test_chuoi_sau_thao_tac_duoc_ghi_theo_thu_tu_moi_nhat_truoc(
+        client: TestClient,
+    ) -> None:
+        """\u0110\u1ee7 6 thao t\xe1c (3 Farm + 3 Batch) -> 6 d\xf2ng log, m\u1edbi nh\u1ea5t \u0111\u1ee9ng \u0111\u1ea7u."""
+>       farm = _create_farm(client)
+               ^^^^^^^^^^^^^^^^^^^^
+
+backend\tests\test_audit_logs.py:214: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+client = <starlette.testclient.TestClient object at 0x000001EB45BCBA50>
+username = 'admin'
+
+    def _create_farm(client: TestClient, username: str = TEST_USERNAME_ADMIN) -> dict:
+        """T\u1ea1o m\u1ed9t v\xf9ng tr\u1ed3ng qua API v\xe0 tr\u1ea3 v\u1ec1 body JSON (\u0111\xe3 c\xf3 ``id``)."""
+        response = client.post("/farms", json=FARM_PAYLOAD, auth=_auth(username))
+>       assert response.status_code == 201, response.text
+E       AssertionError: {"detail":"Vai tr\xf2 'system_admin' kh\xf4ng c\xf3 quy\u1ec1n th\u1ef1c hi\u1ec7n h\xe0nh \u0111\u1ed9ng 'FARM_MANAGE'."}
+E       assert 403 == 201
+E        +  where 403 = <Response [403 Forbidden]>.status_code
+
+backend\tests\test_audit_logs.py:57: AssertionError
+------------------------------ Captured log call ------------------------------
+WARNING  agritrace.security:main.py:129 access_denied method=POST path=/farms client=testclient status=403
+____________________ test_thao_tac_that_bai_khong_ghi_log _____________________
+
+client = <starlette.testclient.TestClient object at 0x000001EB45D53E50>
+session_factory = sessionmaker(class_='Session', autocommit=False, bind=Engine(sqlite:///C:/Users/Hoang/AppData/Local/Temp/ttcs_test_01ympmdw.db), autoflush=False, expire_on_commit=True)
+
+    def test_thao_tac_that_bai_khong_ghi_log(
+        client: TestClient, session_factory: sessionmaker[Session]
+    ) -> None:
+        """404 / 403 / 401 / 422 -> d\u1eef li\u1ec7u kh\xf4ng \u0111\u1ed5i th\xec c\u0169ng kh\xf4ng sinh log."""
+>       farm = _create_farm(client)
+               ^^^^^^^^^^^^^^^^^^^^
+
+backend\tests\test_audit_logs.py:258: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+client = <starlette.testclient.TestClient object at 0x000001EB45D53E50>
+username = 'admin'
+
+    def _create_farm(client: TestClient, username: str = TEST_USERNAME_ADMIN) -> dict:
+        """T\u1ea1o m\u1ed9t v\xf9ng tr\u1ed3ng qua API v\xe0 tr\u1ea3 v\u1ec1 body JSON (\u0111\xe3 c\xf3 ``id``)."""
+        response = client.post("/farms", json=FARM_PAYLOAD, auth=_auth(username))
+>       assert response.status_code == 201, response.text
+E       AssertionError: {"detail":"Vai tr\xf2 'system_admin' kh\xf4ng c\xf3 quy\u1ec1n th\u1ef1c hi\u1ec7n h\xe0nh \u0111\u1ed9ng 'FARM_MANAGE'."}
+E       assert 403 == 201
+E        +  where 403 = <Response [403 Forbidden]>.status_code
+
+backend\tests\test_audit_logs.py:57: AssertionError
+------------------------------ Captured log call ------------------------------
+WARNING  agritrace.security:main.py:129 access_denied method=POST path=/farms client=testclient status=403
+___________________ test_api_doc_va_dang_nhap_khong_ghi_log ___________________
+
+client = <starlette.testclient.TestClient object at 0x000001EB45D64C50>
+session_factory = sessionmaker(class_='Session', autocommit=False, bind=Engine(sqlite:///C:/Users/Hoang/AppData/Local/Temp/ttcs_test_fmavo6ro.db), autoflush=False, expire_on_commit=True)
+
+    def test_api_doc_va_dang_nhap_khong_ghi_log(
+        client: TestClient, session_factory: sessionmaker[Session]
+    ) -> None:
+        """GET d\u1eef li\u1ec7u, xem log, \u0111\u0103ng nh\u1eadp (\u0111\xfang/sai) \u0111\u1ec1u **kh\xf4ng** \u0111\u01b0\u1ee3c ghi log."""
+>       farm = _create_farm(client)
+               ^^^^^^^^^^^^^^^^^^^^
+
+backend\tests\test_audit_logs.py:306: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+client = <starlette.testclient.TestClient object at 0x000001EB45D64C50>
+username = 'admin'
+
+    def _create_farm(client: TestClient, username: str = TEST_USERNAME_ADMIN) -> dict:
+        """T\u1ea1o m\u1ed9t v\xf9ng tr\u1ed3ng qua API v\xe0 tr\u1ea3 v\u1ec1 body JSON (\u0111\xe3 c\xf3 ``id``)."""
+        response = client.post("/farms", json=FARM_PAYLOAD, auth=_auth(username))
+>       assert response.status_code == 201, response.text
+E       AssertionError: {"detail":"Vai tr\xf2 'system_admin' kh\xf4ng c\xf3 quy\u1ec1n th\u1ef1c hi\u1ec7n h\xe0nh \u0111\u1ed9ng 'FARM_MANAGE'."}
+E       assert 403 == 201
+E        +  where 403 = <Response [403 Forbidden]>.status_code
+
+backend\tests\test_audit_logs.py:57: AssertionError
+------------------------------ Captured log call ------------------------------
+WARNING  agritrace.security:main.py:129 access_denied method=POST path=/farms client=testclient status=403
+________________________ test_get_audit_logs_chi_admin ________________________
+
+client = <starlette.testclient.TestClient object at 0x000001EB45D03690>
+
+    def test_get_audit_logs_chi_admin(client: TestClient) -> None:
+        """Admin -> 200, farmer -> 403, ch\u01b0a \u0111\u0103ng nh\u1eadp -> 401."""
+>       _create_farm(client)
+
+backend\tests\test_audit_logs.py:331: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+client = <starlette.testclient.TestClient object at 0x000001EB45D03690>
+username = 'admin'
+
+    def _create_farm(client: TestClient, username: str = TEST_USERNAME_ADMIN) -> dict:
+        """T\u1ea1o m\u1ed9t v\xf9ng tr\u1ed3ng qua API v\xe0 tr\u1ea3 v\u1ec1 body JSON (\u0111\xe3 c\xf3 ``id``)."""
+        response = client.post("/farms", json=FARM_PAYLOAD, auth=_auth(username))
+>       assert response.status_code == 201, response.text
+E       AssertionError: {"detail":"Vai tr\xf2 'system_admin' kh\xf4ng c\xf3 quy\u1ec1n th\u1ef1c hi\u1ec7n h\xe0nh \u0111\u1ed9ng 'FARM_MANAGE'."}
+E       assert 403 == 201
+E        +  where 403 = <Response [403 Forbidden]>.status_code
+
+backend\tests\test_audit_logs.py:57: AssertionError
+------------------------------ Captured log call ------------------------------
+WARNING  agritrace.security:main.py:129 access_denied method=POST path=/farms client=testclient status=403
+___________________ test_limit_va_gia_tri_loc_khong_hop_le ____________________
+
+client = <starlette.testclient.TestClient object at 0x000001EB45DCF1D0>
+
+    def test_limit_va_gia_tri_loc_khong_hop_le(client: TestClient) -> None:
+        """``limit`` gi\u1edbi h\u1ea1n s\u1ed1 d\xf2ng; gi\xe1 tr\u1ecb ngo\xe0i kho\u1ea3ng / sai ki\u1ec3u -> 422."""
+        for _ in range(3):
+>           _create_farm(client)
+
+backend\tests\test_audit_logs.py:404: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+client = <starlette.testclient.TestClient object at 0x000001EB45DCF1D0>
+username = 'admin'
+
+    def _create_farm(client: TestClient, username: str = TEST_USERNAME_ADMIN) -> dict:
+        """T\u1ea1o m\u1ed9t v\xf9ng tr\u1ed3ng qua API v\xe0 tr\u1ea3 v\u1ec1 body JSON (\u0111\xe3 c\xf3 ``id``)."""
+        response = client.post("/farms", json=FARM_PAYLOAD, auth=_auth(username))
+>       assert response.status_code == 201, response.text
+E       AssertionError: {"detail":"Vai tr\xf2 'system_admin' kh\xf4ng c\xf3 quy\u1ec1n th\u1ef1c hi\u1ec7n h\xe0nh \u0111\u1ed9ng 'FARM_MANAGE'."}
+E       assert 403 == 201
+E        +  where 403 = <Response [403 Forbidden]>.status_code
+
+backend\tests\test_audit_logs.py:57: AssertionError
+------------------------------ Captured log call ------------------------------
+WARNING  agritrace.security:main.py:129 access_denied method=POST path=/farms client=testclient status=403
+_________ test_event_endpoints_require_authentication_and_related_org _________
+
+client = <starlette.testclient.TestClient object at 0x000001EB4603DAD0>
+session_factory = sessionmaker(class_='Session', autocommit=False, bind=Engine(sqlite:///C:/Users/Hoang/AppData/Local/Temp/ttcs_test_esak9tea.db), autoflush=False, expire_on_commit=True)
+
+    def test_event_endpoints_require_authentication_and_related_org(client, session_factory):
+>       batch = harvest(client)
+                ^^^^^^^^^^^^^^^
+
+backend\tests\test_completion.py:112: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+client = <starlette.testclient.TestClient object at 0x000001EB4603DAD0>
+
+    def harvest(client):
+        farm = client.post("/farms", auth=ADMIN, json={"name": "Test orchard", "location": "Dong Thap", "area": 2, "owner": "HTX"}).json()
+>       result = client.post("/batches", auth=("farmer", "[redacted]"), json={"farm_id": farm["id"], "product_name": "Mango", "quantity": 100, "harvest_date": str(date.today())})
+                                                                                     ^^^^^^^^^^
+E       KeyError: 'id'
+
+backend\tests\test_completion.py:26: KeyError
+------------------------------ Captured log call ------------------------------
+WARNING  agritrace.security:main.py:129 access_denied method=POST path=/farms client=testclient status=403
+_____ test_updates_are_validated_logged_and_do_not_replenish_split_stock ______
+
+client = <starlette.testclient.TestClient object at 0x000001EB45FCB850>
+
+    def test_updates_are_validated_logged_and_do_not_replenish_split_stock(client):
+>       batch = harvest(client); path = f"/batches/{batch['id']}"
+                ^^^^^^^^^^^^^^^
+
+backend\tests\test_completion.py:128: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+client = <starlette.testclient.TestClient object at 0x000001EB45FCB850>
+
+    def harvest(client):
+        farm = client.post("/farms", auth=ADMIN, json={"name": "Test orchard", "location": "Dong Thap", "area": 2, "owner": "HTX"}).json()
+>       result = client.post("/batches", auth=("farmer", "[redacted]"), json={"farm_id": farm["id"], "product_name": "Mango", "quantity": 100, "harvest_date": str(date.today())})
+                                                                                     ^^^^^^^^^^
+E       KeyError: 'id'
+
+backend\tests\test_completion.py:26: KeyError
+------------------------------ Captured log call ------------------------------
+WARNING  agritrace.security:main.py:129 access_denied method=POST path=/farms client=testclient status=403
+____________________ test_concurrent_events_form_one_chain ____________________
+
+client = <starlette.testclient.TestClient object at 0x000001EB45ED8410>
+
+    def test_concurrent_events_form_one_chain(client):
+>       batch = harvest(client); path = f"/batches/{batch['id']}"
+                ^^^^^^^^^^^^^^^
+
+backend\tests\test_completion.py:146: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+client = <starlette.testclient.TestClient object at 0x000001EB45ED8410>
+
+    def harvest(client):
+        farm = client.post("/farms", auth=ADMIN, json={"name": "Test orchard", "location": "Dong Thap", "area": 2, "owner": "HTX"}).json()
+>       result = client.post("/batches", auth=("farmer", "[redacted]"), json={"farm_id": farm["id"], "product_name": "Mango", "quantity": 100, "harvest_date": str(date.today())})
+                                                                                     ^^^^^^^^^^
+E       KeyError: 'id'
+
+backend\tests\test_completion.py:26: KeyError
+------------------------------ Captured log call ------------------------------
+WARNING  agritrace.security:main.py:129 access_denied method=POST path=/farms client=testclient status=403
+_________________ test_hash_detects_event_metadata_tampering __________________
+
+client = <starlette.testclient.TestClient object at 0x000001EB46116450>
+session_factory = sessionmaker(class_='Session', autocommit=False, bind=Engine(sqlite:///C:/Users/Hoang/AppData/Local/Temp/ttcs_test_k3wq4k79.db), autoflush=False, expire_on_commit=True)
+
+    def test_hash_detects_event_metadata_tampering(client, session_factory):
+>       batch = harvest(client)
+                ^^^^^^^^^^^^^^^
+
+backend\tests\test_completion.py:155: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+client = <starlette.testclient.TestClient object at 0x000001EB46116450>
+
+    def harvest(client):
+        farm = client.post("/farms", auth=ADMIN, json={"name": "Test orchard", "location": "Dong Thap", "area": 2, "owner": "HTX"}).json()
+>       result = client.post("/batches", auth=("farmer", "[redacted]"), json={"farm_id": farm["id"], "product_name": "Mango", "quantity": 100, "harvest_date": str(date.today())})
+                                                                                     ^^^^^^^^^^
+E       KeyError: 'id'
+
+backend\tests\test_completion.py:26: KeyError
+------------------------------ Captured log call ------------------------------
+WARNING  agritrace.security:main.py:129 access_denied method=POST path=/farms client=testclient status=403
+_______ test_demo_is_repeatable_preserves_real_data_and_has_valid_flows _______
+
+client = <starlette.testclient.TestClient object at 0x000001EB4612E250>
+session_factory = sessionmaker(class_='Session', autocommit=False, bind=Engine(sqlite:///C:/Users/Hoang/AppData/Local/Temp/ttcs_test_rv6sb9p8.db), autoflush=False, expire_on_commit=True)
+
+    def test_demo_is_repeatable_preserves_real_data_and_has_valid_flows(client, session_factory):
+>       real_batch = harvest(client)
+                     ^^^^^^^^^^^^^^^
+
+backend\tests\test_completion.py:166: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+client = <starlette.testclient.TestClient object at 0x000001EB4612E250>
+
+    def harvest(client):
+        farm = client.post("/farms", auth=ADMIN, json={"name": "Test orchard", "location": "Dong Thap", "area": 2, "owner": "HTX"}).json()
+>       result = client.post("/batches", auth=("farmer", "[redacted]"), json={"farm_id": farm["id"], "product_name": "Mango", "quantity": 100, "harvest_date": str(date.today())})
+                                                                                     ^^^^^^^^^^
+E       KeyError: 'id'
+
+backend\tests\test_completion.py:26: KeyError
+------------------------------ Captured log call ------------------------------
+WARNING  agritrace.security:main.py:129 access_denied method=POST path=/farms client=testclient status=403
+________ test_lifecycle_events_cannot_be_forged_through_annotation_api ________
+
+client = <starlette.testclient.TestClient object at 0x000001EB45F4FDD0>
+
+    def test_lifecycle_events_cannot_be_forged_through_annotation_api(client):
+>       batch = harvest(client)
+                ^^^^^^^^^^^^^^^
+
+backend\tests\test_completion.py:237: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+client = <starlette.testclient.TestClient object at 0x000001EB45F4FDD0>
+
+    def harvest(client):
+        farm = client.post("/farms", auth=ADMIN, json={"name": "Test orchard", "location": "Dong Thap", "area": 2, "owner": "HTX"}).json()
+>       result = client.post("/batches", auth=("farmer", "[redacted]"), json={"farm_id": farm["id"], "product_name": "Mango", "quantity": 100, "harvest_date": str(date.today())})
+                                                                                     ^^^^^^^^^^
+E       KeyError: 'id'
+
+backend\tests\test_completion.py:26: KeyError
+------------------------------ Captured log call ------------------------------
+WARNING  agritrace.security:main.py:129 access_denied method=POST path=/farms client=testclient status=403
+____________ test_concurrent_handover_response_changes_owner_once _____________
+
+client = <starlette.testclient.TestClient object at 0x000001EB45A8EED0>
+session_factory = sessionmaker(class_='Session', autocommit=False, bind=Engine(sqlite:///C:/Users/Hoang/AppData/Local/Temp/ttcs_test_mfmq9pde.db), autoflush=False, expire_on_commit=True)
+
+    def test_concurrent_handover_response_changes_owner_once(client, session_factory):
+>       batch = harvest(client)
+                ^^^^^^^^^^^^^^^
+
+backend\tests\test_completion.py:245: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+client = <starlette.testclient.TestClient object at 0x000001EB45A8EED0>
+
+    def harvest(client):
+        farm = client.post("/farms", auth=ADMIN, json={"name": "Test orchard", "location": "Dong Thap", "area": 2, "owner": "HTX"}).json()
+>       result = client.post("/batches", auth=("farmer", "[redacted]"), json={"farm_id": farm["id"], "product_name": "Mango", "quantity": 100, "harvest_date": str(date.today())})
+                                                                                     ^^^^^^^^^^
+E       KeyError: 'id'
+
+backend\tests\test_completion.py:26: KeyError
+------------------------------ Captured log call ------------------------------
+WARNING  agritrace.security:main.py:129 access_denied method=POST path=/farms client=testclient status=403
+_ test_handover_uses_remaining_quantity_unit_and_retains_late_accept_history __
+
+client = <starlette.testclient.TestClient object at 0x000001EB45FA1590>
+session_factory = sessionmaker(class_='Session', autocommit=False, bind=Engine(sqlite:///C:/Users/Hoang/AppData/Local/Temp/ttcs_test_aya74l3z.db), autoflush=False, expire_on_commit=True)
+
+    def test_handover_uses_remaining_quantity_unit_and_retains_late_accept_history(client, session_factory):
+        from datetime import datetime, timezone
+        from app.models import Product, ProductUnit
+        from app.services.overdue_job import check_overdue_handovers
+>       batch = harvest(client)
+                ^^^^^^^^^^^^^^^
+
+backend\tests\test_completion.py:268: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+client = <starlette.testclient.TestClient object at 0x000001EB45FA1590>
+
+    def harvest(client):
+        farm = client.post("/farms", auth=ADMIN, json={"name": "Test orchard", "location": "Dong Thap", "area": 2, "owner": "HTX"}).json()
+>       result = client.post("/batches", auth=("farmer", "[redacted]"), json={"farm_id": farm["id"], "product_name": "Mango", "quantity": 100, "harvest_date": str(date.today())})
+                                                                                     ^^^^^^^^^^
+E       KeyError: 'id'
+
+backend\tests\test_completion.py:26: KeyError
+------------------------------ Captured log call ------------------------------
+WARNING  agritrace.security:main.py:129 access_denied method=POST path=/farms client=testclient status=403
+_________________ test_exhausted_batch_cannot_be_handed_over __________________
+
+client = <starlette.testclient.TestClient object at 0x000001EB45F33A90>
+session_factory = sessionmaker(class_='Session', autocommit=False, bind=Engine(sqlite:///C:/Users/Hoang/AppData/Local/Temp/ttcs_test_797u7skv.db), autoflush=False, expire_on_commit=True)
+
+    def test_exhausted_batch_cannot_be_handed_over(client, session_factory):
+>       batch = harvest(client)
+                ^^^^^^^^^^^^^^^
+
+backend\tests\test_completion.py:297: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+client = <starlette.testclient.TestClient object at 0x000001EB45F33A90>
+
+    def harvest(client):
+        farm = client.post("/farms", auth=ADMIN, json={"name": "Test orchard", "location": "Dong Thap", "area": 2, "owner": "HTX"}).json()
+>       result = client.post("/batches", auth=("farmer", "[redacted]"), json={"farm_id": farm["id"], "product_name": "Mango", "quantity": 100, "harvest_date": str(date.today())})
+                                                                                     ^^^^^^^^^^
+E       KeyError: 'id'
+
+backend\tests\test_completion.py:26: KeyError
+------------------------------ Captured log call ------------------------------
+WARNING  agritrace.security:main.py:129 access_denied method=POST path=/farms client=testclient status=403
+============================== warnings summary ===============================
+backend\.venv\Lib\site-packages\starlette\testclient.py:40
+  D:\TTCS_K23C_N5\TTCS-K18C4-N5\backend\.venv\Lib\site-packages\starlette\testclient.py:40: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = typing.Callable[[], typing.ContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED backend/tests/test_audit_logs.py::test_tao_farm_ghi_log - AssertionErr...
+FAILED backend/tests/test_audit_logs.py::test_sua_farm_ghi_log - AssertionErr...
+FAILED backend/tests/test_audit_logs.py::test_xoa_farm_ghi_log_va_khong_ghi_cho_batch_bi_xoa_kem
+FAILED backend/tests/test_audit_logs.py::test_tao_batch_ghi_log - AssertionEr...
+FAILED backend/tests/test_audit_logs.py::test_sua_batch_ghi_log - AssertionEr...
+FAILED backend/tests/test_audit_logs.py::test_xoa_batch_ghi_log - AssertionEr...
+FAILED backend/tests/test_audit_logs.py::test_chuoi_sau_thao_tac_duoc_ghi_theo_thu_tu_moi_nhat_truoc
+FAILED backend/tests/test_audit_logs.py::test_thao_tac_that_bai_khong_ghi_log
+FAILED backend/tests/test_audit_logs.py::test_api_doc_va_dang_nhap_khong_ghi_log
+FAILED backend/tests/test_audit_logs.py::test_get_audit_logs_chi_admin - Asse...
+FAILED backend/tests/test_audit_logs.py::test_limit_va_gia_tri_loc_khong_hop_le
+FAILED backend/tests/test_completion.py::test_event_endpoints_require_authentication_and_related_org
+FAILED backend/tests/test_completion.py::test_updates_are_validated_logged_and_do_not_replenish_split_stock
+FAILED backend/tests/test_completion.py::test_concurrent_events_form_one_chain
+FAILED backend/tests/test_completion.py::test_hash_detects_event_metadata_tampering
+FAILED backend/tests/test_completion.py::test_demo_is_repeatable_preserves_real_data_and_has_valid_flows
+FAILED backend/tests/test_completion.py::test_lifecycle_events_cannot_be_forged_through_annotation_api
+FAILED backend/tests/test_completion.py::test_concurrent_handover_response_changes_owner_once
+FAILED backend/tests/test_completion.py::test_handover_uses_remaining_quantity_unit_and_retains_late_accept_history
+FAILED backend/tests/test_completion.py::test_exhausted_batch_cannot_be_handed_over
+================== 20 failed, 24 passed, 1 warning in 13.35s ==================

@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" fill="none">
+  <defs>
+    <!-- Gradient lá chính (xanh ngọc lục bảo) -->
+    <linearGradient id="leafGradMain" x1="18" y1="56" x2="52" y2="12" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#103D2B"/>
+      <stop offset="60%" stop-color="#277B52"/>
+      <stop offset="100%" stop-color="#2E9E66"/>
+    </linearGradient>
+    <!-- Gradient lá mầm (xanh non) -->
+    <linearGradient id="sproutGrad" x1="10" y1="46" x2="30" y2="18" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#277B52"/>
+      <stop offset="50%" stop-color="#52B788"/>
+      <stop offset="100%" stop-color="#B6E5A8"/>
+    </linearGradient>
+    <!-- Gradient đường chuỗi truy vết -->
+    <linearGradient id="traceGrad" x1="8" y1="14" x2="56" y2="52" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#B6E5A8"/>
+      <stop offset="50%" stop-color="#277B52"/>
+      <stop offset="100%" stop-color="#103D2B"/>
+    </linearGradient>
+    <!-- Shadow nhẹ tự nhiên -->
+    <filter id="softGlow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#103D2B" flood-opacity="0.15"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#softGlow)">
+    <!-- 1. VÒNG CHUỖI MẮT XÍCH TRUY VẾT (Outer Traceability Orbit & Links) -->
+    <!-- Đường cung tròn công nghệ bao bọc và kết nối chuỗi cung ứng -->
+    <path d="M 18,18 C 10,25 9,39 16,48 C 22,55 33,57 41,52" 
+          stroke="url(#traceGrad)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.9"/>
+    
+    <!-- Đường dẫn phụ đứt nét thể hiện truyền dữ liệu hash-chain -->
+    <path d="M 44,49 C 48,45 52,38 52,28 C 52,18 42,10 32,10" 
+          stroke="#277B52" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="3 3.5" fill="none" opacity="0.65"/>
+
+    <!-- 2. CÁNH LÁ CHÍNH (Right Major Leaf - Đại diện cho nông sản thu hoạch) -->
+    <path d="M 32,54 C 32,54 49,43 51,27 C 52,17 44,9 33,7 C 32,18 35,31 32,54 Z" 
+          fill="url(#leafGradMain)"/>
+
+    <!-- 3. CÁNH LÁ MẦM NON (Left Sprout Leaf - Đại diện cho nguồn cội & phát triển tươi tốt) -->
+    <path d="M 32,46 C 30,37 20,38 15,31 C 12,26 15,18 24,14 C 27,22 28,34 32,46 Z" 
+          fill="url(#sproutGrad)"/>
+
+    <!-- 4. GÂN LÁ & MẮT XÍCH TRUY VẾT NỘI TẠI (Inner Verification Vein & Nodes) -->
+    <!-- Đường gân kết nối 3 tầng tổ tiên (Origin -> Processing -> Consumer) -->
+    <path d="M 32,48 Q 31,31 34,16" 
+          stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" fill="none" opacity="0.85"/>
+
+    <!-- Node 1: Lô gốc thu hoạch (Root / Farm Origin) -->
+    <circle cx="32" cy="48" r="3.2" fill="#FFFFFF"/>
+    <circle cx="32" cy="48" r="1.6" fill="#103D2B"/>
+
+    <!-- Node 2: Chế biến & Bàn giao (Processing / Transfer) -->
+    <circle cx="31.8" cy="32" r="3" fill="#FFFFFF"/>
+    <circle cx="31.8" cy="32" r="1.5" fill="#277B52"/>
+
+    <!-- Node 3: Người tiêu dùng & Thành phẩm (Retail / Final Verification) -->
+    <circle cx="33.5" cy="16" r="2.8" fill="#B6E5A8"/>
+    <circle cx="33.5" cy="16" r="1.3" fill="#103D2B"/>
+
+    <!-- Các điểm node vệ tinh trên quỹ đạo chuỗi cung ứng -->
+    <circle cx="16" cy="48" r="2.2" fill="#277B52"/>
+    <circle cx="18" cy="18" r="2.2" fill="#B6E5A8"/>
+    <circle cx="41" cy="52" r="2.2" fill="#103D2B"/>
+  </g>
+</svg>

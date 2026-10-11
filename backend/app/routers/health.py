@@ -1,11 +1,10 @@
-"""Router kiểm tra trạng thái hệ thống.
+"""Router kiểm tra trạng thái hệ thống và kết nối cơ sở dữ liệu."""
 
-Sprint 1 chỉ có duy nhất endpoint ``GET /health`` để xác nhận backend đã
-chạy thành công và trả về đúng JSON phục vụ demo.
-"""
+from fastapi import APIRouter, Depends, status
+from sqlalchemy import text
+from sqlalchemy.orm import Session
 
-from fastapi import APIRouter, status
-
+from app.database import get_db
 from app.schemas import HealthResponse
 
 router = APIRouter(
@@ -17,13 +16,18 @@ router = APIRouter(
     "/health",
     response_model=HealthResponse,
     status_code=status.HTTP_200_OK,
-    summary="Kiểm tra hệ thống",
-    description="Trả về trạng thái hoạt động của backend. Dùng cho health check khi deploy.",
+    summary="Kiểm tra hệ thống (Health Check)",
+    description="Trả về trạng thái hoạt động của backend và kết nối DB. Dùng cho health check CI/CD.",
 )
-def health_check() -> HealthResponse:
-    """Endpoint health check.
+def health_check(db: Session = Depends(get_db)) -> HealthResponse:
+    """Endpoint health check kiểm tra máy chủ và kết nối database.
 
     Returns:
-        HealthResponse: ``{"status": "running"}`` nếu API đang hoạt động.
+        HealthResponse: {"status": "ok", "database": "connected"} nếu mọi thứ bình thường.
     """
-    return HealthResponse(status="running")
+    try:
+        db.execute(text("SELECT 1"))
+        db_status = "connected"
+    except Exception:
+        db_status = "disconnected"
+    return HealthResponse(status="ok", database=db_status)

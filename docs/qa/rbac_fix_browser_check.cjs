@@ -1,0 +1,38 @@
+const {chromium}=require('playwright');const fs=require('fs'),assert=require('node:assert/strict');
+const base='http://127.0.0.1:8778',instance=JSON.parse(fs.readFileSync('docs/qa/rbac_fix_matrix_instance.json')),meta=JSON.parse(fs.readFileSync(instance.trial+'/meta.json'));const passwords=JSON.parse(fs.readFileSync('.sprint123-trial/credentials.local'));const results=[];
+async function req(page,url,method='GET',body){return page.evaluate(async({url,method,body})=>{const r=await fetch(API_BASE_URL+url,{method,credentials:'include',headers:{'Content-Type':'application/json','X-CSRF-Token':session.csrf_token},...(body?{body:JSON.stringify(body)}:{})});return {status:r.status,data:await r.json()};},{url,method,body});}
+async function main(){const scope=await(await fetch(base+'/demo-scope')).json();assert.equal(scope.database_name,'rbac_fixed.db');assert(scope.database_path.includes('agritrace_rbac_fixed_'));
+for(const channel of ['chrome','msedge']){const browser=await chromium.launch({channel,headless:true});try{
+for(const account of ['farm','packing','receiver','transport','distribution','inspector','admin','org_admin']){
+ const ctx=await browser.newContext({viewport:{width:1366,height:768}}),page=await ctx.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
+ try{await page.goto(base);await page.locator('#login-username').fill('s123_'+account+'@demo.local');await page.locator('#login-password').fill(passwords[account]);await page.locator('#login-submit').click();await page.locator('#app-view').waitFor({state:'visible'});await page.waitForFunction(()=>!document.querySelector('#login-submit').disabled);
+ const {role,org,ids}=meta.accounts[account],index=channel==='chrome'?0:2,bid=ids[index],second=ids[index+1],target=org||2;const manage=['farmer','org_admin'].includes(role),split=['farmer','processor','distributor'].includes(role),handover=['farmer','processor','transporter','distributor'].includes(role),edit=!['system_admin','inspector'].includes(role);
+ const checked={};async function check(key,url,method,body,status){const r=await req(page,url,method,body);checked[key]=r.status;assert.equal(r.status,status,account+' '+key+': '+JSON.stringify(r.data));return r;}
+ assert.equal(await page.locator('#farm-entry').evaluate(x=>!x.hidden),manage);assert.equal(await page.locator('#batch-entry').evaluate(x=>!x.hidden),role==='farmer');assert.equal(await page.locator('#btn-open-merge-batches').evaluate(x=>!x.hidden),role==='processor');
+ for(const hash of ['#overview','#farm-card','#batch-card','#traceability','#events']){await page.evaluate(h=>location.hash=h,hash);await page.waitForTimeout(30);assert.equal(await page.locator('.app-screen:not([hidden])').count(),1);}
+ let summary=(await check('summary',`/batches/${bid}/summary`,'GET',undefined,200)).data;assert.equal(summary.can_split,split);assert.equal(summary.can_merge,role==='processor');assert.equal(summary.can_handover,handover);
+ await page.evaluate(id=>openBatchDetailsModal(id),bid);assert.equal(await page.locator('#btn-detail-split').evaluate(x=>x.hidden),!split);assert.equal(await page.locator('#btn-detail-handover').evaluate(x=>x.hidden),!handover);await page.locator('#modal-batch-details').evaluate(x=>x.hidden=true);
+ const fp={name:'Temporary corrected RBAC '+channel+' '+account,location:'Temporary',owner:'Test',area:1};await check('farmCreate','/farms','POST',fp,manage?201:403);await check('farmUpdate',`/farms/${meta.farms[target]}`,'PUT',fp,manage?200:403);
+ assert.equal(await page.locator('#btn-open-add-product').evaluate(x=>!x.hidden),role==='system_admin');await check('productCreate','/products','POST',{name:'Shared product '+channel+' '+account,unit:'kg'},role==='system_admin'?201:403);
+ await check('batchUpdate',`/batches/${bid}`,'PUT',{harvest_date:'2026-10-09'},edit?200:403);await check('eventCreate',`/batches/${bid}/events`,'POST',{event_type:'QUALITY_CHECK',event_data:'Temporary test'},edit?201:403);
+ await check('harvest','/batches','POST',{farm_id:meta.farms[target],product_id:meta.product,quantity:5,harvest_date:'2026-10-09'},role==='farmer'?201:403);
+ await check('split',`/batches/${bid}/split`,'POST',{child_quantities:[.1,.1]},split?201:403);await check('merge','/batches/merge','POST',{product_id:meta.product,items:[{parent_batch_id:bid,quantity:.1},{parent_batch_id:second,quantity:.1}]},role==='processor'?201:403);
+ await check('handover',`/batches/${bid}/handover`,'POST',{to_org_id:target===2?3:2,note:'Temporary test'},handover?201:403);
+ const foreign=target===2?meta.accounts.farm.ids[0]:meta.accounts.receiver.ids[0];await check('foreignBatchRead',`/batches/${foreign}`,'GET',undefined,role==='inspector'?200:403);await check('foreignFarmWrite',`/farms/${meta.farms[target===2?1:2]}`,'PUT',fp,403);
+ await check('traceback',`/batches/${bid}/trace-back`,'GET',undefined,200);const chain=(await check('integrity',`/batches/${bid}/integrity`,'GET',undefined,200)).data;assert.equal(chain.is_valid,true);
+ const auditAllowed=['system_admin','org_admin','inspector'].includes(role);const logs=await check('audit','/audit-logs','GET',undefined,auditAllowed?200:403);
+ if(role==='org_admin'){assert(logs.data.every(x=>meta.users.find(u=>u.id===x.user_id)?.org===org));let foreignUser=meta.users.find(u=>u.org===2);await check('foreignAuditFilter','/audit-logs?user_id='+foreignUser.id,'GET',undefined,403);await check('foreignUserUpdate','/users/'+foreignUser.id,'PATCH',{is_active:false},403);}
+ if(role==='inspector'){assert.equal(await page.locator('#stat-pending-handovers').textContent(),'Không có quyền xem');assert.equal(await page.locator('#stat-audit').textContent(),String(logs.data.length));}
+ if(['system_admin','org_admin'].includes(role))assert.equal(await page.locator('#stat-pending-card a').evaluate(x=>x.hidden),true);
+ // Inject outages in this browser only, never change API/DB.
+ for(const [url,key,load] of [['**/farms','stat-farms','loadFarms'],['**/batches?*','stat-batches','loadBatches'],['**/handovers/pending','stat-pending-handovers','loadPendingHandovers'],...(auditAllowed?[['**/audit-logs','stat-audit','loadAuditLogs']]:[])]){
+  for(const status of [500,403]){await page.route(url,route=>route.fulfill({status,contentType:'application/json',body:JSON.stringify({detail:'Simulated test failure'})}));await page.evaluate(name=>window[name](),load);assert.equal(await page.locator('#'+key).textContent(),status===403?'Không có quyền xem':'Không tải được dữ liệu');if(key==='stat-batches')assert.equal(await page.locator('#stat-yield').textContent(),status===403?'Không có quyền xem':'Không tải được dữ liệu');await page.unroute(url);assert(await page.locator('#app-view').isVisible());}
+ }
+ await ctx.addCookies([{name:'session_id',value:'expired-test-session',url:base}]);const expired=await page.evaluate(async()=>{try{await apiRequest('/auth/me');return 200;}catch(e){return e.status;}});assert.equal(expired,401);await page.locator('#login-view').waitFor({state:'visible'});assert.equal(await page.locator('#modal-batch-details').evaluate(x=>x.hidden),true);assert.equal(errors.length,0,errors.join('\n'));
+ results.push({channel,account,role,passed:true,api:checked,kpiFailures:true,session401403:true});
+ }catch(e){results.push({channel,account,passed:false,error:Object.values(passwords).reduce((s,p)=>s.split(p).join('[redacted]'),String(e.stack))});}
+ finally{await ctx.close();fs.writeFileSync('docs/qa/rbac_fix_browser_results.json',JSON.stringify(results,null,2));}
+}
+}finally{await browser.close();}}
+console.log(JSON.stringify(results,null,2));if(results.some(x=>!x.passed))process.exitCode=1;}
+main().catch(e=>{console.error(Object.values(passwords).reduce((s,p)=>s.split(p).join('[redacted]'),String(e.stack)));process.exitCode=1});

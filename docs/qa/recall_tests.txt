@@ -1,0 +1,29 @@
+============================= test session starts =============================
+platform win32 -- Python 3.11.9, pytest-9.1.1, pluggy-1.6.0
+rootdir: D:\TTCS_K23C_N5\TTCS-K18C4-N5
+configfile: pytest.ini
+plugins: anyio-4.15.1
+collected 193 items
+
+tests\test_audit_logs.py ................                                [  8%]
+tests\test_batch_events.py ......                                        [ 11%]
+tests\test_batch_events_integrity.py ....                                [ 13%]
+tests\test_completion.py ............................                    [ 27%]
+tests\test_database_migration.py ....                                    [ 30%]
+tests\test_handovers.py .........                                        [ 34%]
+tests\test_health.py .                                                   [ 35%]
+tests\test_login_email.py ........                                       [ 39%]
+tests\test_login_lockout.py .........                                    [ 44%]
+tests\test_organization_isolation.py .........                           [ 48%]
+tests\test_sprint2_full.py .......                                       [ 52%]
+tests\test_sprint3_full.py ..........                                    [ 57%]
+tests\test_stage1a_security.py ...                                       [ 59%]
+tests\test_stage1b_rbac.py ........                                      [ 63%]
+tests\test_stage2_1_sync_and_verify.py ........                          [ 67%]
+tests\test_stage2_auth_and_users.py ........                             [ 71%]
+tests\test_stage3_business_review.py ........                            [ 75%]
+tests\test_stage3a1_rbac_and_session.py .......                          [ 79%]
+tests\test_stage3a2_trace_forward_and_consumed.py ..............         [ 86%]
+tests\test_stage3b1b_recall_design.py ..........................         [100%]
+
+================= 193 passed, 2 warnings in 74.15s (0:01:14) ==================

@@ -1,0 +1,171 @@
+=== BÁO CÁO CHI TIẾT 11 BATCH ID MỒ CÔI (Tổng 26 sự kiện) ===
+
+--------------------------------------------------------------------------------
+BATCH ID: 2
+  - Số sự kiện tham chiếu: 6
+  - Mã lô xác minh được: ['GNPS6FD8']
+  - Sản phẩm: ['Xoài cát Chu', 'id:1']
+  - Khối lượng ghi nhận: ['initial:10000.0']
+  - Ngày thu hoạch: ['2026-10-06']
+  - Tổ chức liên quan: [1, 2]
+  - Quan hệ làm cha (Parent trong batch_relations): []
+  - Quan hệ làm con (Child trong batch_relations): []
+  - Các trường CÓ BẰNG CHỨNG: ['code', 'harvest_date', 'initial_quantity', 'organization_id', 'product_id', 'product_name']
+  - Các trường KHÔNG THỂ XÁC MINH: ['current_remaining_quantity', 'is_deleted_original_reason', 'plot_id']
+  - Chi tiết từng sự kiện:
+      * Event #1: type=HARVEST, ts=2026-10-06 23:13:37.680537, org=1, payload_keys=['batch_code', 'plot_id', 'product_id', 'product_name', 'unit', 'initial_quantity', 'harvest_date']
+      * Event #3: type=HANDOVER_INIT, ts=2026-10-06 23:42:19.127381, org=1, payload_keys=['handover_id', 'batch_code', 'from_org_id', 'to_org_id', 'note']
+      * Event #4: type=HANDOVER_ACCEPT, ts=2026-10-06 23:42:43.715418, org=2, payload_keys=['handover_id', 'batch_code', 'from_org_id', 'to_org_id', 'message']
+      * Event #9: type=HANDOVER_INIT, ts=2026-10-07 00:00:12.440328, org=2, payload_keys=['handover_id', 'batch_code', 'from_org_id', 'to_org_id', 'note']
+      * Event #10: type=HANDOVER_ACCEPT, ts=2026-10-07 00:00:25.451421, org=1, payload_keys=['handover_id', 'batch_code', 'from_org_id', 'to_org_id', 'message']
+      * Event #55: type=SPLIT, ts=2026-10-07 02:17:59.922375, org=1, payload_keys=['child_batch_codes', 'child_quantities', 'total_split_quantity']
+--------------------------------------------------------------------------------
+BATCH ID: 4
+  - Số sự kiện tham chiếu: 2
+  - Mã lô xác minh được: ['B-ROOT-01']
+  - Sản phẩm: Không có trong payload
+  - Khối lượng ghi nhận: ['qty:1000.0']
+  - Ngày thu hoạch: ['2026-09-01']
+  - Tổ chức liên quan: [1]
+  - Quan hệ làm cha (Parent trong batch_relations): []
+  - Quan hệ làm con (Child trong batch_relations): []
+  - Các trường CÓ BẰNG CHỨNG: ['code', 'harvest_date', 'organization_id', 'quantity']
+  - Các trường KHÔNG THỂ XÁC MINH: ['current_remaining_quantity', 'is_deleted_original_reason', 'plot_id']
+  - Chi tiết từng sự kiện:
+      * Event #11: type=HARVEST, ts=2026-10-07 01:05:17.578150, org=1, payload_keys=['batch_code', 'harvest_date', 'quantity']
+      * Event #14: type=SPLIT, ts=2026-10-07 01:05:17.586323, org=1, payload_keys=['child_batch_codes', 'total_split_quantity']
+--------------------------------------------------------------------------------
+BATCH ID: 5
+  - Số sự kiện tham chiếu: 2
+  - Mã lô xác minh được: ['B-ROOT-02']
+  - Sản phẩm: Không có trong payload
+  - Khối lượng ghi nhận: ['qty:1000.0']
+  - Ngày thu hoạch: ['2026-09-02']
+  - Tổ chức liên quan: [1]
+  - Quan hệ làm cha (Parent trong batch_relations): []
+  - Quan hệ làm con (Child trong batch_relations): []
+  - Các trường CÓ BẰNG CHỨNG: ['code', 'harvest_date', 'organization_id', 'quantity']
+  - Các trường KHÔNG THỂ XÁC MINH: ['current_remaining_quantity', 'is_deleted_original_reason', 'plot_id']
+  - Chi tiết từng sự kiện:
+      * Event #12: type=HARVEST, ts=2026-10-07 01:05:17.578150, org=1, payload_keys=['batch_code', 'harvest_date', 'quantity']
+      * Event #17: type=SPLIT, ts=2026-10-07 01:05:17.586323, org=1, payload_keys=['child_batch_codes', 'total_split_quantity']
+--------------------------------------------------------------------------------
+BATCH ID: 6
+  - Số sự kiện tham chiếu: 2
+  - Mã lô xác minh được: ['B-ROOT-03']
+  - Sản phẩm: Không có trong payload
+  - Khối lượng ghi nhận: ['qty:1000.0']
+  - Ngày thu hoạch: ['2026-09-03']
+  - Tổ chức liên quan: [1]
+  - Quan hệ làm cha (Parent trong batch_relations): []
+  - Quan hệ làm con (Child trong batch_relations): []
+  - Các trường CÓ BẰNG CHỨNG: ['code', 'harvest_date', 'organization_id', 'quantity']
+  - Các trường KHÔNG THỂ XÁC MINH: ['current_remaining_quantity', 'is_deleted_original_reason', 'plot_id']
+  - Chi tiết từng sự kiện:
+      * Event #13: type=HARVEST, ts=2026-10-07 01:05:17.578150, org=1, payload_keys=['batch_code', 'harvest_date', 'quantity']
+      * Event #20: type=SPLIT, ts=2026-10-07 01:05:17.586323, org=1, payload_keys=['child_batch_codes', 'total_split_quantity']
+--------------------------------------------------------------------------------
+BATCH ID: 7
+  - Số sự kiện tham chiếu: 2
+  - Mã lô xác minh được: KHÔNG TÌM THẤY TRONG PAYLOAD
+  - Sản phẩm: Không có trong payload
+  - Khối lượng ghi nhận: ['qty:400.0']
+  - Ngày thu hoạch: Không có
+  - Tổ chức liên quan: [1]
+  - Quan hệ làm cha (Parent trong batch_relations): []
+  - Quan hệ làm con (Child trong batch_relations): []
+  - Các trường CÓ BẰNG CHỨNG: ['organization_id', 'quantity']
+  - Các trường KHÔNG THỂ XÁC MINH: ['current_remaining_quantity', 'is_deleted_original_reason', 'plot_id']
+  - Chi tiết từng sự kiện:
+      * Event #15: type=GENESIS_SPLIT, ts=2026-10-07 01:05:17.586323, org=1, payload_keys=['parent_batch_code', 'parent_batch_id', 'quantity']
+      * Event #23: type=EXPORT_MERGE, ts=2026-10-07 01:05:17.586323, org=1, payload_keys=['merged_batch_code', 'quantity_taken']
+--------------------------------------------------------------------------------
+BATCH ID: 8
+  - Số sự kiện tham chiếu: 2
+  - Mã lô xác minh được: KHÔNG TÌM THẤY TRONG PAYLOAD
+  - Sản phẩm: Không có trong payload
+  - Khối lượng ghi nhận: ['qty:600.0']
+  - Ngày thu hoạch: Không có
+  - Tổ chức liên quan: [1]
+  - Quan hệ làm cha (Parent trong batch_relations): []
+  - Quan hệ làm con (Child trong batch_relations): []
+  - Các trường CÓ BẰNG CHỨNG: ['organization_id', 'quantity']
+  - Các trường KHÔNG THỂ XÁC MINH: ['current_remaining_quantity', 'is_deleted_original_reason', 'plot_id']
+  - Chi tiết từng sự kiện:
+      * Event #16: type=GENESIS_SPLIT, ts=2026-10-07 01:05:17.586323, org=1, payload_keys=['parent_batch_code', 'parent_batch_id', 'quantity']
+      * Event #26: type=EXPORT_MERGE, ts=2026-10-07 01:05:17.586323, org=1, payload_keys=['merged_batch_code', 'quantity_taken']
+--------------------------------------------------------------------------------
+BATCH ID: 9
+  - Số sự kiện tham chiếu: 2
+  - Mã lô xác minh được: KHÔNG TÌM THẤY TRONG PAYLOAD
+  - Sản phẩm: Không có trong payload
+  - Khối lượng ghi nhận: ['qty:500.0']
+  - Ngày thu hoạch: Không có
+  - Tổ chức liên quan: [1]
+  - Quan hệ làm cha (Parent trong batch_relations): []
+  - Quan hệ làm con (Child trong batch_relations): []
+  - Các trường CÓ BẰNG CHỨNG: ['organization_id', 'quantity']
+  - Các trường KHÔNG THỂ XÁC MINH: ['current_remaining_quantity', 'is_deleted_original_reason', 'plot_id']
+  - Chi tiết từng sự kiện:
+      * Event #18: type=GENESIS_SPLIT, ts=2026-10-07 01:05:17.586323, org=1, payload_keys=['parent_batch_code', 'parent_batch_id', 'quantity']
+      * Event #24: type=EXPORT_MERGE, ts=2026-10-07 01:05:17.586323, org=1, payload_keys=['merged_batch_code', 'quantity_taken']
+--------------------------------------------------------------------------------
+BATCH ID: 10
+  - Số sự kiện tham chiếu: 2
+  - Mã lô xác minh được: KHÔNG TÌM THẤY TRONG PAYLOAD
+  - Sản phẩm: Không có trong payload
+  - Khối lượng ghi nhận: ['qty:500.0']
+  - Ngày thu hoạch: Không có
+  - Tổ chức liên quan: [1]
+  - Quan hệ làm cha (Parent trong batch_relations): []
+  - Quan hệ làm con (Child trong batch_relations): []
+  - Các trường CÓ BẰNG CHỨNG: ['organization_id', 'quantity']
+  - Các trường KHÔNG THỂ XÁC MINH: ['current_remaining_quantity', 'is_deleted_original_reason', 'plot_id']
+  - Chi tiết từng sự kiện:
+      * Event #19: type=GENESIS_SPLIT, ts=2026-10-07 01:05:17.586323, org=1, payload_keys=['parent_batch_code', 'parent_batch_id', 'quantity']
+      * Event #29: type=EXPORT_MERGE, ts=2026-10-07 01:05:17.602006, org=1, payload_keys=['merged_batch_code', 'quantity_taken']
+--------------------------------------------------------------------------------
+BATCH ID: 12
+  - Số sự kiện tham chiếu: 2
+  - Mã lô xác minh được: KHÔNG TÌM THẤY TRONG PAYLOAD
+  - Sản phẩm: Không có trong payload
+  - Khối lượng ghi nhận: ['qty:700.0']
+  - Ngày thu hoạch: Không có
+  - Tổ chức liên quan: [1]
+  - Quan hệ làm cha (Parent trong batch_relations): []
+  - Quan hệ làm con (Child trong batch_relations): []
+  - Các trường CÓ BẰNG CHỨNG: ['organization_id', 'quantity']
+  - Các trường KHÔNG THỂ XÁC MINH: ['current_remaining_quantity', 'is_deleted_original_reason', 'plot_id']
+  - Chi tiết từng sự kiện:
+      * Event #22: type=GENESIS_SPLIT, ts=2026-10-07 01:05:17.586323, org=1, payload_keys=['parent_batch_code', 'parent_batch_id', 'quantity']
+      * Event #30: type=EXPORT_MERGE, ts=2026-10-07 01:05:17.602006, org=1, payload_keys=['merged_batch_code', 'quantity_taken']
+--------------------------------------------------------------------------------
+BATCH ID: 25
+  - Số sự kiện tham chiếu: 2
+  - Mã lô xác minh được: KHÔNG TÌM THẤY TRONG PAYLOAD
+  - Sản phẩm: Không có trong payload
+  - Khối lượng ghi nhận: ['qty:625.0']
+  - Ngày thu hoạch: Không có
+  - Tổ chức liên quan: [1]
+  - Quan hệ làm cha (Parent trong batch_relations): []
+  - Quan hệ làm con (Child trong batch_relations): []
+  - Các trường CÓ BẰNG CHỨNG: ['organization_id', 'quantity']
+  - Các trường KHÔNG THỂ XÁC MINH: ['current_remaining_quantity', 'is_deleted_original_reason', 'plot_id']
+  - Chi tiết từng sự kiện:
+      * Event #53: type=GENESIS_SPLIT, ts=2026-10-07 02:17:59.900987, org=1, payload_keys=['parent_batch_code', 'parent_batch_id', 'quantity']
+      * Event #56: type=EXPORT_MERGE, ts=2026-10-07 03:38:40.246611, org=1, payload_keys=['merged_batch_code', 'merged_batch_id', 'quantity_taken']
+--------------------------------------------------------------------------------
+BATCH ID: 26
+  - Số sự kiện tham chiếu: 2
+  - Mã lô xác minh được: KHÔNG TÌM THẤY TRONG PAYLOAD
+  - Sản phẩm: Không có trong payload
+  - Khối lượng ghi nhận: ['qty:625.0']
+  - Ngày thu hoạch: Không có
+  - Tổ chức liên quan: [1]
+  - Quan hệ làm cha (Parent trong batch_relations): []
+  - Quan hệ làm con (Child trong batch_relations): []
+  - Các trường CÓ BẰNG CHỨNG: ['organization_id', 'quantity']
+  - Các trường KHÔNG THỂ XÁC MINH: ['current_remaining_quantity', 'is_deleted_original_reason', 'plot_id']
+  - Chi tiết từng sự kiện:
+      * Event #54: type=GENESIS_SPLIT, ts=2026-10-07 02:17:59.918478, org=1, payload_keys=['parent_batch_code', 'parent_batch_id', 'quantity']
+      * Event #57: type=EXPORT_MERGE, ts=2026-10-07 03:38:40.253736, org=1, payload_keys=['merged_batch_code', 'merged_batch_id', 'quantity_taken']

@@ -1,5 +1,7 @@
 # Backend - TTCS K18C4
 
+> **Bản kiểm tra Sprint 1–2 ngày 10/10/2026:** xem [hướng dẫn chạy/seed/tài khoản hiện tại](../docs/DEMO.md) và [báo cáo kiểm chứng](../docs/COMPLETION_REPORT.md). Các mô tả Sprint và mật khẩu mặc định ở phần tài liệu cũ bên dưới không phải cấu hình demo hiện tại.
+
 Backend API cho đề tài **"Truy xuất nguồn gốc và giám sát chuỗi lạnh nông sản"**.
 
 - **Framework:** Python + FastAPI
@@ -20,10 +22,11 @@ Backend API cho đề tài **"Truy xuất nguồn gốc và giám sát chuỗi l
   `FarmUpdate`/`BatchUpdate`/`DeleteResponse`; frontend ẩn/hiện theo trạng thái
   đăng nhập, thêm cột **Thao tác** (Sửa/Xoá) và dashboard thống kê
   (tổng vùng trồng, tổng lô nông sản, tổng sản lượng).
-- **Sprint 6:** **bảo mật đăng nhập** — sai mật khẩu **5 lần liên tiếp** thì khoá
-  tài khoản **5 phút** và trả `403` (kèm header `Retry-After`); đăng nhập thành
-  công hoặc hết thời gian khoá thì bộ đếm tự đặt lại; database cũ tự được thêm 2
-  cột qua migration khi server khởi động; kèm bộ test `pytest` trong `tests/`.
+- **Sprint 6 / S-04:** **bảo mật đăng nhập** — sai mật khẩu **5 lần liên tiếp** thì khoá
+  tài khoản **15 phút** và trả `403` (kèm header `Retry-After`); đăng nhập thành
+  công hoặc hết thời gian khoá thì bộ đếm tự đặt lại; **S-04:** cho phép đăng nhập
+  bằng **email** (thêm cột `users.email`); database cũ tự được thêm 2 cột qua
+  migration khi server khởi động; kèm bộ test `pytest` trong `tests/`.
 - **Sprint 7:** **lịch sử thao tác (audit log)** — bảng `audit_logs` ghi lại
   **ai đã làm gì, lúc nào** mỗi khi tạo/sửa/xoá Farm hoặc Batch (ghi tự động
   trong cùng transaction với thao tác); xem lại bằng `GET /audit-logs`
@@ -133,19 +136,26 @@ python -c "from fastapi.testclient import TestClient; from app.main import app; 
 
 Kết quả mong đợi: `200 {'status': 'running'}`
 
-### Bước 5 — Đăng nhập (Sprint 4)
+### Bước 5 — Đăng nhập (Sprint 4 / S-04)
 
-Tài khoản demo được tạo tự động ở lần chạy đầu tiên:
+Tài khoản demo được tạo tự động ở lần chạy đầu tiên (mỗi tài khoản có **email** để
+đăng nhập bằng email - S-04):
 
-| Tài khoản | Mật khẩu | Vai trò |
+| Email hoặc tài khoản | Mật khẩu | Vai trò |
 | --- | --- | --- |
-| `admin` | `123456` | admin (toàn quyền, xem được `GET /users`) |
-| `farmer` | `123456` | farmer (quản lý vùng trồng + lô nông sản) |
+| `admin@gmail.com` (hoặc `admin`) | `123456` | admin (toàn quyền, xem được `GET /users`) |
+| `farmer@gmail.com` (hoặc `farmer`) | `123456` | farmer (quản lý vùng trồng + lô nông sản) |
+
+> **S-04:** trường `username` của `POST /auth/login` chấp nhận **email hoặc tên
+> đăng nhập** (email không phân biệt hoa/thường); response trả kèm `email`.
 
 Kiểm tra nhanh bằng `curl.exe`:
 
 ```powershell
-# Đăng nhập đúng -> 200 + {"username":"admin","role":"admin"}
+# Đăng nhập đúng bằng EMAIL -> 200 + {"username":"admin","email":"admin@gmail.com","role":"admin"}
+curl.exe --% -s -X POST http://127.0.0.1:8000/auth/login -H "Content-Type: application/json" -d "{\"username\":\"admin@gmail.com\",\"password\":\"123456\"}"
+
+# Vẫn đăng nhập được bằng tên đăng nhập (tương thích ngược)
 curl.exe --% -s -X POST http://127.0.0.1:8000/auth/login -H "Content-Type: application/json" -d "{\"username\":\"admin\",\"password\":\"123456\"}"
 
 # Không gửi thông tin đăng nhập -> 401 (GET /farms nay cần quyền)
@@ -170,8 +180,9 @@ nên **không** đụng tới file `ttcs.db`:
 
 ```powershell
 cd backend
-python -m pytest                                  # chạy toàn bộ (29 test)
-python -m pytest tests/test_login_lockout.py -v   # chỉ test bảo mật đăng nhập
+python -m pytest                                  # chạy toàn bộ (83 test)
+python -m pytest tests/test_login_email.py -v     # chỉ test đăng nhập bằng email (S-04)
+python -m pytest tests/test_login_lockout.py -v   # chỉ test bảo mật đăng nhập (khoá tài khoản)
 python -m pytest tests/test_audit_logs.py -v      # chỉ test lịch sử thao tác
 ```
 
@@ -196,7 +207,7 @@ Các kịch bản được kiểm tra:
 | Method | Endpoint | Mô tả | Quyền | Mã trả về |
 | --- | --- | --- | --- | --- |
 | GET | `/health` | Kiểm tra hệ thống đang chạy | công khai | `200` |
-| POST | `/auth/login` | Kiểm tra tài khoản, trả về `{username, role}` | công khai | `200` · `401` sai tài khoản · `403` tài khoản đang bị tạm khoá · `422` thiếu dữ liệu |
+| POST | `/auth/login` | Kiểm tra **email hoặc tên đăng nhập** + mật khẩu, trả về `{username, email, role}` | công khai | `200` · `401` sai tài khoản · `403` tài khoản đang bị tạm khoá · `422` thiếu dữ liệu |
 | GET | `/farms` | Lấy danh sách vùng trồng (sắp xếp theo `id` tăng dần) | farmer **hoặc** admin | `200` · `401` |
 | POST | `/farms` | Tạo vùng trồng mới | farmer **hoặc** admin | `201` · `401` · `422` dữ liệu sai |
 | PUT | `/farms/{farm_id}` | Cập nhật (thay thế) vùng trồng theo `id` | farmer **hoặc** admin | `200` · `401` · `404` không tìm thấy · `422` dữ liệu sai |
@@ -331,7 +342,7 @@ Chính sách (hằng số khai báo ở đầu `app/security.py`, đổi 1 chỗ
 | Hằng số | Giá trị | Ý nghĩa |
 | --- | --- | --- |
 | `MAX_FAILED_LOGIN_ATTEMPTS` | `5` | Số lần nhập sai **liên tiếp** tối đa |
-| `LOCKOUT_DURATION` | `timedelta(minutes=5)` | Thời gian tạm khoá tài khoản |
+| `LOCKOUT_DURATION` | `timedelta(minutes=15)` | Thời gian tạm khoá tài khoản |
 
 Luồng xử lý của `POST /auth/login` (`authenticate_user_with_lockout()`):
 
@@ -339,7 +350,7 @@ Luồng xử lý của `POST /auth/login` (`authenticate_user_with_lockout()`):
    không có tài khoản nào để ghi nhận, và cố tình không phân biệt "sai username"
    với "sai mật khẩu").
 2. Sai mật khẩu lần 1–4 → **`401`** + `failed_login_attempts` tăng 1 sau mỗi lần.
-3. Sai mật khẩu **lần thứ 5** → khoá tài khoản: `locked_until = now + 5 phút`, trả
+3. Sai mật khẩu **lần thứ 5** → khoá tài khoản: `locked_until = now + 15 phút`, trả
    **`403 Forbidden`** kèm message nêu rõ thời gian chờ.
 4. Đang trong thời gian khoá → **`403`** với mọi lần thử, **kể cả đúng mật khẩu**
    (API cần quyền gọi bằng HTTP Basic của tài khoản bị khoá cũng trả `403`).
@@ -365,7 +376,7 @@ Kiểm tra nhanh (sai 5 lần là bị khoá; `-w` in ra mã HTTP):
 curl.exe --% -s -X POST http://127.0.0.1:8000/auth/login -H "Content-Type: application/json" -d "{\"username\":\"admin\",\"password\":\"123456\"}"
 ```
 
-> Muốn thử lại ngay mà không chờ 5 phút: mở `/docs`, gọi `GET /users` bằng tài
+> Muốn thử lại ngay mà không chờ 15 phút: mở `/docs`, gọi `GET /users` bằng tài
 > khoản admin khác, hoặc đặt lại 2 cột bằng `sqlite3`:
 > `UPDATE users SET failed_login_attempts = 0, locked_until = NULL WHERE username = 'admin';`
 

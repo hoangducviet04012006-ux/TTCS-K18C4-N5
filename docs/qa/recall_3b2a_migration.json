@@ -1,0 +1,17 @@
+{
+  "mode": "new_test_copy",
+  "source_unchanged": true,
+  "existing_tables_preserved": true,
+  "output": "D:\\TTCS_K23C_N5\\TTCS-K18C4-N5\\.recall-trial\\recall_3b2a.db",
+  "foreign_key_violations_preserved": 0,
+  "integrity": "ok",
+  "fk_violations": 0,
+  "table_counts": {
+    "batches": 7,
+    "batch_events": 8,
+    "recalls": 0,
+    "recall_acknowledgments": 0,
+    "idempotency_records": 0
+  },
+  "sqlite_version": "3.45.1"
+}

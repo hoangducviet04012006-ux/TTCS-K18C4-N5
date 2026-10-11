@@ -1,0 +1,11 @@
+============================= test session starts =============================
+platform win32 -- Python 3.11.9, pytest-9.1.1, pluggy-1.6.0
+rootdir: D:\TTCS_K23C_N5\TTCS-K18C4-N5
+configfile: pytest.ini
+plugins: anyio-4.15.1
+collected 13 items
+
+tests\test_sprint123_demo_safety.py ......                               [ 46%]
+tests\test_stage3a1_rbac_and_session.py .......                          [100%]
+
+======================= 13 passed, 1 warning in 10.21s ========================
