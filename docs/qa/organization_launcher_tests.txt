@@ -1,0 +1,8 @@
+Port 8765 unavailable; PID: 21004. Keeping existing processes; trying next port.
+Port 8766 unavailable; PID: 23264. Keeping existing processes; trying next port.
+Selected free port: 8767 (requested 8765).
+Sprint 1-3 TEST ONLY: http://127.0.0.1:8767/
+Code root: D:\TTCS_K23C_N5\TTCS-K18C4-N5
+Database: D:\TTCS_K23C_N5\TTCS-K18C4-N5\.sprint123-trial\demo_sprint123.db
+Login: s123_farm@demo.local; password: private .sprint123-trial/credentials.local (never logged)
+Demo process PID: 12204; stop with Stop-Process -Id 12204

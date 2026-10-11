@@ -21,10 +21,12 @@ from app.models import (
     ACTION_UPDATE,
     ENTITY_FARM,
     Farm,
+    ROLE_INSPECTOR,
     User,
 )
 from app.schemas import DeleteResponse, FarmCreate, FarmResponse, FarmUpdate
-from app.security import require_admin, require_farmer
+from app.security import require_admin, require_farm_reader, require_farmer
+from app.services.rbac import check_action_permission
 
 router = APIRouter(
     prefix="/farms",
@@ -39,7 +41,7 @@ router = APIRouter(
     summary="Tạo vùng trồng / thửa đất mới",
     description=(
         "Lưu một thửa đất mới vào database, tự động gán theo `organization_id` của tài khoản hiện tại.\n\n"
-        "**Phân quyền:** đăng nhập với role `farmer` hoặc `admin`."
+        "**Phân quyền:** tạo vùng chỉ dành cho `farmer` hoặc `org_admin`."
     ),
     responses={
         status.HTTP_401_UNAUTHORIZED: {"description": "Chưa đăng nhập."},
@@ -52,6 +54,7 @@ def create_farm(
     db: Session = Depends(get_db),
 ) -> Farm:
     """Tạo thửa đất mới thuộc tổ chức hiện tại."""
+    check_action_permission(current_user, "FARM_MANAGE")
     org_id = current_user.organization_id
     if org_id is None:
         raise HTTPException(
@@ -84,17 +87,23 @@ def create_farm(
     summary="Lấy danh sách vùng trồng",
     description=(
         "Trả về danh sách vùng trồng thuộc tổ chức của tài khoản hiện tại.\n\n"
-        "**Phân quyền:** đăng nhập với role `farmer` hoặc `admin`."
+        "**Phân quyền:** đọc theo tổ chức; inspector được đọc liên tổ chức."
     ),
 )
 def list_farms(
-    current_user: User = Depends(require_farmer),
+    current_user: User = Depends(require_farm_reader),
     db: Session = Depends(get_db),
 ) -> list[Farm]:
-    """Lấy danh sách vùng trồng (cách ly theo tổ chức)."""
-    query = select(Farm).order_by(Farm.id)
-    if current_user.organization_id is not None:
-        query = query.where(Farm.organization_id == current_user.organization_id)
+    if current_user.role == ROLE_INSPECTOR:
+        query = select(Farm).order_by(Farm.id)
+        return list(db.scalars(query).all())
+
+    if current_user.organization_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tài khoản chưa được liên kết với tổ chức nào.",
+        )
+    query = select(Farm).where(Farm.organization_id == current_user.organization_id).order_by(Farm.id)
     return list(db.scalars(query).all())
 
 
@@ -107,7 +116,7 @@ def list_farms(
 )
 def get_farm(
     farm_id: int = Path(..., ge=1, description="ID vùng trồng."),
-    current_user: User = Depends(require_farmer),
+    current_user: User = Depends(require_farm_reader),
     db: Session = Depends(get_db),
 ) -> Farm:
     """Lấy chi tiết thửa đất (kiểm tra cách ly tổ chức)."""
@@ -118,11 +127,12 @@ def get_farm(
             detail=f"Không tìm thấy vùng trồng có id={farm_id}.",
         )
 
-    if current_user.organization_id is not None and farm.organization_id != current_user.organization_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Bạn không có quyền truy cập dữ liệu của tổ chức khác.",
-        )
+    if current_user.role != ROLE_INSPECTOR:
+        if current_user.organization_id is None or farm.organization_id != current_user.organization_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Bạn không có quyền truy cập dữ liệu của tổ chức khác.",
+            )
 
     return farm
 
@@ -141,6 +151,7 @@ def update_farm(
     db: Session = Depends(get_db),
 ) -> Farm:
     """Cập nhật thông tin vùng trồng theo id."""
+    check_action_permission(current_user, "FARM_MANAGE")
     farm = db.get(Farm, farm_id)
     if farm is None:
         raise HTTPException(
@@ -148,7 +159,7 @@ def update_farm(
             detail=f"Không tìm thấy vùng trồng có id={farm_id}.",
         )
 
-    if current_user.organization_id is not None and farm.organization_id != current_user.organization_id:
+    if current_user.organization_id is None or farm.organization_id != current_user.organization_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Bạn không có quyền truy cập dữ liệu của tổ chức khác.",
@@ -191,13 +202,15 @@ def delete_farm(
             detail=f"Không tìm thấy vùng trồng có id={farm_id}.",
         )
 
-    if current_user.organization_id is not None and farm.organization_id != current_user.organization_id:
+    if current_user.organization_id is None or farm.organization_id != current_user.organization_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Bạn không có quyền truy cập dữ liệu của tổ chức khác.",
         )
 
-    deleted_batches = len(farm.batches)
+    if farm.batches:
+        raise HTTPException(409, "Vùng trồng có lô truy xuất; không thể xóa lịch sử nguồn gốc.")
+    deleted_batches = 0
     db.delete(farm)
     try:
         record_action(db, current_user, ACTION_DELETE, ENTITY_FARM, farm_id)

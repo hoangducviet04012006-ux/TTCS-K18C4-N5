@@ -1,0 +1,142 @@
+[
+  {
+    "channel": "chrome",
+    "test": "role:farm",
+    "passed": true
+  },
+  {
+    "channel": "chrome",
+    "test": "role:packing",
+    "passed": true
+  },
+  {
+    "channel": "chrome",
+    "test": "role:receiver",
+    "passed": true
+  },
+  {
+    "channel": "chrome",
+    "test": "role:transport",
+    "passed": true
+  },
+  {
+    "channel": "chrome",
+    "test": "role:distribution",
+    "passed": true
+  },
+  {
+    "channel": "chrome",
+    "test": "role:inspector",
+    "passed": true
+  },
+  {
+    "channel": "chrome",
+    "test": "role:admin",
+    "passed": true
+  },
+  {
+    "channel": "chrome",
+    "test": "role:org_admin",
+    "passed": true
+  },
+  {
+    "channel": "chrome",
+    "test": "farm UI create",
+    "passed": true
+  },
+  {
+    "channel": "chrome",
+    "test": "harvest double submit, case search, split + integrity",
+    "passed": true
+  },
+  {
+    "channel": "chrome",
+    "test": "unrelated organization read/write denied; session preserved",
+    "passed": true
+  },
+  {
+    "channel": "chrome",
+    "test": "partial merge UI + handover pending",
+    "passed": true
+  },
+  {
+    "channel": "chrome",
+    "test": "receive UI, lineage, timeline, hash verification",
+    "passed": true
+  },
+  {
+    "channel": "chrome",
+    "test": "401 return destination / 403 retains session / no JS error",
+    "passed": true
+  },
+  {
+    "channel": "msedge",
+    "test": "role:farm",
+    "passed": true
+  },
+  {
+    "channel": "msedge",
+    "test": "role:packing",
+    "passed": true
+  },
+  {
+    "channel": "msedge",
+    "test": "role:receiver",
+    "passed": true
+  },
+  {
+    "channel": "msedge",
+    "test": "role:transport",
+    "passed": true
+  },
+  {
+    "channel": "msedge",
+    "test": "role:distribution",
+    "passed": true
+  },
+  {
+    "channel": "msedge",
+    "test": "role:inspector",
+    "passed": true
+  },
+  {
+    "channel": "msedge",
+    "test": "role:admin",
+    "passed": true
+  },
+  {
+    "channel": "msedge",
+    "test": "role:org_admin",
+    "passed": true
+  },
+  {
+    "channel": "msedge",
+    "test": "farm UI create",
+    "passed": true
+  },
+  {
+    "channel": "msedge",
+    "test": "harvest double submit, case search, split + integrity",
+    "passed": true
+  },
+  {
+    "channel": "msedge",
+    "test": "unrelated organization read/write denied; session preserved",
+    "passed": true
+  },
+  {
+    "channel": "msedge",
+    "test": "partial merge UI + handover pending",
+    "passed": true
+  },
+  {
+    "channel": "msedge",
+    "test": "receive UI, lineage, timeline, hash verification",
+    "passed": true
+  },
+  {
+    "channel": "msedge",
+    "test": "401 return destination / 403 retains session / no JS error",
+    "passed": true
+  }
+]

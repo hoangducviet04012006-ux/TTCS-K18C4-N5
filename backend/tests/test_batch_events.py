@@ -72,7 +72,7 @@ def test_tao_event_moi_thanh_cong_va_chuoi_hash_hop_le(client: TestClient) -> No
     res1 = client.post(
         f"/batches/{batch_id}/events",
         json={
-            "event_type": "HARVEST",
+            "event_type": "HARVEST_NOTE",
             "event_data": "Thu hoạch xoài 500kg",
         },
         headers=headers,
@@ -80,7 +80,7 @@ def test_tao_event_moi_thanh_cong_va_chuoi_hash_hop_le(client: TestClient) -> No
     assert res1.status_code == 201
     event1 = res1.json()
     assert event1["batch_id"] == batch_id
-    assert event1["event_type"] == "HARVEST"
+    assert event1["event_type"] == "HARVEST_NOTE"
     assert event1["event_data"] == "Thu hoạch xoài 500kg"
     assert "prev_hash" in event1
     assert "record_hash" in event1
@@ -111,19 +111,19 @@ def test_doc_event_thanh_cong(client: TestClient) -> None:
     )
 
     # Đọc danh sách event theo batch
-    res_batch_events = client.get(f"/batches/{batch_id}/events")
+    res_batch_events = client.get(f"/batches/{batch_id}/events", auth=("admin", "123456"))
     assert res_batch_events.status_code == 200
     events_list = res_batch_events.json()
     assert len(events_list) >= 2  # Gồm BATCH_CREATED và PROCESSING
 
     # Đọc tất cả event
-    res_all = client.get("/events")
+    res_all = client.get("/events", auth=("admin", "123456"))
     assert res_all.status_code == 200
     assert len(res_all.json()) >= 2
 
     # Đọc chi tiết event theo ID
     event_id = events_list[0]["id"]
-    res_detail = client.get(f"/events/{event_id}")
+    res_detail = client.get(f"/events/{event_id}", auth=("admin", "123456"))
     assert res_detail.status_code == 200
     assert res_detail.json()["id"] == event_id
 

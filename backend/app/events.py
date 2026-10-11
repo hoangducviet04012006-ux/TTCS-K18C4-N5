@@ -1,17 +1,22 @@
-"""Ghi & đọc sự kiện của lô nông sản (Batch Event) - Sprint S-11.
+"""Ghi & đọc sự kiện của lô nông sản (Batch Event) - Tương thích ngược Sprint S-11 & Sprint 2.
 
-Module này là điểm duy nhất chịu trách nhiệm ghi và đọc các sự kiện (batch_events).
-Mỗi sự kiện được ghi theo cơ chế **append-only** với mã bămprev_hash và record_hash
+Module này điều phối với app.hash_chain để ghi và đọc các sự kiện batch_events.
+Mỗi sự kiện được ghi theo cơ chế append-only với mã băm prev_hash và current_hash/record_hash
 tạo thành một chuỗi liên kết (hash chain) đảm bảo tính toàn vẹn dữ liệu.
 """
 
-import hashlib
 from datetime import datetime, timezone
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.audit import record_action
+from app.hash_chain import (
+    calculate_event_hash as hash_chain_calc,
+    record_event,
+    verify_batch_chain,
+)
 from app.models import ACTION_CREATE, BatchEvent, User
 
 
@@ -20,20 +25,25 @@ def _naive_utcnow() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
-def calculate_event_hash(
-    batch_id: int,
-    event_type: str,
-    event_data: str | None,
-    created_at: datetime,
-    prev_hash: str,
-) -> str:
-    """Tính toán SHA-256 record_hash cho sự kiện lô nông sản.
+def calculate_event_hash(*args, **kwargs) -> str:
+    """Tính toán mã băm cho sự kiện.
 
-    Payload mã hóa dạng: batch_id|event_type|event_data|created_at_iso|prev_hash
+    Hỗ trợ 2 chữ ký:
+    1. Chữ ký Sprint 2 (T-24): calculate_event_hash(prev_hash: str, event_data: dict) -> str
+    2. Chữ ký Sprint 1 (S-11): calculate_event_hash(batch_id, event_type, event_data, created_at, prev_hash) -> str
     """
-    created_at_str = created_at.isoformat()
-    raw = f"{batch_id}|{event_type}|{event_data or ''}|{created_at_str}|{prev_hash}"
-    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+    if len(args) == 2 and isinstance(args[0], str) and isinstance(args[1], dict):
+        return hash_chain_calc(args[0], args[1])
+    if "prev_hash" in kwargs and "event_data" in kwargs and isinstance(kwargs["event_data"], dict):
+        return hash_chain_calc(kwargs["prev_hash"], kwargs["event_data"])
+
+    # Fallback cho Sprint 2 dict payload
+    if len(args) >= 5:
+        batch_id, event_type, event_data, created_at, prev_hash = args[:5]
+        payload = {"event_data": event_data, "event_type": event_type, "batch_id": batch_id}
+        return hash_chain_calc(prev_hash, payload)
+
+    return ""
 
 
 def record_batch_event(
@@ -46,40 +56,31 @@ def record_batch_event(
     from_org_id: int | None = None,
     to_org_id: int | None = None,
     notes: str | None = None,
+    payload: dict[str, Any] | None = None,
 ) -> BatchEvent:
-    """Tạo một sự kiện mới cho lô nông sản (append-only).
+    """Tạo một sự kiện mới cho lô nông sản (append-only)."""
+    eff_user_id = user.id if user is not None else (user_id or 1)
+    eff_org_id = from_org_id or (user.organization_id if user else 1) or 1
+    raw_desc = event_data if event_data is not None else (notes or f"Sự kiện {event_type}")
 
-    Lấy record_hash của sự kiện trước đó của cùng lô làm prev_hash.
-    Nếu là sự kiện đầu tiên của lô, prev_hash là 64 ký tự '0'.
-    """
-    last_event = db.scalar(
-        select(BatchEvent)
-        .where(BatchEvent.batch_id == batch_id)
-        .order_by(BatchEvent.id.desc())
-        .limit(1)
-    )
-    prev_hash = last_event.record_hash if (last_event and last_event.record_hash) else "0" * 64
-    now = _naive_utcnow()
+    evt_payload = payload or {
+        "event_data": raw_desc,
+        "description": raw_desc,
+        "event_type": event_type,
+    }
 
-    eff_user_id = user.id if user is not None else user_id
-    eff_data = event_data if event_data is not None else notes
-
-    record_hash = calculate_event_hash(batch_id, event_type, eff_data, now, prev_hash)
-
-    event = BatchEvent(
+    event = record_event(
+        db=db,
         batch_id=batch_id,
         event_type=event_type,
-        event_data=eff_data,
+        payload=evt_payload,
+        org_id=eff_org_id,
         user_id=eff_user_id,
+        event_data=raw_desc,
         from_org_id=from_org_id,
         to_org_id=to_org_id,
         notes=notes,
-        created_at=now,
-        prev_hash=prev_hash,
-        record_hash=record_hash,
     )
-    db.add(event)
-    db.flush()
 
     if user is not None:
         record_action(db, user, ACTION_CREATE, "batch_event", event.id)
@@ -103,87 +104,25 @@ def fetch_batch_events(
     return list(db.scalars(stmt).all())
 
 
+def verify_batch_events_integrity(db: Session, batch_id: int) -> dict:
+    """Kiểm tra toàn vẹn chuỗi sự kiện của một lô nông sản.
+
+    Ánh xạ kết quả sang cả chuẩn Sprint 1 và Sprint 2.
+    """
+    res = verify_batch_chain(db, batch_id)
+    if not res.get("valid", True):
+        # Đồng bộ error_type cho các test cũ S-12
+        err = res.get("error_type")
+        if err == "HASH_MISMATCH":
+            res["error_type"] = "RECORD_HASH_MISMATCH"
+        elif err == "CHAIN_BROKEN":
+            res["error_type"] = "PREV_HASH_MISMATCH"
+    return res
+
+
 __all__ = [
     "calculate_event_hash",
     "fetch_batch_events",
     "record_batch_event",
     "verify_batch_events_integrity",
 ]
-
-
-def verify_batch_events_integrity(db: Session, batch_id: int) -> dict:
-    """Kiểm tra toàn vẹn chuỗi sự kiện của một lô nông sản (Hash Chain Verification) - Sprint S-12."""
-    events = fetch_batch_events(db, batch_id=batch_id, limit=10000)
-
-    if not events:
-        return {
-            "valid": True,
-            "batch_id": batch_id,
-            "total_events": 0,
-            "message": "Lô nông sản chưa có sự kiện nào trong hệ thống.",
-        }
-
-    for idx, event in enumerate(events):
-        if idx == 0:
-            expected_prev_hash = "0" * 64
-            if event.prev_hash != expected_prev_hash:
-                return {
-                    "valid": False,
-                    "batch_id": batch_id,
-                    "event_id": event.id,
-                    "index": idx,
-                    "error_type": "PREV_HASH_MISMATCH",
-                    "expected_hash": expected_prev_hash,
-                    "actual_hash": event.prev_hash,
-                    "message": f"Sự kiện đầu tiên (ID #{event.id}) có prev_hash không đúng chuẩn genesis.",
-                }
-        else:
-            prev_event = events[idx - 1]
-            if event.prev_hash != prev_event.record_hash:
-                return {
-                    "valid": False,
-                    "batch_id": batch_id,
-                    "event_id": event.id,
-                    "index": idx,
-                    "error_type": "PREV_HASH_MISMATCH",
-                    "expected_hash": prev_event.record_hash,
-                    "actual_hash": event.prev_hash,
-                    "message": (
-                        f"Chuỗi sự kiện bị đứt mạch tại vị trí index {idx} (Event ID #{event.id}). "
-                        f"prev_hash của sự kiện hiện tại ({event.prev_hash[:12]}...) không khớp với "
-                        f"record_hash của sự kiện trước đó #{prev_event.id} ({prev_event.record_hash[:12]}...). "
-                        f"Có thể sự kiện trước đó đã bị xóa hoặc prev_hash bị chỉnh sửa."
-                    ),
-                }
-
-        eff_data = event.event_data if event.event_data is not None else event.notes
-        computed_hash = calculate_event_hash(
-            batch_id=event.batch_id,
-            event_type=event.event_type,
-            event_data=eff_data,
-            created_at=event.created_at,
-            prev_hash=event.prev_hash,
-        )
-
-        if computed_hash != event.record_hash:
-            return {
-                "valid": False,
-                "batch_id": batch_id,
-                "event_id": event.id,
-                "index": idx,
-                "error_type": "RECORD_HASH_MISMATCH",
-                "expected_hash": computed_hash,
-                "actual_hash": event.record_hash,
-                "message": (
-                    f"Dữ liệu sự kiện tại vị trí index {idx} (Event ID #{event.id}) đã bị chỉnh sửa hoặc giả mạo. "
-                    f"Mã băm tính toán lại ({computed_hash[:12]}...) "
-                    f"không khớp với record_hash lưu trong cơ sở dữ liệu ({event.record_hash[:12]}...)."
-                ),
-            }
-
-    return {
-        "valid": True,
-        "batch_id": batch_id,
-        "total_events": len(events),
-        "message": f"Toàn bộ {len(events)} sự kiện của lô #{batch_id} đều hợp lệ và đảm bảo tính toàn vẹn dữ liệu.",
-    }

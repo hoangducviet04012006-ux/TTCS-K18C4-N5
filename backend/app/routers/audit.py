@@ -13,7 +13,7 @@ Hỗ trợ lọc để tra cứu nhanh: ``?entity=farm|batch``, ``?user_id=<id>`
 
 from typing import Literal
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.audit import (
@@ -24,7 +24,8 @@ from app.audit import (
 from app.database import get_db
 from app.models import User
 from app.schemas import AuditLogResponse
-from app.security import require_admin
+from app.security import require_audit_reader
+from app.services.rbac import get_effective_role
 
 router = APIRouter(
     prefix="/audit-logs",
@@ -36,7 +37,7 @@ router = APIRouter(
     "",
     response_model=list[AuditLogResponse],
     status_code=status.HTTP_200_OK,
-    summary="Xem lịch sử thao tác (chỉ admin)",
+    summary="Xem nhật ký quản trị theo phạm vi vai trò",
     description=(
         "Trả về danh sách thao tác đã được ghi nhận, **mới nhất trước**: ai "
         "(`user_id`/`username`) làm gì (`action`) trên bản ghi nào "
@@ -46,7 +47,7 @@ router = APIRouter(
         "**Bộ lọc (tuỳ chọn):** `entity` (`farm`/`batch`), `user_id`, `limit` "
         f"(mặc định {DEFAULT_AUDIT_LOG_LIMIT}, tối đa {MAX_AUDIT_LOG_LIMIT}). "
         "Giá trị `entity` không hợp lệ → `422 Unprocessable Entity`.\n\n"
-        "**Phân quyền:** chỉ `role = admin` được gọi (dùng `require_admin`). "
+        "**Phân quyền:** system_admin/inspector đọc toàn hệ thống; org_admin chỉ đọc phạm vi tổ chức. "
         "Farmer gọi sẽ nhận `403 Forbidden`."
     ),
     responses={
@@ -61,7 +62,7 @@ router = APIRouter(
 def list_audit_logs(
     # `Literal` (chuỗi cụ thể) để FastAPI validate: giá trị lạ -> 422.
     # Hai giá trị hợp lệ trùng với ENTITY_FARM / ENTITY_BATCH ở `app/models.py`.
-    entity: Literal["farm", "batch"] | None = Query(
+    entity: Literal["farm", "batch", "user"] | None = Query(
         default=None,
         description="Lọc theo loại dữ liệu bị tác động: `farm` hoặc `batch`.",
         examples=["farm"],
@@ -82,10 +83,10 @@ def list_audit_logs(
         ),
         examples=[100],
     ),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_audit_reader),
     db: Session = Depends(get_db),
 ) -> list[AuditLogResponse]:
-    """Lấy lịch sử thao tác (chỉ admin).
+    """Lấy lịch sử thao tác trong phạm vi vai trò.
 
     Args:
         entity: Lọc theo ``"farm"`` / ``"batch"``; ``None`` = tất cả.
@@ -102,7 +103,13 @@ def list_audit_logs(
         HTTPException: 401 nếu chưa đăng nhập; 403 nếu không phải admin
             (được raise tự động bên trong dependency ``require_admin``).
     """
-    # `current_user` không dùng trong thân hàm nhưng bắt buộc phải khai báo để
-    # FastAPI chạy dependency kiểm tra quyền trước khi vào endpoint.
-    _ = current_user
-    return fetch_audit_logs(db, entity=entity, user_id=user_id, limit=limit)
+    organization_id = None
+    if get_effective_role(current_user) == "org_admin":
+        organization_id = current_user.organization_id
+        if organization_id is None:
+            raise HTTPException(403, "Tài khoản chưa được liên kết với tổ chức.")
+        if user_id is not None:
+            actor = db.get(User, user_id)
+            if actor is None or actor.organization_id != organization_id:
+                raise HTTPException(403, "Không có quyền xem nhật ký của tổ chức khác.")
+    return fetch_audit_logs(db, entity=entity, user_id=user_id, limit=limit, organization_id=organization_id)

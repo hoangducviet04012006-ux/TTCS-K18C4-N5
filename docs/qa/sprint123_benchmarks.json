@@ -1,0 +1,26 @@
+{
+  "write_1000_events_seconds": 0.7424204999988433,
+  "verify_1000_events": {
+    "seconds": 0.02126490000227932,
+    "valid": true,
+    "events": 1000
+  },
+  "timeline_200_events": {
+    "seconds": 0.005253300005279016,
+    "events": 200
+  },
+  "backwards_1000_nodes": {
+    "seconds": 0.49217119999957504,
+    "ancestors": 999
+  },
+  "list_5000plus_batches": {
+    "seconds": 0.007910899999842513,
+    "returned": 20,
+    "queries": 24
+  },
+  "summary": {
+    "seconds": 0.008117600002151448,
+    "queries": 3,
+    "parents": 2
+  }
+}

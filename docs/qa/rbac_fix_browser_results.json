@@ -1,0 +1,252 @@
+[
+  {
+    "channel": "chrome",
+    "account": "farm",
+    "passed": false,
+    "error": "AssertionError [ERR_ASSERTION]: farm split: {\"detail\":\"Lỗi cơ sở dữ liệu khi thực hiện tách lô.\"}\n\n500 !== 201\n\n    at check (D:\\TTCS_K23C_N5\\TTCS-K18C4-N5\\docs\\qa\\rbac_fix_browser_check.cjs:10:137)\n    at async main (D:\\TTCS_K23C_N5\\TTCS-K18C4-N5\\docs\\qa\\rbac_fix_browser_check.cjs:19:2)"
+  },
+  {
+    "channel": "chrome",
+    "account": "packing",
+    "passed": false,
+    "error": "AssertionError [ERR_ASSERTION]: packing merge: {\"detail\":\"Lỗi cơ sở dữ liệu khi thực hiện gộp lô.\"}\n\n500 !== 201\n\n    at check (D:\\TTCS_K23C_N5\\TTCS-K18C4-N5\\docs\\qa\\rbac_fix_browser_check.cjs:10:137)\n    at async main (D:\\TTCS_K23C_N5\\TTCS-K18C4-N5\\docs\\qa\\rbac_fix_browser_check.cjs:19:95)"
+  },
+  {
+    "channel": "chrome",
+    "account": "receiver",
+    "role": "processor",
+    "passed": true,
+    "api": {
+      "summary": 200,
+      "farmCreate": 403,
+      "farmUpdate": 403,
+      "productCreate": 403,
+      "batchUpdate": 200,
+      "eventCreate": 201,
+      "harvest": 403,
+      "split": 201,
+      "merge": 201,
+      "handover": 201,
+      "foreignBatchRead": 403,
+      "foreignFarmWrite": 403,
+      "traceback": 200,
+      "integrity": 200,
+      "audit": 403
+    },
+    "kpiFailures": true,
+    "session401403": true
+  },
+  {
+    "channel": "chrome",
+    "account": "transport",
+    "role": "transporter",
+    "passed": true,
+    "api": {
+      "summary": 200,
+      "farmCreate": 403,
+      "farmUpdate": 403,
+      "productCreate": 403,
+      "batchUpdate": 200,
+      "eventCreate": 201,
+      "harvest": 403,
+      "split": 403,
+      "merge": 403,
+      "handover": 201,
+      "foreignBatchRead": 403,
+      "foreignFarmWrite": 403,
+      "traceback": 200,
+      "integrity": 200,
+      "audit": 403
+    },
+    "kpiFailures": true,
+    "session401403": true
+  },
+  {
+    "channel": "chrome",
+    "account": "distribution",
+    "passed": false,
+    "error": "AssertionError [ERR_ASSERTION]: distribution foreignBatchRead: {\"id\":47,\"code\":\"FIX-5-0\",\"plot_id\":9,\"farm_id\":9,\"product_id\":1,\"product_name\":\"Xoài cát Chu\",\"initial_quantity\":100,\"remaining_quantity\":99.7,\"quantity\":99.7,\"unit\":\"kg\",\"harvest_date\":\"2026-10-09\",\"current_org_id\":2,\"current_org_name\":\"Hợp tác xã Nông nghiệp Sạch Tiền Giang\",\"status\":\"ACTIVE\",\"is_pending\":true,\"pending_handover\":{\"id\":7,\"status\":\"PENDING\",\"is_overdue\":false,\"to_org_id\":3,\"created_at\":\"2026-10-10T12:28:36.529109\"}}\n\n200 !== 403\n\n    at check (D:\\TTCS_K23C_N5\\TTCS-K18C4-N5\\docs\\qa\\rbac_fix_browser_check.cjs:10:137)\n    at async main (D:\\TTCS_K23C_N5\\TTCS-K18C4-N5\\docs\\qa\\rbac_fix_browser_check.cjs:21:83)"
+  },
+  {
+    "channel": "chrome",
+    "account": "inspector",
+    "role": "inspector",
+    "passed": true,
+    "api": {
+      "summary": 200,
+      "farmCreate": 403,
+      "farmUpdate": 403,
+      "productCreate": 403,
+      "batchUpdate": 403,
+      "eventCreate": 403,
+      "harvest": 403,
+      "split": 403,
+      "merge": 403,
+      "handover": 403,
+      "foreignBatchRead": 200,
+      "foreignFarmWrite": 403,
+      "traceback": 200,
+      "integrity": 200,
+      "audit": 200
+    },
+    "kpiFailures": true,
+    "session401403": true
+  },
+  {
+    "channel": "chrome",
+    "account": "admin",
+    "role": "system_admin",
+    "passed": true,
+    "api": {
+      "summary": 200,
+      "farmCreate": 403,
+      "farmUpdate": 403,
+      "productCreate": 201,
+      "batchUpdate": 403,
+      "eventCreate": 403,
+      "harvest": 403,
+      "split": 403,
+      "merge": 403,
+      "handover": 403,
+      "foreignBatchRead": 403,
+      "foreignFarmWrite": 403,
+      "traceback": 200,
+      "integrity": 200,
+      "audit": 200
+    },
+    "kpiFailures": true,
+    "session401403": true
+  },
+  {
+    "channel": "chrome",
+    "account": "org_admin",
+    "role": "org_admin",
+    "passed": true,
+    "api": {
+      "summary": 200,
+      "farmCreate": 201,
+      "farmUpdate": 200,
+      "productCreate": 403,
+      "batchUpdate": 200,
+      "eventCreate": 201,
+      "harvest": 403,
+      "split": 403,
+      "merge": 403,
+      "handover": 403,
+      "foreignBatchRead": 403,
+      "foreignFarmWrite": 403,
+      "traceback": 200,
+      "integrity": 200,
+      "audit": 200,
+      "foreignAuditFilter": 403,
+      "foreignUserUpdate": 403
+    },
+    "kpiFailures": true,
+    "session401403": true
+  },
+  {
+    "channel": "msedge",
+    "account": "farm",
+    "passed": false,
+    "error": "AssertionError [ERR_ASSERTION]: farm foreignBatchRead: {\"id\":47,\"code\":\"FIX-5-0\",\"plot_id\":9,\"farm_id\":9,\"product_id\":1,\"product_name\":\"Xoài cát Chu\",\"initial_quantity\":100,\"remaining_quantity\":99.7,\"quantity\":99.7,\"unit\":\"kg\",\"harvest_date\":\"2026-10-09\",\"current_org_id\":2,\"current_org_name\":\"Hợp tác xã Nông nghiệp Sạch Tiền Giang\",\"status\":\"ACTIVE\",\"is_pending\":true,\"pending_handover\":{\"id\":7,\"status\":\"PENDING\",\"is_overdue\":false,\"to_org_id\":3,\"created_at\":\"2026-10-10T12:28:36.529109\"}}\n\n200 !== 403\n\n    at check (D:\\TTCS_K23C_N5\\TTCS-K18C4-N5\\docs\\qa\\rbac_fix_browser_check.cjs:10:137)\n    at async main (D:\\TTCS_K23C_N5\\TTCS-K18C4-N5\\docs\\qa\\rbac_fix_browser_check.cjs:21:83)"
+  },
+  {
+    "channel": "msedge",
+    "account": "packing",
+    "passed": false,
+    "error": "AssertionError [ERR_ASSERTION]: packing foreignBatchRead: {\"id\":47,\"code\":\"FIX-5-0\",\"plot_id\":9,\"farm_id\":9,\"product_id\":1,\"product_name\":\"Xoài cát Chu\",\"initial_quantity\":100,\"remaining_quantity\":99.7,\"quantity\":99.7,\"unit\":\"kg\",\"harvest_date\":\"2026-10-09\",\"current_org_id\":2,\"current_org_name\":\"Hợp tác xã Nông nghiệp Sạch Tiền Giang\",\"status\":\"ACTIVE\",\"is_pending\":true,\"pending_handover\":{\"id\":7,\"status\":\"PENDING\",\"is_overdue\":false,\"to_org_id\":3,\"created_at\":\"2026-10-10T12:28:36.529109\"}}\n\n200 !== 403\n\n    at check (D:\\TTCS_K23C_N5\\TTCS-K18C4-N5\\docs\\qa\\rbac_fix_browser_check.cjs:10:137)\n    at async main (D:\\TTCS_K23C_N5\\TTCS-K18C4-N5\\docs\\qa\\rbac_fix_browser_check.cjs:21:83)"
+  },
+  {
+    "channel": "msedge",
+    "account": "receiver",
+    "role": "processor",
+    "passed": true,
+    "api": {
+      "summary": 200,
+      "farmCreate": 403,
+      "farmUpdate": 403,
+      "productCreate": 403,
+      "batchUpdate": 200,
+      "eventCreate": 201,
+      "harvest": 403,
+      "split": 201,
+      "merge": 201,
+      "handover": 201,
+      "foreignBatchRead": 403,
+      "foreignFarmWrite": 403,
+      "traceback": 200,
+      "integrity": 200,
+      "audit": 403
+    },
+    "kpiFailures": true,
+    "session401403": true
+  },
+  {
+    "channel": "msedge",
+    "account": "transport",
+    "role": "transporter",
+    "passed": true,
+    "api": {
+      "summary": 200,
+      "farmCreate": 403,
+      "farmUpdate": 403,
+      "productCreate": 403,
+      "batchUpdate": 200,
+      "eventCreate": 201,
+      "harvest": 403,
+      "split": 403,
+      "merge": 403,
+      "handover": 201,
+      "foreignBatchRead": 403,
+      "foreignFarmWrite": 403,
+      "traceback": 200,
+      "integrity": 200,
+      "audit": 403
+    },
+    "kpiFailures": true,
+    "session401403": true
+  },
+  {
+    "channel": "msedge",
+    "account": "distribution",
+    "passed": false,
+    "error": "AssertionError [ERR_ASSERTION]: distribution foreignBatchRead: {\"id\":47,\"code\":\"FIX-5-0\",\"plot_id\":9,\"farm_id\":9,\"product_id\":1,\"product_name\":\"Xoài cát Chu\",\"initial_quantity\":100,\"remaining_quantity\":99.7,\"quantity\":99.7,\"unit\":\"kg\",\"harvest_date\":\"2026-10-09\",\"current_org_id\":2,\"current_org_name\":\"Hợp tác xã Nông nghiệp Sạch Tiền Giang\",\"status\":\"ACTIVE\",\"is_pending\":true,\"pending_handover\":{\"id\":7,\"status\":\"PENDING\",\"is_overdue\":false,\"to_org_id\":3,\"created_at\":\"2026-10-10T12:28:36.529109\"}}\n\n200 !== 403\n\n    at check (D:\\TTCS_K23C_N5\\TTCS-K18C4-N5\\docs\\qa\\rbac_fix_browser_check.cjs:10:137)\n    at async main (D:\\TTCS_K23C_N5\\TTCS-K18C4-N5\\docs\\qa\\rbac_fix_browser_check.cjs:21:83)"
+  },
+  {
+    "channel": "msedge",
+    "account": "inspector",
+    "role": "inspector",
+    "passed": true,
+    "api": {
+      "summary": 200,
+      "farmCreate": 403,
+      "farmUpdate": 403,
+      "productCreate": 403,
+      "batchUpdate": 403,
+      "eventCreate": 403,
+      "harvest": 403,
+      "split": 403,
+      "merge": 403,
+      "handover": 403,
+      "foreignBatchRead": 200,
+      "foreignFarmWrite": 403,
+      "traceback": 200,
+      "integrity": 200,
+      "audit": 200
+    },
+    "kpiFailures": true,
+    "session401403": true
+  },
+  {
+    "channel": "msedge",
+    "account": "admin",
+    "passed": false,
+    "error": "AssertionError [ERR_ASSERTION]: admin foreignBatchRead: {\"id\":47,\"code\":\"FIX-5-0\",\"plot_id\":9,\"farm_id\":9,\"product_id\":1,\"product_name\":\"Xoài cát Chu\",\"initial_quantity\":100,\"remaining_quantity\":99.7,\"quantity\":99.7,\"unit\":\"kg\",\"harvest_date\":\"2026-10-09\",\"current_org_id\":2,\"current_org_name\":\"Hợp tác xã Nông nghiệp Sạch Tiền Giang\",\"status\":\"ACTIVE\",\"is_pending\":true,\"pending_handover\":{\"id\":7,\"status\":\"PENDING\",\"is_overdue\":false,\"to_org_id\":3,\"created_at\":\"2026-10-10T12:28:36.529109\"}}\n\n200 !== 403\n\n    at check (D:\\TTCS_K23C_N5\\TTCS-K18C4-N5\\docs\\qa\\rbac_fix_browser_check.cjs:10:137)\n    at async main (D:\\TTCS_K23C_N5\\TTCS-K18C4-N5\\docs\\qa\\rbac_fix_browser_check.cjs:21:83)"
+  },
+  {
+    "channel": "msedge",
+    "account": "org_admin",
+    "passed": false,
+    "error": "AssertionError [ERR_ASSERTION]: org_admin foreignBatchRead: {\"id\":47,\"code\":\"FIX-5-0\",\"plot_id\":9,\"farm_id\":9,\"product_id\":1,\"product_name\":\"Xoài cát Chu\",\"initial_quantity\":100,\"remaining_quantity\":99.7,\"quantity\":99.7,\"unit\":\"kg\",\"harvest_date\":\"2026-10-09\",\"current_org_id\":2,\"current_org_name\":\"Hợp tác xã Nông nghiệp Sạch Tiền Giang\",\"status\":\"ACTIVE\",\"is_pending\":true,\"pending_handover\":{\"id\":7,\"status\":\"PENDING\",\"is_overdue\":false,\"to_org_id\":3,\"created_at\":\"2026-10-10T12:28:36.529109\"}}\n\n200 !== 403\n\n    at check (D:\\TTCS_K23C_N5\\TTCS-K18C4-N5\\docs\\qa\\rbac_fix_browser_check.cjs:10:137)\n    at async main (D:\\TTCS_K23C_N5\\TTCS-K18C4-N5\\docs\\qa\\rbac_fix_browser_check.cjs:21:83)"
+  }
+]

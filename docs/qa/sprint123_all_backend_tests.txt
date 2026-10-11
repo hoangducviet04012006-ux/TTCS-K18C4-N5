@@ -1,0 +1,32 @@
+============================= test session starts =============================
+platform win32 -- Python 3.11.9, pytest-9.1.1, pluggy-1.6.0
+rootdir: D:\TTCS_K23C_N5\TTCS-K18C4-N5
+configfile: pytest.ini
+plugins: anyio-4.15.1
+collected 259 items
+
+tests\test_audit_logs.py ................                                [  6%]
+tests\test_batch_events.py ......                                        [  8%]
+tests\test_batch_events_integrity.py ....                                [ 10%]
+tests\test_completion.py ............................                    [ 20%]
+tests\test_database_migration.py ....                                    [ 22%]
+tests\test_handovers.py .........                                        [ 25%]
+tests\test_health.py .                                                   [ 26%]
+tests\test_login_email.py ........                                       [ 29%]
+tests\test_login_lockout.py .........                                    [ 32%]
+tests\test_organization_isolation.py .........                           [ 36%]
+tests\test_sprint123_demo_safety.py .....                                [ 38%]
+tests\test_sprint2_full.py .......                                       [ 40%]
+tests\test_sprint3_full.py ..........                                    [ 44%]
+tests\test_stage1a_security.py ...                                       [ 45%]
+tests\test_stage1b_rbac.py ........                                      [ 49%]
+tests\test_stage2_1_sync_and_verify.py ........                          [ 52%]
+tests\test_stage2_auth_and_users.py ........                             [ 55%]
+tests\test_stage3_business_review.py ........                            [ 58%]
+tests\test_stage3a1_rbac_and_session.py .......                          [ 61%]
+tests\test_stage3a2_trace_forward_and_consumed.py ..............         [ 66%]
+tests\test_stage3b1b_recall_design.py ..........................         [ 76%]
+tests\test_stage3b2a_recall_api.py ..................................... [ 90%]
+........................                                                 [100%]
+
+================= 259 passed, 2 warnings in 180.06s (0:03:00) =================

@@ -154,7 +154,7 @@ def test_ban_giao_thanh_cong(client: TestClient, setup_handover_data: dict[str, 
     assert data["reject_reason"] is None
 
     # Kiểm tra sự kiện trong batch_events
-    events_resp = client.get(f"/api/batches/{batch_id}/events")
+    events_resp = client.get(f"/api/batches/{batch_id}/events", auth=("admin", "123456"))
     assert events_resp.status_code == 200
     events = events_resp.json()
     assert len(events) >= 1
@@ -267,7 +267,7 @@ def test_nhan_lo_thanh_cong_doi_current_org_id(
         assert batch.current_org_id == org_tg_id
 
     # Kiểm tra sự kiện HANDOVER_ACCEPTED
-    events_resp = client.get(f"/api/batches/{batch_id}/events")
+    events_resp = client.get(f"/api/batches/{batch_id}/events", auth=("admin", "123456"))
     assert events_resp.status_code == 200
     events = events_resp.json()
     assert events[0]["event_type"] == EVENT_HANDOVER_ACCEPTED

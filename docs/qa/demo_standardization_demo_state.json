@@ -1,0 +1,14 @@
+{
+  "database": "D:\\TTCS_K23C_N5\\TTCS-K18C4-N5\\.sprint123-trial\\demo_sprint123.db",
+  "tables": {
+    "users": 9,
+    "batches": 30,
+    "batch_events": 64,
+    "organizations": 3,
+    "user_sessions": 60
+  },
+  "active_users": 8,
+  "orphans": 0,
+  "integrity": "ok",
+  "foreign_key_violations": 0
+}

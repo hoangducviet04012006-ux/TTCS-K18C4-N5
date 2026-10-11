@@ -1,0 +1,45 @@
+============================= test session starts =============================
+platform win32 -- Python 3.11.9, pytest-9.1.1, pluggy-1.6.0
+rootdir: D:\TTCS_K23C_N5\TTCS-K18C4-N5
+configfile: pytest.ini
+plugins: anyio-4.15.1
+collected 273 items
+
+backend\tests\test_audit_logs.py ................                        [  5%]
+backend\tests\test_batch_events.py ......                                [  8%]
+backend\tests\test_batch_events_integrity.py ....                        [  9%]
+backend\tests\test_completion.py ............................            [ 19%]
+backend\tests\test_database_migration.py ....                            [ 21%]
+backend\tests\test_handovers.py .........                                [ 24%]
+backend\tests\test_health.py .                                           [ 24%]
+backend\tests\test_login_email.py ........                               [ 27%]
+backend\tests\test_login_lockout.py .........                            [ 31%]
+backend\tests\test_organization_isolation.py .........                   [ 34%]
+backend\tests\test_sprint123_demo_safety.py .........                    [ 37%]
+backend\tests\test_sprint123_rbac_fixes.py ..........                    [ 41%]
+backend\tests\test_sprint2_full.py .......                               [ 43%]
+backend\tests\test_sprint3_full.py ..........                            [ 47%]
+backend\tests\test_stage1a_security.py ...                               [ 48%]
+backend\tests\test_stage1b_rbac.py ........                              [ 51%]
+backend\tests\test_stage2_1_sync_and_verify.py ........                  [ 54%]
+backend\tests\test_stage2_auth_and_users.py ........                     [ 57%]
+backend\tests\test_stage3_business_review.py ........                    [ 60%]
+backend\tests\test_stage3a1_rbac_and_session.py .......                  [ 63%]
+backend\tests\test_stage3a2_trace_forward_and_consumed.py .............. [ 68%]
+                                                                         [ 68%]
+backend\tests\test_stage3b1b_recall_design.py .......................... [ 77%]
+                                                                         [ 77%]
+backend\tests\test_stage3b2a_recall_api.py ............................. [ 88%]
+................................                                         [100%]
+
+============================== warnings summary ===============================
+backend\.venv\Lib\site-packages\starlette\testclient.py:40
+  D:\TTCS_K23C_N5\TTCS-K18C4-N5\backend\.venv\Lib\site-packages\starlette\testclient.py:40: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = typing.Callable[[], typing.ContextManager[anyio.abc.BlockingPortal]]
+
+backend/tests/test_stage2_auth_and_users.py::test_logout_revokes_session
+  D:\TTCS_K23C_N5\TTCS-K18C4-N5\backend\.venv\Lib\site-packages\starlette\testclient.py:484: DeprecationWarning: Setting per-request cookies=<...> is being deprecated, because the expected behaviour on cookie persistence is ambiguous. Set cookies directly on the client instance instead.
+    return super().request(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+================= 273 passed, 2 warnings in 230.70s (0:03:50) =================

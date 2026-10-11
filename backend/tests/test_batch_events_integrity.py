@@ -52,7 +52,7 @@ def test_1_chuoi_su_kien_hop_le(client: TestClient, session_factory: sessionmake
 
     # Thêm 3 sự kiện liên tiếp
     events_payload = [
-        {"event_type": "HARVEST", "event_data": "Thu hoạch 1000kg xoài"},
+        {"event_type": "HARVEST_NOTE", "event_data": "Thu hoạch 1000kg xoài"},
         {"event_type": "PROCESSING", "event_data": "Sơ chế và dán tem truy xuất"},
         {"event_type": "TEMP_CHECK", "event_data": "Bảo quản lạnh 12°C"},
     ]
@@ -61,7 +61,7 @@ def test_1_chuoi_su_kien_hop_le(client: TestClient, session_factory: sessionmake
         assert res.status_code == 201
 
     # Gọi API integrity check
-    res_integrity = client.get(f"/batches/{batch_id}/integrity")
+    res_integrity = client.get(f"/batches/{batch_id}/integrity", auth=("admin", "123456"))
     assert res_integrity.status_code == 200
     data = res_integrity.json()
 
@@ -86,7 +86,7 @@ def test_2_event_bi_sua_du_lieu(client: TestClient, session_factory: sessionmake
     # Thêm sự kiện
     res1 = client.post(
         f"/batches/{batch_id}/events",
-        json={"event_type": "HARVEST", "event_data": "Thu hoạch ban đầu 500kg"},
+        json={"event_type": "HARVEST_NOTE", "event_data": "Thu hoạch ban đầu 500kg"},
         headers=headers,
     )
     event1_id = res1.json()["id"]
@@ -120,7 +120,7 @@ def test_2_event_bi_sua_du_lieu(client: TestClient, session_factory: sessionmake
         session.commit()
 
     # Chạy kiểm tra toàn vẹn qua API
-    res_check = client.get(f"/batches/{batch_id}/integrity")
+    res_check = client.get(f"/batches/{batch_id}/integrity", auth=("admin", "123456"))
     assert res_check.status_code == 200
     data = res_check.json()
 
@@ -179,7 +179,7 @@ def test_3_event_bi_xoa(client: TestClient, session_factory: sessionmaker[Sessio
         session.commit()
 
     # Chạy kiểm tra toàn vẹn
-    res_check = client.get(f"/batches/{batch_id}/integrity")
+    res_check = client.get(f"/batches/{batch_id}/integrity", auth=("admin", "123456"))
     assert res_check.status_code == 200
     data = res_check.json()
 
@@ -230,7 +230,7 @@ def test_prev_hash_bi_thay_doi(client: TestClient, session_factory: sessionmaker
         )
         session.commit()
 
-    res_check = client.get(f"/batches/{batch_id}/integrity")
+    res_check = client.get(f"/batches/{batch_id}/integrity", auth=("admin", "123456"))
     assert res_check.status_code == 200
     data = res_check.json()
     assert data["valid"] is False

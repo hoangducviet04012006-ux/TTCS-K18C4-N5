@@ -1,0 +1,4 @@
+Sprint 1-3 TEST ONLY: http://127.0.0.1:8767/
+Database: D:\TTCS_K23C_N5\TTCS-K18C4-N5\.sprint123-trial\launcher_check.db
+Login s123_farm@demo.local / Sprint123Demo!2026
+Demo process PID: 20728; stop with Stop-Process -Id 20728

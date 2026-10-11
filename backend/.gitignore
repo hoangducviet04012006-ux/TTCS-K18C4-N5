@@ -11,7 +11,7 @@ __pycache__/
 venv/
 env/
 
-# Database SQLite sinh ra khi chạy local
+# Database SQLite sinh ra khi cháº¡y local
 *.db
 *.db-journal
 *.sqlite3
@@ -19,3 +19,12 @@ env/
 # IDE
 .idea/
 .vscode/
+
+# Local demo credential and environments (never commit)
+.demo-password.local
+*.local
+.env
+.env.*
+
+# Backups
+backups/

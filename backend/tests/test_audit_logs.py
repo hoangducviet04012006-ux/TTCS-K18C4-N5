@@ -22,7 +22,7 @@ from sqlalchemy import Engine, select
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.models import AuditLog, User
-from app.security import utcnow
+from app.security import hash_password, utcnow
 from tests.conftest import TEST_PASSWORD, TEST_USERNAME_ADMIN, TEST_USERNAME_FARMER
 
 AUDIT_LOGS_URL = "/audit-logs"
@@ -51,7 +51,7 @@ def _auth(username: str = TEST_USERNAME_ADMIN) -> tuple[str, str]:
     return username, TEST_PASSWORD
 
 
-def _create_farm(client: TestClient, username: str = TEST_USERNAME_ADMIN) -> dict:
+def _create_farm(client: TestClient, username: str = TEST_USERNAME_FARMER) -> dict:
     """Tạo một vùng trồng qua API và trả về body JSON (đã có ``id``)."""
     response = client.post("/farms", json=FARM_PAYLOAD, auth=_auth(username))
     assert response.status_code == 201, response.text
@@ -61,7 +61,7 @@ def _create_farm(client: TestClient, username: str = TEST_USERNAME_ADMIN) -> dic
 def _create_batch(
     client: TestClient,
     farm_id: int,
-    username: str = TEST_USERNAME_ADMIN,
+    username: str = TEST_USERNAME_FARMER,
 ) -> dict:
     """Tạo một lô nông sản qua API và trả về body JSON (đã có ``id``)."""
     response = client.post(
@@ -132,8 +132,8 @@ def test_tao_farm_ghi_log(
         "farm",
         farm["id"],
     )
-    assert log["user_id"] == _user_id(session_factory, TEST_USERNAME_ADMIN)
-    assert log["username"] == TEST_USERNAME_ADMIN
+    assert log["user_id"] == _user_id(session_factory, TEST_USERNAME_FARMER)
+    assert log["username"] == TEST_USERNAME_FARMER
     # `created_at` là UTC (naive) và phải gần với thời điểm hiện tại.
     elapsed = (utcnow() - datetime.fromisoformat(log["created_at"])).total_seconds()
     assert abs(elapsed) < 60
@@ -146,7 +146,7 @@ def test_sua_farm_ghi_log(client: TestClient) -> None:
     response = client.put(
         f"/farms/{farm['id']}",
         json={**FARM_PAYLOAD, "area": 9.9, "owner": "Hợp tác xã mới"},
-        auth=_auth(),
+        auth=_auth(TEST_USERNAME_FARMER),
     )
     assert response.status_code == 200
 
@@ -157,20 +157,18 @@ def test_sua_farm_ghi_log(client: TestClient) -> None:
 
 
 def test_xoa_farm_ghi_log_va_khong_ghi_cho_batch_bi_xoa_kem(client: TestClient) -> None:
-    """``DELETE /farms/{id}`` -> log ``delete``/``farm``; batch cascade không sinh log."""
+    """Delete a farm only when it has no traceable batches; failed deletion creates no log."""
     farm = _create_farm(client)
     batches = [_create_batch(client, farm["id"]) for _ in range(2)]
-
-    response = client.delete(f"/farms/{farm['id']}", auth=_auth())
-    assert response.status_code == 200
-    assert response.json()["deleted_batches"] == 2
-
-    assert _actions(client) == [
-        ("delete", "farm", farm["id"]),
-        ("create", "batch", batches[1]["id"]),
-        ("create", "batch", batches[0]["id"]),
-        ("create", "farm", farm["id"]),
-    ]
+    before = _get_logs(client)
+    assert client.delete(f"/farms/{farm['id']}", auth=_auth()).status_code == 409
+    assert _get_logs(client) == before
+    for batch in batches:
+        assert client.get(f"/batches/{batch['id']}", auth=_auth()).status_code == 200
+        assert client.get(f"/batches/{batch['id']}/integrity", auth=_auth()).json()["is_valid"]
+    empty_farm = _create_farm(client)
+    assert client.delete(f"/farms/{empty_farm['id']}", auth=_auth()).status_code == 200
+    assert _actions(client)[0] == ("delete", "farm", empty_farm["id"])
 
 
 def test_tao_batch_ghi_log(client: TestClient) -> None:
@@ -192,7 +190,7 @@ def test_sua_batch_ghi_log(client: TestClient) -> None:
     response = client.put(
         f"/batches/{batch['id']}",
         json={**_batch_payload(farm["id"]), "quantity": 99.9},
-        auth=_auth(),
+        auth=_auth(TEST_USERNAME_FARMER),
     )
     assert response.status_code == 200
 
@@ -200,14 +198,13 @@ def test_sua_batch_ghi_log(client: TestClient) -> None:
 
 
 def test_xoa_batch_ghi_log(client: TestClient) -> None:
-    """``DELETE /batches/{id}`` -> 1 dòng log ``delete`` / ``batch``."""
+    """S-11: deletion cannot orphan an immutable batch history, and failure is not audited as success."""
     farm = _create_farm(client)
     batch = _create_batch(client, farm["id"])
-
-    response = client.delete(f"/batches/{batch['id']}", auth=_auth())
-    assert response.status_code == 200
-
-    assert _actions(client)[0] == ("delete", "batch", batch["id"])
+    before = _get_logs(client)
+    assert client.delete(f"/batches/{batch['id']}", auth=_auth()).status_code == 409
+    assert _get_logs(client) == before
+    assert client.get(f"/batches/{batch['id']}/events", auth=_auth()).json()
 
 
 def test_chuoi_sau_thao_tac_duoc_ghi_theo_thu_tu_moi_nhat_truoc(
@@ -216,22 +213,20 @@ def test_chuoi_sau_thao_tac_duoc_ghi_theo_thu_tu_moi_nhat_truoc(
     """Đủ 6 thao tác (3 Farm + 3 Batch) -> 6 dòng log, mới nhất đứng đầu."""
     farm = _create_farm(client)
     batch = _create_batch(client, farm["id"])
-    client.put(f"/farms/{farm['id']}", json=FARM_PAYLOAD, auth=_auth())
-    client.put(f"/batches/{batch['id']}", json=_batch_payload(farm["id"]), auth=_auth())
+    client.put(f"/farms/{farm['id']}", json=FARM_PAYLOAD, auth=_auth(TEST_USERNAME_FARMER))
+    client.put(f"/batches/{batch['id']}", json=_batch_payload(farm["id"]), auth=_auth(TEST_USERNAME_FARMER))
     client.delete(f"/batches/{batch['id']}", auth=_auth())
     client.delete(f"/farms/{farm['id']}", auth=_auth())
 
     logs = _get_logs(client)
     assert [(log["action"], log["entity"], log["entity_id"]) for log in logs] == [
-        ("delete", "farm", farm["id"]),
-        ("delete", "batch", batch["id"]),
         ("update", "batch", batch["id"]),
         ("update", "farm", farm["id"]),
         ("create", "batch", batch["id"]),
         ("create", "farm", farm["id"]),
     ]
     # Log vẫn còn nguyên dù bản ghi farm/batch đã bị xoá (không xoá dây chuyền).
-    assert [log["id"] for log in logs] == [6, 5, 4, 3, 2, 1]
+    assert [log["id"] for log in logs] == [4, 3, 2, 1]
 
 
 # ---------------------------------------------- 2. Ghi log đúng người thực hiện ---
@@ -245,14 +240,14 @@ def test_log_ghi_dung_nguoi_thuc_hien(
 
     logs = _get_logs(client)
     assert [(log["username"], log["action"], log["entity"]) for log in logs] == [
-        (TEST_USERNAME_ADMIN, "delete", "batch"),
+
         (TEST_USERNAME_FARMER, "create", "batch"),
         (TEST_USERNAME_FARMER, "create", "farm"),
     ]
 
     farmer_id = _user_id(session_factory, TEST_USERNAME_FARMER)
     admin_id = _user_id(session_factory, TEST_USERNAME_ADMIN)
-    assert [log["user_id"] for log in logs] == [admin_id, farmer_id, farmer_id]
+    assert [log["user_id"] for log in logs] == [farmer_id, farmer_id]
 
 
 # ------------------------------------------- 3. Thao tác thất bại không ghi log ---
@@ -264,15 +259,15 @@ def test_thao_tac_that_bai_khong_ghi_log(
     farm_id = farm["id"]
 
     # 404: bản ghi (hoặc vùng trồng tham chiếu) không tồn tại.
-    assert client.put("/farms/999", json=FARM_PAYLOAD, auth=_auth()).status_code == 404
+    assert client.put("/farms/999", json=FARM_PAYLOAD, auth=_auth(TEST_USERNAME_FARMER)).status_code == 404
     assert client.delete("/farms/999", auth=_auth()).status_code == 404
     assert (
-        client.post("/batches", json=_batch_payload(999), auth=_auth()).status_code
+        client.post("/batches", json=_batch_payload(999), auth=_auth(TEST_USERNAME_FARMER)).status_code
         == 404
     )
     assert (
         client.put(
-            "/batches/999", json=_batch_payload(farm_id), auth=_auth()
+            "/batches/999", json=_batch_payload(farm_id), auth=_auth(TEST_USERNAME_FARMER)
         ).status_code
         == 404
     )
@@ -301,7 +296,7 @@ def test_thao_tac_that_bai_khong_ghi_log(
         "farm",
         farm_id,
     )
-    assert logs[0].user_id == _user_id(session_factory, TEST_USERNAME_ADMIN)
+    assert logs[0].user_id == _user_id(session_factory, TEST_USERNAME_FARMER)
 
 
 def test_api_doc_va_dang_nhap_khong_ghi_log(
@@ -361,12 +356,24 @@ def test_loc_theo_entity_va_user_id(
     client: TestClient, session_factory: sessionmaker[Session]
 ) -> None:
     """Bộ lọc ``?entity=`` và ``?user_id=`` trả đúng tập con của lịch sử."""
+    from app.models import ROLE_FARMER
+    with session_factory() as session:
+        u2 = User(
+            username="farmer2",
+            email="farmer2@gmail.com",
+            password=hash_password(TEST_PASSWORD),
+            role=ROLE_FARMER,
+            organization_id=1,
+        )
+        session.add(u2)
+        session.commit()
+        u2_id = u2.id
+
     farm = _create_farm(client, TEST_USERNAME_FARMER)
     _create_batch(client, farm["id"], TEST_USERNAME_FARMER)
-    _create_batch(client, farm["id"], TEST_USERNAME_ADMIN)
+    _create_batch(client, farm["id"], "farmer2")
 
     farmer_id = _user_id(session_factory, TEST_USERNAME_FARMER)
-    admin_id = _user_id(session_factory, TEST_USERNAME_ADMIN)
 
     assert _actions(client, entity="farm") == [("create", "farm", farm["id"])]
     assert _actions(client, entity="batch") == [
@@ -378,12 +385,15 @@ def test_loc_theo_entity_va_user_id(
         TEST_USERNAME_FARMER,
         TEST_USERNAME_FARMER,
     ]
-    assert [log["username"] for log in _get_logs(client, user_id=admin_id)] == [
-        TEST_USERNAME_ADMIN
+    assert [log["username"] for log in _get_logs(client, user_id=u2_id)] == [
+        "farmer2"
     ]
     # Kết hợp cả hai bộ lọc + trường hợp không có thao tác nào.
     assert _actions(client, entity="batch", user_id=farmer_id) == [
         ("create", "batch", 1)
+    ]
+    assert _actions(client, entity="batch", user_id=u2_id) == [
+        ("create", "batch", 2)
     ]
     assert _get_logs(client, user_id=999) == []
 
@@ -398,7 +408,7 @@ def test_limit_va_gia_tri_loc_khong_hop_le(client: TestClient) -> None:
 
     limit_zero = client.get(AUDIT_LOGS_URL, params={"limit": 0}, auth=_auth())
     limit_too_big = client.get(AUDIT_LOGS_URL, params={"limit": 501}, auth=_auth())
-    bad_entity = client.get(AUDIT_LOGS_URL, params={"entity": "user"}, auth=_auth())
+    bad_entity = client.get(AUDIT_LOGS_URL, params={"entity": "unknown"}, auth=_auth())
     bad_user_id = client.get(AUDIT_LOGS_URL, params={"user_id": 0}, auth=_auth())
 
     assert limit_zero.status_code == 422

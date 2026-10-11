@@ -15,18 +15,22 @@ Các sprint:
 - Sprint 5: hoàn thiện CRUD - thêm ``PUT``/``DELETE`` cho ``/farms`` và
   ``/batches`` (xoá chỉ dành cho ``admin``).
 - Sprint 6: bảo mật đăng nhập - sai mật khẩu 5 lần liên tiếp thì khoá tài khoản
-  5 phút (``POST /auth/login`` trả ``403`` kèm header ``Retry-After``, mọi API
+  15 phút (``POST /auth/login`` trả ``403`` kèm header ``Retry-After``, mọi API
   cần quyền cũng bị chặn khi tài khoản đang bị khoá) - xem ``app/security.py``.
 - Sprint 7: lịch sử thao tác (audit log) - tự ghi log mỗi lần tạo/sửa/xoá vùng
   trồng hoặc lô nông sản, xem lại bằng ``GET /audit-logs`` (chỉ ``admin``) -
   xem ``app/audit.py``.
 """
 
+import logging
+import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-from fastapi import Depends, FastAPI, status
+from fastapi import Depends, FastAPI, Request, status
+from fastapi.exceptions import ResponseValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -36,11 +40,11 @@ from app.routers import (
     audit,
     auth,
     batches,
-    catalogs,
     events,
     farms,
     handovers,
     health,
+    products,
     users,
 )
 from app.schemas import HealthResponse
@@ -78,7 +82,7 @@ app = FastAPI(
         "`/batches`) + dashboard thống kê trên giao diện. Nhóm `DELETE` yêu cầu "
         "role `admin` (farmer nhận `403`), các API còn lại cho cả `farmer`.\n"
         "- **Sprint 6**: bảo mật đăng nhập - nhập sai mật khẩu **5 lần liên tiếp** "
-        "thì tài khoản bị **tạm khoá 5 phút**: `/auth/login` và mọi API cần quyền "
+        "thì tài khoản bị **tạm khoá 15 phút**: `/auth/login` và mọi API cần quyền "
         "trả `403` (kèm header `Retry-After`), kể cả khi gõ đúng mật khẩu. "
         "Đăng nhập thành công hoặc hết thời gian khoá thì bộ đếm tự đặt lại về 0.\n"
         "- **Sprint 7**: lịch sử thao tác (audit log) - mỗi lần tạo/sửa/xoá vùng "
@@ -94,15 +98,62 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS: cho phép frontend (chạy ở cổng khác) gọi API khi phát triển.
-# Sprint sau cần thay "*" bằng danh sách domain cụ thể trước khi deploy production.
+# CORS: cho phép frontend gọi API từ các cổng phát triển khác nhau.
+origins = [
+    "http://localhost:5500",
+    "http://127.0.0.1:5500",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:8080",
+    "http://127.0.0.1:8080",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=os.getenv("CORS_ORIGINS", ",".join(origins)).split(","),
+    allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# -------------------------------------------------------- Exception Handlers ---
+@app.middleware("http")
+async def log_denied_requests(request: Request, call_next):
+    """S-05: record denied API attempts without writing business history."""
+    response = await call_next(request)
+    if response.status_code == 403:
+        logging.getLogger("agritrace.security").warning(
+            "access_denied method=%s path=%s client=%s status=403",
+            request.method, request.url.path,
+            request.client.host if request.client else "unknown",
+        )
+    return response
+
+
+@app.exception_handler(ResponseValidationError)
+async def response_validation_exception_handler(
+    request: Request, exc: ResponseValidationError
+) -> JSONResponse:
+    """Bắt lỗi dữ liệu không khớp Pydantic schema và trả về 500 kèm đầy đủ header CORS."""
+    logging.getLogger(__name__).error("Request failed: %s", request.url.path, exc_info=exc)
+    return JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content={"detail": "Lỗi định dạng dữ liệu phản hồi. Vui lòng liên hệ quản trị viên."},
+    )
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    """Bắt mọi ngoại lệ chưa được xử lý để đảm bảo frontend nhận được JSON và header CORS."""
+    logging.getLogger(__name__).error("Request failed: %s", request.url.path, exc_info=exc)
+    return JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content={"detail": "Lỗi máy chủ nội bộ. Vui lòng thử lại hoặc liên hệ quản trị viên."},
+    )
 
 
 # ------------------------------------------------------------- Health Check ---
@@ -130,8 +181,13 @@ app.include_router(health.router)
 app.include_router(auth.router)
 app.include_router(farms.router)
 app.include_router(batches.router)
-app.include_router(catalogs.router)
+app.include_router(batches.router, prefix="/api/v1")
 app.include_router(events.router)
 app.include_router(users.router)
 app.include_router(audit.router)
 app.include_router(handovers.router)
+app.include_router(products.router)
+
+# Recall keeps the existing root-level API convention.
+from app.routers import recalls  # noqa: E402
+app.include_router(recalls.router)

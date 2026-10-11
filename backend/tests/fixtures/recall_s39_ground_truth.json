@@ -1,0 +1,123 @@
+{
+  "scenario_name": "S-39 4-Level 3-Org Recall Benchmark with Cross-Origin Merge and Consumed Batch",
+  "verified_by": [],
+  "root_batch": {
+    "code": "S39-ROOT-A",
+    "organization_code": "ORG-FARM",
+    "initial_quantity": 1000.0,
+    "remaining_quantity": 0.0,
+    "status": "SPLIT"
+  },
+  "organizations_involved": [
+    {
+      "code": "ORG-FARM",
+      "name": "Hợp tác xã Nông nghiệp Cao Lãnh"
+    },
+    {
+      "code": "ORG-PROC",
+      "name": "Nhà máy Chế biến Nông sản Đồng Tháp"
+    },
+    {
+      "code": "ORG-DIST",
+      "name": "Hệ thống Siêu thị Co.opmart"
+    }
+  ],
+  "expected_total_descendants": 5,
+  "descendants": [
+    {
+      "code": "S39-SPLIT-B1",
+      "level": 1,
+      "parent_code": "S39-ROOT-A",
+      "current_org_code": "ORG-PROC",
+      "initial_quantity": 400.0,
+      "remaining_quantity": 0.0,
+      "status": "MERGED",
+      "is_consumed": false,
+      "is_merged_cross_origin": false
+    },
+    {
+      "code": "S39-SPLIT-B2",
+      "level": 1,
+      "parent_code": "S39-ROOT-A",
+      "current_org_code": "ORG-DIST",
+      "initial_quantity": 600.0,
+      "remaining_quantity": 0.0,
+      "status": "CONSUMED",
+      "is_consumed": true,
+      "is_merged_cross_origin": false
+    },
+    {
+      "code": "S39-MERGE-C1",
+      "level": 2,
+      "parent_codes": [
+        "S39-SPLIT-B1",
+        "S39-CLEAN-X"
+      ],
+      "current_org_code": "ORG-PROC",
+      "initial_quantity": 600.0,
+      "remaining_quantity": 0.0,
+      "status": "SPLIT",
+      "is_consumed": false,
+      "is_merged_cross_origin": true
+    },
+    {
+      "code": "S39-FINAL-D1",
+      "level": 3,
+      "parent_code": "S39-MERGE-C1",
+      "current_org_code": "ORG-DIST",
+      "initial_quantity": 250.0,
+      "remaining_quantity": 250.0,
+      "status": "ACTIVE",
+      "is_consumed": false,
+      "is_merged_cross_origin": true
+    },
+    {
+      "code": "S39-FINAL-D2",
+      "level": 3,
+      "parent_code": "S39-MERGE-C1",
+      "current_org_code": "ORG-PROC",
+      "initial_quantity": 350.0,
+      "remaining_quantity": 350.0,
+      "status": "ACTIVE",
+      "is_consumed": false,
+      "is_merged_cross_origin": true
+    }
+  ],
+  "expected_metrics": {
+    "total_reclaimable_inventory_kg": 600.0,
+    "total_market_consumed_kg": 600.0,
+    "cross_origin_contaminated_batches_count": 3,
+    "organizations_required_acknowledgment": [
+      "ORG-FARM",
+      "ORG-PROC",
+      "ORG-DIST"
+    ]
+  },
+  "verification_status": "Automated consistency checks only; two independent human reviews pending",
+  "external_root": {
+    "code": "S39-CLEAN-X",
+    "organization_code": "ORG-PROC",
+    "initial_quantity": 200,
+    "remaining_quantity": 0,
+    "status": "MERGED"
+  },
+  "expected_levels": {
+    "1": [
+      "S39-SPLIT-B1",
+      "S39-SPLIT-B2"
+    ],
+    "2": [
+      "S39-MERGE-C1"
+    ],
+    "3": [
+      "S39-FINAL-D1",
+      "S39-FINAL-D2"
+    ]
+  },
+  "expected_terminal_codes": [
+    "S39-SPLIT-B2",
+    "S39-FINAL-D1",
+    "S39-FINAL-D2"
+  ],
+  "quantity_semantics": "Full affected batch quantities (including external 200kg merge input); consumed from CONSUMED.previous_remaining_quantity, not initial minus remaining across lineage."
+}

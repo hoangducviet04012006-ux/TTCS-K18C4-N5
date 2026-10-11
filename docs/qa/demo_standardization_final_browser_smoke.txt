@@ -1,0 +1,2 @@
+chrome: final profile, hidden later-sprint controls, session restore: PASS
+msedge: final profile, hidden later-sprint controls, session restore: PASS
