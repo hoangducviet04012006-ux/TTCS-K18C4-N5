@@ -772,8 +772,12 @@ class TraceForwardResponse(BaseModel):
     """Kết quả truy xuôi nguồn gốc phả hệ BFS (GET /batches/{id}/trace-forward - S-26, S-27)."""
 
     target_batch: dict[str, Any] = Field(..., description="Thông tin lô gốc đang truy xuôi.")
-    descendants_by_level: dict[int, list[TraceForwardNode]] = Field(..., description="Danh sách các thế hệ hậu duệ phân tầng theo khoảng cách.")
-    terminal_batches: list[TerminalBatchInfo] = Field(..., description="Danh sách các lô lá cuối chuỗi cung ứng hoặc đã tiêu thụ.")
+    descendants_by_level: dict[int, list[TraceForwardNode]] = Field(
+        ..., description="Danh sách các thế hệ hậu duệ phân tầng theo khoảng cách."
+    )
+    terminal_batches: list[TerminalBatchInfo] = Field(
+        ..., description="Danh sách các lô lá cuối chuỗi cung ứng hoặc đã tiêu thụ."
+    )
     total_descendants: int = Field(..., description="Tổng số lô hậu duệ tìm thấy.")
 
 

@@ -13,8 +13,7 @@ from datetime import datetime, timedelta, timezone
 import os
 import secrets
 import threading
-from typing import Any
-from sqlalchemy import select, text
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 SESSION_COOKIE_NAME = "session_id"
@@ -79,7 +78,7 @@ def _has_user_sessions_table(db: Session) -> bool:
 
 def create_session(user_id: int, db: Session | None = None) -> SessionData:
     """Tạo một phiên đăng nhập mới cho người dùng.
-    
+
     Trong môi trường production (is_production_mode=True):
     Bắt buộc phải lưu vào bảng DB `user_sessions`. Nếu chưa migrate bảng hoặc DB lỗi,
     sẽ ném RuntimeError chứ tuyệt đối không âm thầm fallback in-memory.

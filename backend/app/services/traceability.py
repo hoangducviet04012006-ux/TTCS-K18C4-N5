@@ -35,7 +35,7 @@ def clear_trace_cache(batch_id: int | None = None) -> None:
         _FORWARD_CACHE.clear()
 
 
-def trace_backwards(
+def trace_backwards(  # noqa: C901
     db: Session,
     batch_id: int,
     use_cache: bool = True,
@@ -132,7 +132,10 @@ def trace_backwards(
 
             plot_name = parent_batch.plot.name if parent_batch.plot else None
             farm_name = parent_batch.farm.name if parent_batch.farm else plot_name
-            location = parent_batch.plot.location if parent_batch.plot else (parent_batch.farm.location if parent_batch.farm else None)
+            location = (
+                parent_batch.plot.location if parent_batch.plot
+                else (parent_batch.farm.location if parent_batch.farm else None)
+            )
             owner = parent_batch.plot.owner if parent_batch.plot else (parent_batch.farm.owner if parent_batch.farm else None)
             prod_name = parent_batch.product_name or (parent_batch.product.name if parent_batch.product else None)
 
@@ -150,8 +153,14 @@ def trace_backwards(
                 "owner": owner,
                 "current_org_id": parent_batch.current_org_id,
                 "current_org_name": parent_batch.current_org_name,
-                "initial_quantity": float(parent_batch.initial_quantity) if parent_batch.initial_quantity is not None else None,
-                "remaining_quantity": float(parent_batch.remaining_quantity) if parent_batch.remaining_quantity is not None else None,
+                "initial_quantity": (
+                    float(parent_batch.initial_quantity)
+                    if parent_batch.initial_quantity is not None else None
+                ),
+                "remaining_quantity": (
+                    float(parent_batch.remaining_quantity)
+                    if parent_batch.remaining_quantity is not None else None
+                ),
                 "harvest_date": str(parent_batch.harvest_date),
                 "relation_type": rel.relation_type,
                 "transferred_quantity": float(rel.transferred_quantity),
@@ -242,7 +251,7 @@ def trace_backwards(
     return result
 
 
-def trace_forward(
+def trace_forward(  # noqa: C901
     db: Session,
     batch_id: int,
     use_cache: bool = True,
@@ -352,7 +361,10 @@ def trace_forward(
             status_val = child_batch.status or "ACTIVE"
             is_consumed = (status_val == "CONSUMED")
             # S-27 AC 2: Nếu đã bán hết (S-29) -> trạng thái Đã tiêu thụ, khối lượng còn lại = 0
-            rem_qty = 0.0 if is_consumed else (float(child_batch.remaining_quantity) if child_batch.remaining_quantity is not None else 0.0)
+            rem_qty = (
+                0.0 if is_consumed
+                else (float(child_batch.remaining_quantity) if child_batch.remaining_quantity is not None else 0.0)
+            )
 
             node_dict = {
                 "batch_id": child_batch.id,
@@ -411,7 +423,10 @@ def trace_forward(
                 "current_org_name": target.current_org_name,
                 "location": loc,
                 "initial_quantity": float(target.initial_quantity) if target.initial_quantity is not None else None,
-                "remaining_quantity": 0.0 if is_c else (float(target.remaining_quantity) if target.remaining_quantity is not None else 0.0),
+                "remaining_quantity": (
+                    0.0 if is_c
+                    else (float(target.remaining_quantity) if target.remaining_quantity is not None else 0.0)
+                ),
                 "status": target.status,
                 "is_consumed": is_c,
                 "harvest_date": str(target.harvest_date),
@@ -438,7 +453,10 @@ def trace_forward(
                     "current_org_name": b.current_org_name,
                     "location": loc,
                     "initial_quantity": float(b.initial_quantity) if b.initial_quantity is not None else None,
-                    "remaining_quantity": 0.0 if is_c else (float(b.remaining_quantity) if b.remaining_quantity is not None else 0.0),
+                    "remaining_quantity": (
+                        0.0 if is_c
+                        else (float(b.remaining_quantity) if b.remaining_quantity is not None else 0.0)
+                    ),
                     "status": b.status,
                     "is_consumed": is_c,
                     "harvest_date": str(b.harvest_date),
@@ -456,4 +474,3 @@ def trace_forward(
         _FORWARD_CACHE[batch_id] = (now + CACHE_TTL_SECONDS, result)
 
     return result
-

@@ -179,7 +179,7 @@ def create_user(
 
 
 @router.patch("/{user_id}", response_model=UserResponse)
-def edit_user(
+def edit_user(  # noqa: C901
     user_id: int,
     payload: AccountUpdate,
     current_user: User = Depends(require_admin),

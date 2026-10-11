@@ -125,7 +125,12 @@ def _seed_lineage(db, orgs, actors, roots, product, base):
             c_batch = db.get(Batch, r.child_batch_id)
             if c_batch.current_org_id != orgs[1].id:
                 EVENT_TIME.set(base + timedelta(days=4, hours=2))
-                h = create_handover(HandoverCreate(to_org_id=orgs[1].id, note="Bàn giao sơ chế gộp lô"), r.child_batch_id, actors[0], db)
+                h = create_handover(
+                    HandoverCreate(to_org_id=orgs[1].id, note="Bàn giao sơ chế gộp lô"),
+                    r.child_batch_id,
+                    actors[0],
+                    db,
+                )
                 EVENT_TIME.set(base + timedelta(days=4, hours=3))
                 accept_handover(h.id, actors[1], db)
 

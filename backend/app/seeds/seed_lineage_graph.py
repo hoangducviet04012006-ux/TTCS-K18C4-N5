@@ -47,7 +47,7 @@ from app.models import (
 from app.security import hash_password
 
 
-def seed_lineage_graph(db: Session | None = None) -> dict[str, int]:
+def seed_lineage_graph(db: Session | None = None) -> dict[str, int]:  # noqa: C901
     """Khởi tạo toàn bộ đồ thị phả hệ 3 tầng."""
     if os.getenv("TTCS_ENV", "local").lower() not in ("local", "development", "test"):
         raise RuntimeError("Demo seed is disabled outside local environments.")
@@ -212,9 +212,15 @@ def seed_lineage_graph(db: Session | None = None) -> dict[str, int]:
         # ======================================================================
         # TẦNG 0: 3 Lô thu hoạch gốc (B-ROOT-01, B-ROOT-02, B-ROOT-03)
         # ======================================================================
-        b_root1 = get_or_create_batch("B-ROOT-01", plots[0].id, Decimal("1000.00"), Decimal("0.00"), date(2026, 9, 1), org_dt.id, "SPLIT")
-        b_root2 = get_or_create_batch("B-ROOT-02", plots[1].id, Decimal("1000.00"), Decimal("0.00"), date(2026, 9, 2), org_dt.id, "SPLIT")
-        b_root3 = get_or_create_batch("B-ROOT-03", plots[2].id, Decimal("1000.00"), Decimal("0.00"), date(2026, 9, 3), org_dt.id, "SPLIT")
+        b_root1 = get_or_create_batch(
+            "B-ROOT-01", plots[0].id, Decimal("1000.00"), Decimal("0.00"), date(2026, 9, 1), org_dt.id, "SPLIT"
+        )
+        b_root2 = get_or_create_batch(
+            "B-ROOT-02", plots[1].id, Decimal("1000.00"), Decimal("0.00"), date(2026, 9, 2), org_dt.id, "SPLIT"
+        )
+        b_root3 = get_or_create_batch(
+            "B-ROOT-03", plots[2].id, Decimal("1000.00"), Decimal("0.00"), date(2026, 9, 3), org_dt.id, "SPLIT"
+        )
 
         for r_batch in [b_root1, b_root2, b_root3]:
             if not r_batch.events:
@@ -222,7 +228,11 @@ def seed_lineage_graph(db: Session | None = None) -> dict[str, int]:
                     db=db,
                     batch_id=r_batch.id,
                     event_type=EVENT_HARVEST,
-                    payload={"batch_code": r_batch.code, "harvest_date": str(r_batch.harvest_date), "quantity": float(r_batch.initial_quantity)},
+                    payload={
+                        "batch_code": r_batch.code,
+                        "harvest_date": str(r_batch.harvest_date),
+                        "quantity": float(r_batch.initial_quantity),
+                    },
                     org_id=org_dt.id,
                     user_id=user_id,
                 )
@@ -230,18 +240,30 @@ def seed_lineage_graph(db: Session | None = None) -> dict[str, int]:
         # ======================================================================
         # TẦNG 1: 6 Lô tách (B1 -> 1A, 1B; B2 -> 2A, 2B; B3 -> 3A, 3B)
         # ======================================================================
-        b_s1a = get_or_create_batch("B-SPLIT-01A", plots[0].id, Decimal("400.00"), Decimal("0.00"), date(2026, 9, 1), org_dt.id, "MERGED")
-        b_s1b = get_or_create_batch("B-SPLIT-01B", plots[0].id, Decimal("600.00"), Decimal("0.00"), date(2026, 9, 1), org_dt.id, "MERGED")
+        b_s1a = get_or_create_batch(
+            "B-SPLIT-01A", plots[0].id, Decimal("400.00"), Decimal("0.00"), date(2026, 9, 1), org_dt.id, "MERGED"
+        )
+        b_s1b = get_or_create_batch(
+            "B-SPLIT-01B", plots[0].id, Decimal("600.00"), Decimal("0.00"), date(2026, 9, 1), org_dt.id, "MERGED"
+        )
         ensure_relation(b_root1.id, b_s1a.id, Decimal("400.00"), RELATION_SPLIT)
         ensure_relation(b_root1.id, b_s1b.id, Decimal("600.00"), RELATION_SPLIT)
 
-        b_s2a = get_or_create_batch("B-SPLIT-02A", plots[1].id, Decimal("500.00"), Decimal("0.00"), date(2026, 9, 2), org_dt.id, "MERGED")
-        b_s2b = get_or_create_batch("B-SPLIT-02B", plots[1].id, Decimal("500.00"), Decimal("0.00"), date(2026, 9, 2), org_dt.id, "MERGED")
+        b_s2a = get_or_create_batch(
+            "B-SPLIT-02A", plots[1].id, Decimal("500.00"), Decimal("0.00"), date(2026, 9, 2), org_dt.id, "MERGED"
+        )
+        b_s2b = get_or_create_batch(
+            "B-SPLIT-02B", plots[1].id, Decimal("500.00"), Decimal("0.00"), date(2026, 9, 2), org_dt.id, "MERGED"
+        )
         ensure_relation(b_root2.id, b_s2a.id, Decimal("500.00"), RELATION_SPLIT)
         ensure_relation(b_root2.id, b_s2b.id, Decimal("500.00"), RELATION_SPLIT)
 
-        b_s3a = get_or_create_batch("B-SPLIT-03A", plots[2].id, Decimal("300.00"), Decimal("0.00"), date(2026, 9, 3), org_dt.id, "MERGED")
-        b_s3b = get_or_create_batch("B-SPLIT-03B", plots[2].id, Decimal("700.00"), Decimal("0.00"), date(2026, 9, 3), org_dt.id, "MERGED")
+        b_s3a = get_or_create_batch(
+            "B-SPLIT-03A", plots[2].id, Decimal("300.00"), Decimal("0.00"), date(2026, 9, 3), org_dt.id, "MERGED"
+        )
+        b_s3b = get_or_create_batch(
+            "B-SPLIT-03B", plots[2].id, Decimal("700.00"), Decimal("0.00"), date(2026, 9, 3), org_dt.id, "MERGED"
+        )
         ensure_relation(b_root3.id, b_s3a.id, Decimal("300.00"), RELATION_SPLIT)
         ensure_relation(b_root3.id, b_s3b.id, Decimal("700.00"), RELATION_SPLIT)
 
@@ -252,7 +274,10 @@ def seed_lineage_graph(db: Session | None = None) -> dict[str, int]:
                     db=db,
                     batch_id=p_batch.id,
                     event_type=EVENT_SPLIT,
-                    payload={"child_batch_codes": [c.code for c in children], "total_split_quantity": float(p_batch.initial_quantity)},
+                    payload={
+                        "child_batch_codes": [c.code for c in children],
+                        "total_split_quantity": float(p_batch.initial_quantity),
+                    },
                     org_id=org_dt.id,
                     user_id=user_id,
                 )
@@ -262,7 +287,11 @@ def seed_lineage_graph(db: Session | None = None) -> dict[str, int]:
                         db=db,
                         batch_id=c.id,
                         event_type=EVENT_GENESIS_SPLIT,
-                        payload={"parent_batch_code": p_batch.code, "parent_batch_id": p_batch.id, "quantity": float(c.initial_quantity)},
+                        payload={
+                            "parent_batch_code": p_batch.code,
+                            "parent_batch_id": p_batch.id,
+                            "quantity": float(c.initial_quantity),
+                        },
                         org_id=org_dt.id,
                         user_id=user_id,
                     )
@@ -270,15 +299,21 @@ def seed_lineage_graph(db: Session | None = None) -> dict[str, int]:
         # ======================================================================
         # TẦNG 2: 3 Lô gộp (M1: 1A+2A -> 900kg; M2: 1B+3A -> 900kg; M3: 2B+3B -> 1200kg)
         # ======================================================================
-        b_m1 = get_or_create_batch("B-MERGE-01", plots[0].id, Decimal("900.00"), Decimal("0.00"), date(2026, 9, 4), org_dt.id, "SPLIT")
+        b_m1 = get_or_create_batch(
+            "B-MERGE-01", plots[0].id, Decimal("900.00"), Decimal("0.00"), date(2026, 9, 4), org_dt.id, "SPLIT"
+        )
         ensure_relation(b_s1a.id, b_m1.id, Decimal("400.00"), RELATION_MERGE)
         ensure_relation(b_s2a.id, b_m1.id, Decimal("500.00"), RELATION_MERGE)
 
-        b_m2 = get_or_create_batch("B-MERGE-02", plots[0].id, Decimal("900.00"), Decimal("900.00"), date(2026, 9, 4), org_dt.id, "ACTIVE")
+        b_m2 = get_or_create_batch(
+            "B-MERGE-02", plots[0].id, Decimal("900.00"), Decimal("900.00"), date(2026, 9, 4), org_dt.id, "ACTIVE"
+        )
         ensure_relation(b_s1b.id, b_m2.id, Decimal("600.00"), RELATION_MERGE)
         ensure_relation(b_s3a.id, b_m2.id, Decimal("300.00"), RELATION_MERGE)
 
-        b_m3 = get_or_create_batch("B-MERGE-03", plots[1].id, Decimal("1200.00"), Decimal("1200.00"), date(2026, 9, 4), org_dt.id, "ACTIVE")
+        b_m3 = get_or_create_batch(
+            "B-MERGE-03", plots[1].id, Decimal("1200.00"), Decimal("1200.00"), date(2026, 9, 4), org_dt.id, "ACTIVE"
+        )
         ensure_relation(b_s2b.id, b_m3.id, Decimal("500.00"), RELATION_MERGE)
         ensure_relation(b_s3b.id, b_m3.id, Decimal("700.00"), RELATION_MERGE)
 
@@ -304,7 +339,10 @@ def seed_lineage_graph(db: Session | None = None) -> dict[str, int]:
                     db=db,
                     batch_id=m_batch.id,
                     event_type=EVENT_MERGE,
-                    payload={"parent_batches": [{"code": p[0].code, "quantity": p[1]} for p in parents_info], "total_quantity": float(m_batch.initial_quantity)},
+                    payload={
+                        "parent_batches": [{"code": p[0].code, "quantity": p[1]} for p in parents_info],
+                        "total_quantity": float(m_batch.initial_quantity),
+                    },
                     org_id=org_dt.id,
                     user_id=user_id,
                 )
@@ -313,8 +351,12 @@ def seed_lineage_graph(db: Session | None = None) -> dict[str, int]:
         # TẦNG 3: Tách B-MERGE-01 -> B-FINAL-01 (500kg) & B-FINAL-02 (400kg)
         # Bàn giao B-FINAL-01 cho HTX-TG (Org 2), B-FINAL-02 cho DN-XNK (Org 3)
         # ======================================================================
-        b_fin1 = get_or_create_batch("B-FINAL-01", plots[0].id, Decimal("500.00"), Decimal("500.00"), date(2026, 9, 5), org_tg.id, "ACTIVE")
-        b_fin2 = get_or_create_batch("B-FINAL-02", plots[0].id, Decimal("400.00"), Decimal("400.00"), date(2026, 9, 5), org_xnk.id, "ACTIVE")
+        b_fin1 = get_or_create_batch(
+            "B-FINAL-01", plots[0].id, Decimal("500.00"), Decimal("500.00"), date(2026, 9, 5), org_tg.id, "ACTIVE"
+        )
+        b_fin2 = get_or_create_batch(
+            "B-FINAL-02", plots[0].id, Decimal("400.00"), Decimal("400.00"), date(2026, 9, 5), org_xnk.id, "ACTIVE"
+        )
         ensure_relation(b_m1.id, b_fin1.id, Decimal("500.00"), RELATION_SPLIT)
         ensure_relation(b_m1.id, b_fin2.id, Decimal("400.00"), RELATION_SPLIT)
 
@@ -336,7 +378,11 @@ def seed_lineage_graph(db: Session | None = None) -> dict[str, int]:
                     db=db,
                     batch_id=fin.id,
                     event_type=EVENT_GENESIS_SPLIT,
-                    payload={"parent_batch_code": b_m1.code, "parent_batch_id": b_m1.id, "quantity": float(fin.initial_quantity)},
+                    payload={
+                        "parent_batch_code": b_m1.code,
+                        "parent_batch_id": b_m1.id,
+                        "quantity": float(fin.initial_quantity),
+                    },
                     org_id=org_dt.id,
                     user_id=user_id,
                 )

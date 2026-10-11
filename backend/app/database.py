@@ -160,7 +160,7 @@ def migrate_handover_and_batch_columns() -> None:
                 pass
 
 
-def migrate_sprint2_schema(target_engine=None) -> None:
+def migrate_sprint2_schema(target_engine=None) -> None:  # noqa: C901
     """Migration nâng cấp schema cho Sprint 2:
 
     - Bảng products (T-16)
@@ -222,7 +222,8 @@ def migrate_sprint2_schema(target_engine=None) -> None:
                     "UPDATE batches SET initial_quantity = quantity WHERE initial_quantity IS NULL AND quantity IS NOT NULL"
                 )
                 connection.exec_driver_sql(
-                    "UPDATE batches SET remaining_quantity = quantity WHERE remaining_quantity IS NULL AND quantity IS NOT NULL"
+                    "UPDATE batches SET remaining_quantity = quantity "
+                    "WHERE remaining_quantity IS NULL AND quantity IS NOT NULL"
                 )
                 connection.exec_driver_sql(
                     "UPDATE batches SET status = 'ACTIVE' WHERE status IS NULL"

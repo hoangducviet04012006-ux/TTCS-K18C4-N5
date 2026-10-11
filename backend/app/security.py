@@ -228,7 +228,7 @@ def get_current_user(
     db: Session = Depends(get_db),
 ) -> User:
     """Lấy tài khoản đang gọi API từ Phiên làm việc (Session Cookie) hoặc HTTP Basic.
-    
+
     Ngăn chặn việc dùng HTTP Basic làm đường vòng vượt qua session bị thu hồi/hết hạn.
     """
     unauthorized = HTTPException(
@@ -281,7 +281,10 @@ def get_current_user(
     if not is_basic_auth_allowed():
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Hệ thống đã vô hiệu hóa HTTP Basic Auth trong môi trường sản xuất. Vui lòng đăng nhập qua /auth/login để nhận phiên làm việc.",
+            detail=(
+                "Hệ thống đã vô hiệu hóa HTTP Basic Auth trong môi trường sản xuất. "
+                "Vui lòng đăng nhập qua /auth/login để nhận phiên làm việc."
+            ),
         )
 
     if credentials is None:

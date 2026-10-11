@@ -28,7 +28,6 @@ from app.models import (
     ACTION_DELETE,
     ACTION_UPDATE,
     ENTITY_BATCH,
-    EVENT_CONSUMED,
     EVENT_EXPORT_MERGE,
     EVENT_GENESIS_SPLIT,
     EVENT_HARVEST,
@@ -99,7 +98,7 @@ router = APIRouter(
         status.HTTP_404_NOT_FOUND: {"description": "Không tìm thấy thửa đất hoặc sản phẩm."},
     },
 )
-def create_batch(
+def create_batch(  # noqa: C901
     payload: BatchCreate,
     current_user: User = Depends(require_farmer),
     db: Session = Depends(get_db),
@@ -544,7 +543,7 @@ def delete_batch(
         "- Ghi sự kiện MERGE và EXPORT_MERGE vào Hash-Chain (T-47)."
     ),
 )
-def merge_batches(
+def merge_batches(  # noqa: C901
     payload: BatchMergeRequest,
     current_user: User = Depends(require_farmer),
     db: Session = Depends(get_db),
@@ -773,7 +772,7 @@ def merge_batches(
     status_code=status.HTTP_201_CREATED,
     include_in_schema=False,
 )
-def split_batch(
+def split_batch(  # noqa: C901
     payload: BatchSplitRequest,
     batch_id: str = Path(..., description="ID số nguyên hoặc Mã chuỗi của lô mẹ cần tách."),
     current_user: User = Depends(require_farmer),
@@ -853,7 +852,10 @@ def split_batch(
     if total_split > parent.remaining_quantity:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Tổng khối lượng tách ({total_split}) vượt quá khối lượng còn lại của lô mẹ ({parent.remaining_quantity}).",
+            detail=(
+                f"Tổng khối lượng tách ({total_split}) vượt quá "
+                f"khối lượng còn lại của lô mẹ ({parent.remaining_quantity})."
+            ),
         )
 
     child_batches: list[Batch] = []
@@ -1157,7 +1159,8 @@ def get_batch_summary(
         "- Phát hiện chu trình (Cycle detection) ném HTTP 400 (S-26 AC 2).\n"
         "- Hiển thị tổ chức đang giữ, địa điểm và khối lượng còn lại (S-27).\n"
         "- Lô đã tiêu thụ (CONSUMED) hiển thị trạng thái và khối lượng còn lại = 0 (S-27 AC 2).\n"
-        "- Phân quyền: Cán bộ kiểm tra (Inspector) xem toàn bộ liên tổ chức. Người dùng tổ chức không thấy thông tin nội bộ của tổ chức khác."
+        "- Phân quyền: Cán bộ kiểm tra (Inspector) xem toàn bộ liên tổ chức. "
+        "Người dùng tổ chức không thấy thông tin nội bộ của tổ chức khác."
     ),
 )
 def get_batch_trace_forward(
@@ -1328,4 +1331,3 @@ def consume_batch(
         event=event,
         message="Ghi nhận lô nông sản đã tiêu thụ thành công.",
     )
-

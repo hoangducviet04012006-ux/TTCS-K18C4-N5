@@ -30,7 +30,7 @@ from app.schemas import BatchEventCreate, BatchEventOut, BatchIntegrityResponse
 from app.security import get_current_user, require_farmer
 from app.services.rbac import check_action_permission
 from app.services.permissions import can_view_batch
-from app.services.rbac import get_handover_cutoff_event_id, get_handover_history_cutoff
+from app.services.rbac import get_handover_cutoff_event_id
 
 router = APIRouter(
     tags=["Batch Events"],
