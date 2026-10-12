@@ -701,12 +701,21 @@
       <p id="audit-error" class="empty empty--error" hidden></p>
     </section>
 
-    <!-- ==================== CÁN BỘ KIỂM TRA (INSPECTOR - T-29) ==================== -->
+    <!-- ==================== CÁN BỘ KIỂM TRA (INSPECTOR - T-29 & S-33) ==================== -->
 <section id="recall-card" class="card">
-<header class="card__header"><div><h2>Thu hồi lô hàng</h2><p class="card__desc">Thông tin theo phạm vi được cấp quyền. Hoàn tất xác nhận vẫn tiếp tục phong tỏa lô.</p></div><div class="form__actions"><button id="recall-refresh" class="btn btn--light" type="button">Tải lại Recall</button><button id="recall-open" class="btn btn--primary" type="button" hidden>Mở lệnh thu hồi</button></div></header>
+<header class="card__header"><div><h2>🚨 Thu hồi lô hàng &amp; Quản lý sự cố (S-33)</h2><p class="card__desc">Tìm kiếm lô hàng theo mã lô, đánh dấu lô có sự cố và mở lệnh thu hồi kèm lý do bất biến. Hoàn tất xác nhận vẫn tiếp tục phong tỏa lô.</p></div><div class="form__actions"><button id="recall-refresh" class="btn btn--light" type="button">Tải lại Recall</button><button id="recall-open" class="btn btn--danger" type="button" hidden style="background:#dc2626; border-color:#dc2626;">🚨 Mở lệnh thu hồi</button></div></header>
+
+<div class="screen-toolbar" id="recall-quick-search-bar" style="margin-bottom:14px; display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap;">
+  <label class="field" style="flex:1; min-width:240px; margin-bottom:0;">
+    <span class="field__label">Tìm kiếm &amp; Chọn lô hàng theo mã lô để báo sự cố</span>
+    <input id="recall-search-code" type="text" maxlength="30" placeholder="Nhập mã lô (VD: 4M8KQ2PY hoặc S39-ROOT-A)..." autocomplete="off" />
+  </label>
+  <button id="btn-quick-recall" class="btn btn--danger" type="button" style="background:#dc2626; border-color:#dc2626; height:42px;">🚨 Báo sự cố &amp; Mở thu hồi</button>
+</div>
+
 <p id="recall-status" role="status"></p><div id="recall-alerts" aria-label="Cảnh báo thu hồi"></div>
 <div class="table-wrap"><table class="table"><thead><tr><th>Mã Recall</th><th>Lô gốc</th><th>Lý do</th><th>Trạng thái</th><th>Ngày tạo</th><th>Xác nhận</th><th>Bất thường</th><th>Thao tác</th></tr></thead><tbody id="recall-list"></tbody></table></div>
-<p class="card__desc">Tạm thời chỉ một Recall cho mỗi lô gốc trong vòng đời; chờ mentor xác nhận chính sách.</p>
+<p class="card__desc">Hệ thống áp dụng chính sách: Không cho phép tạo lệnh thu hồi trùng lặp cho cùng một lô khi lệnh trước đó vẫn đang xử lý.</p>
 </section>
     <section id="inspector-card" class="card inspector-card">
       <header class="card__header">
@@ -1166,13 +1175,39 @@
   </noscript>
 
 <div id="modal-recall-create" class="modal-backdrop" hidden>
-<div class="modal" role="dialog" aria-modal="true" aria-labelledby="recall-create-title"><header class="modal__header"><h3 id="recall-create-title">Mở lệnh thu hồi</h3><button class="modal__close" data-recall-close="modal-recall-create" type="button" aria-label="Đóng">×</button></header><div class="modal__body">
-<form id="recall-create-form"><label class="field"><span class="field__label">Lô cần thu hồi (mã hoặc ID)</span><input id="recall-root" list="recall-root-options" required autocomplete="off"><datalist id="recall-root-options"></datalist></label>
-<p class="card__desc">Có thể nhập ID lô ngoài trang danh sách hiện tại. Quyền nắm giữ được kiểm tra lại trên server.</p>
-<label class="field"><span class="field__label">Lý do (20–5000 ký tự)</span><textarea id="recall-reason" minlength="20" maxlength="5000" required rows="4"></textarea></label>
-<label><input id="recall-create-confirm" type="checkbox" required> Tôi xác nhận phong tỏa lô và mọi hậu duệ, gồm cả lô đã tiêu thụ.</label>
-<p id="recall-create-error" role="alert"></p><p class="card__desc">Sau lỗi mạng hoặc hết thời gian chờ, gửi lại dùng cùng khóa thao tác và giữ nguyên nội dung.</p>
-<div class="modal__actions"><button id="recall-create-submit" class="btn btn--primary" type="submit">Xác nhận mở Recall</button></div></form></div></div></div>
+<div class="modal" role="dialog" aria-modal="true" aria-labelledby="recall-create-title"><header class="modal__header"><h3 id="recall-create-title">🚨 S-33: Đánh dấu sự cố &amp; Mở lệnh thu hồi</h3><button class="modal__close" data-recall-close="modal-recall-create" type="button" aria-label="Đóng">×</button></header><div class="modal__body">
+<form id="recall-create-form">
+<label class="field"><span class="field__label">Tìm kiếm &amp; Chọn lô hàng (Mã lô hoặc ID) <em>*</em></span>
+<input id="recall-root" list="recall-root-options" required autocomplete="off" placeholder="Nhập mã lô (VD: 4M8KQ2PY) hoặc ID lô...">
+<datalist id="recall-root-options"></datalist></label>
+<div id="recall-batch-preview" class="recall-batch-preview" hidden></div>
+<p class="card__desc" style="margin-top: 4px;">Người dùng có thể tìm theo mã lô trong hệ thống. Quyền mở lệnh (Inspector hoặc Org Admin giữ lô) được kiểm tra chặt chẽ trên máy chủ.</p>
+
+<div class="operator-meta-box" id="recall-operator-box" style="background: rgba(30, 41, 59, 0.6); padding: 8px 12px; border-radius: 6px; margin: 10px 0; font-size: 0.85rem; border: 1px solid rgba(148, 163, 184, 0.2);">
+  <div><strong>Người thực hiện:</strong> <span id="recall-operator-name">—</span> (<span id="recall-operator-role">—</span>)</div>
+  <div><strong>Thời gian thao tác:</strong> <span id="recall-operator-time">—</span></div>
+</div>
+
+<label class="field"><span class="field__label">Lý do thu hồi &amp; mô tả sự cố <em>*</em> (bắt buộc, tối thiểu 20 ký tự)</span>
+<textarea id="recall-reason" minlength="20" maxlength="5000" required rows="4" placeholder="Nhập lý do chi tiết về sự cố hoặc cảnh báo an toàn thực phẩm (tối thiểu 20 ký tự)..."></textarea>
+<div style="display:flex; justify-content:space-between; font-size:0.8rem; color:#94a3b8; margin-top:2px;">
+  <span>Bắt buộc nhập lý do trước khi xác nhận</span>
+  <span id="recall-reason-count">0 / 20 ký tự tối thiểu</span>
+</div>
+</label>
+
+<label style="display: flex; align-items: flex-start; gap: 8px; margin: 12px 0; cursor: pointer;">
+  <input id="recall-create-confirm" type="checkbox" required style="margin-top: 3px;">
+  <span>Tôi xác nhận đánh dấu lô này <strong>Có sự cố</strong>, chuyển trạng thái cảnh báo và phong tỏa toàn bộ lô hàng cùng các hậu duệ.</span>
+</label>
+
+<p id="recall-create-error" class="login__error" role="alert" style="margin-bottom: 8px;"></p>
+<p class="card__desc">Hệ thống áp dụng Idempotency: nếu có sự cố mạng, gửi lại sẽ sử dụng cùng khóa thao tác để bảo đảm không sinh lệnh trùng lặp.</p>
+<div class="modal__actions">
+  <button class="btn btn--light" data-recall-close="modal-recall-create" type="button">Hủy bỏ</button>
+  <button id="recall-create-submit" class="btn btn--danger" type="submit" style="background:#dc2626; border-color:#dc2626;">🚨 Xác nhận đánh dấu sự cố &amp; Mở lệnh</button>
+</div>
+</form></div></div></div>
 <div id="modal-recall-detail" class="modal-backdrop" hidden>
 <div class="modal modal--lg recall-detail-modal" role="dialog" aria-modal="true" aria-labelledby="recall-detail-title"><header class="modal__header"><h3 id="recall-detail-title">Chi tiết Recall</h3><button class="modal__close" data-recall-close="modal-recall-detail" type="button" aria-label="Đóng">×</button></header><div class="modal__body"><div id="recall-detail-body"></div>
 <form id="recall-ack-form" hidden><p class="recall-warning">Chỉ xác nhận phần tổ chức mình đã xử lý. Xác nhận ghi vào lịch sử, không thể sửa/xóa; lô vẫn phong tỏa.</p><label class="field"><span class="field__label">Ghi chú xử lý</span><textarea id="recall-ack-notes" maxlength="5000" rows="3"></textarea></label><label><input id="recall-ack-confirm" type="checkbox" required> Tôi xác nhận tổ chức mình đã xử lý các lô liên quan.</label><p id="recall-ack-error" role="alert"></p><div class="modal__actions"><button id="recall-ack-submit" class="btn btn--primary" type="submit">Xác nhận xử lý</button></div></form>

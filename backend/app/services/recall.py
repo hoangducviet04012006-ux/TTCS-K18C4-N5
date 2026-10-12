@@ -107,10 +107,14 @@ def detail(db, recall, user, graph=None):
             "acknowledged_at": ack.acknowledged_at.isoformat() if ack and ack.acknowledged_at else None,
             "notes": ack.notes if ack else None,
         })
+    root_batch = next((b for b in batches if b.id == recall.root_batch_id), batches[0] if batches else None)
     return {
         "id": recall.id, "recall_code": recall.recall_code, "root_batch_id": recall.root_batch_id,
+        "batch_code": root_batch.code if root_batch else None,
         "reason": recall.reason, "status": recall.status,
+        "incident_status": "Có sự cố",
         "created_at": recall.created_at.isoformat(),
+        "created_by_user_id": recall.created_by_user_id,
         "completed_at": recall.completed_at.isoformat() if recall.completed_at else None,
         "policy": "ONE_RECALL_PER_ROOT_LIFETIME_PENDING_MENTOR",
         "affected_batches": nodes, "visible_batch_count": len(nodes),

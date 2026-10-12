@@ -1333,8 +1333,14 @@ function renderBatches() {
       const isOverdue = (batch.pending_handover && (batch.pending_handover.is_overdue || checkIsOverdue(batch.pending_handover.created_at))) ||
                         (pendingItem && (pendingItem.is_overdue || checkIsOverdue(pendingItem.created_at)));
 
+      // Kiểm tra trạng thái sự cố và thu hồi (S-33)
+      const isRecalled = window.recallUi?.isBatchRecalled ? (window.recallUi.isBatchRecalled(batch.id) || window.recallUi.isBatchRecalled(batch.code)) : false;
+      const recallInfo = window.recallUi?.getBatchRecallInfo ? (window.recallUi.getBatchRecallInfo(batch.id) || window.recallUi.getBatchRecallInfo(batch.code)) : null;
+
       let statusBadge = '<span class="badge badge--ok">Đang quản lý</span>';
-      if (batch.status === "CONSUMED") {
+      if (isRecalled) {
+        statusBadge = `<span class="badge badge--danger" style="background:#dc2626; color:#fff; font-weight:700;" title="Lô hàng có sự cố và đang trong lệnh thu hồi ${escapeHtml(recallInfo?.recall_code || '')} (S-33)">🚨 Có sự cố</span>`;
+      } else if (batch.status === "CONSUMED") {
         statusBadge = '<span class="badge" style="background:#64748b; color:#fff;" title="Lô hàng đã bán hết cho người tiêu dùng (S-29)">🍽️ Đã tiêu thụ</span>';
       } else if (batch.status === "SPLIT") {
         statusBadge = '<span class="badge badge--info" style="background:#0284c7; color:#fff;">✂️ Đã tách</span>';
@@ -1357,8 +1363,36 @@ function renderBatches() {
       let splitBtn = "";
       let consumeBtn = "";
       let editBtn = "";
+      let recallBtn = "";
+
+      const canOpenRecall = session?.role === "inspector" || (session?.role === "org_admin" && isHolder);
+      if (canOpenRecall) {
+        if (isRecalled) {
+          recallBtn = `<button class="btn btn--outline-danger btn--sm" type="button"
+                         data-action="open-recall-section"
+                         title="Lô hàng đang trong lệnh thu hồi ${escapeHtml(recallInfo?.recall_code || '')}. Bấm để xem danh sách thu hồi."
+                         style="border-color:#dc2626; color:#dc2626;">🚨 Lệnh thu hồi</button>`;
+        } else {
+          recallBtn = `<button class="btn btn--outline-danger btn--sm" type="button"
+                         data-action="create-recall" data-id="${escapeHtml(batch.id)}" data-code="${escapeHtml(batch.code || '')}"
+                         title="Đánh dấu lô có sự cố và mở lệnh thu hồi kèm lý do (S-33)"
+                         style="border-color:#dc2626; color:#dc2626;">🚨 Báo sự cố</button>`;
+        }
+      }
+
       if (isHolder && batch.status !== "CONSUMED") {
-        if (isPending) {
+        if (isRecalled) {
+          // Khi lô có sự cố / trong lệnh thu hồi: Phong tỏa mọi thao tác vật lý
+          if (canHandover()) {
+            handoverBtn = `<button class="btn btn--light btn--sm" type="button" disabled title="Lô hàng đang có sự cố / bị thu hồi: chặn bàn giao (S-38)">🚚 Bàn giao</button>`;
+          }
+          if (canSplit()) {
+            splitBtn = `<button class="btn btn--light btn--sm" type="button" disabled title="Lô hàng đang có sự cố / bị thu hồi: chặn tách lô (S-38)">✂️ Tách</button>`;
+          }
+          if (canConsume()) {
+            consumeBtn = `<button class="btn btn--light btn--sm" type="button" disabled title="Lô hàng đang có sự cố / bị thu hồi: chặn tiêu thụ (S-38)">🍽️ Tiêu thụ</button>`;
+          }
+        } else if (isPending) {
           if (canHandover()) {
             handoverBtn = `<button class="btn btn--light btn--sm" type="button" disabled title="Lô hàng đang có yêu cầu bàn giao chờ xác nhận">⏳ Chờ duyệt</button>`;
           }
@@ -1379,7 +1413,7 @@ function renderBatches() {
                             data-action="consume-batch" data-id="${escapeHtml(batch.id)}" title="Ghi nhận đã bán hết cho người tiêu dùng (S-29)" style="border-color:#d97706; color:#d97706;">🍽️ Tiêu thụ</button>`;
           }
         }
-        if (canHarvest()) {
+        if (canHarvest() && !isRecalled) {
           editBtn = `<button class="btn btn--light btn--sm" type="button"
                              data-action="edit" data-entity="batch"
                              data-id="${escapeHtml(batch.id)}">Sửa</button>`;
@@ -1410,6 +1444,7 @@ function renderBatches() {
             ${splitBtn}
             ${handoverBtn}
             ${consumeBtn}
+            ${recallBtn}
             ${editBtn}
             ${
               canDelete()
@@ -4020,6 +4055,25 @@ function handleTableAction(event) {
 
   if (action === "view-details") {
     openBatchDetailsModal(id);
+    return;
+  }
+
+  if (action === "create-recall") {
+    const code = button.dataset.code;
+    if (window.recallUi?.openCreate) {
+      window.recallUi.openCreate(code || id);
+    } else {
+      toast("Chức năng thu hồi đang khởi tạo...", "info");
+    }
+    return;
+  }
+
+  if (action === "open-recall-section") {
+    window.location.hash = "#recall-card";
+    const recallCard = $("recall-card");
+    if (recallCard) {
+      recallCard.scrollIntoView({ behavior: "smooth" });
+    }
     return;
   }
 
