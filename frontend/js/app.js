@@ -1884,6 +1884,9 @@ async function loadUsers() {
   for (const [id, key] of [["user-search", "search"], ["user-role-filter", "role"], ["user-org-filter", "organization_id"], ["user-status-filter", "is_active"]]) {
     if ($(id).value) params.set(key, $(id).value);
   }
+  if (session?.role === "org_admin" && session.organization_id) {
+    params.set("organization_id", session.organization_id);
+  }
   $("user-load-status").textContent = "Đang tải tài khoản…";
   try {
     const data = await apiRequest(`/users?${params}`);
@@ -4164,7 +4167,17 @@ async function loadAllData() {
   await loadPendingHandovers();
   if (window.AGRITRACE_CONFIG?.maxSprint !== 3) await window.recallUi?.load();
   if (isAdmin()) {
-    $("user-org-filter").innerHTML = '<option value="">Tất cả tổ chức</option>' + accountOrgOptions();
+    const orgFilter = $("user-org-filter");
+    if (session?.role === "org_admin") {
+      const myOrg = organizations.find(o => o.id === session.organization_id);
+      const orgName = session.organization_name || myOrg?.name || "Tổ chức của bạn";
+      orgFilter.innerHTML = `<option value="${session.organization_id}">${escapeHtml(orgName)}</option>`;
+      orgFilter.value = String(session.organization_id);
+      orgFilter.disabled = true;
+    } else {
+      orgFilter.disabled = false;
+      orgFilter.innerHTML = '<option value="">Tất cả tổ chức</option>' + accountOrgOptions();
+    }
     await loadUsers();
   }
   if (canViewAuditLogs()) await loadAuditLogs({ silent: true });

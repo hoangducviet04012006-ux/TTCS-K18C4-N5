@@ -533,7 +533,7 @@ def create_organization(
 )
 def list_batch_events_legacy_api(
     batch_id: int = Path(..., ge=1),
-    current_user: User = Depends(require_farmer),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> list[BatchEventOut]:
     from app.routers.events import list_events_for_batch
