@@ -3167,6 +3167,24 @@ async function loadDetailLineageForward(batchId) {
 
   try {
     const data = await apiRequest(`/batches/${batchId}/trace-forward`);
+    // S-28: cây phả hệ tương tác; giữ nguyên danh sách hậu duệ hiện có.
+    const treeContainer = $("detail-lineage-tree-container");
+    if (treeContainer && window.LineageTree && typeof window.LineageTree.render === "function") {
+      let ancestorData = null;
+      try {
+        ancestorData = await apiRequest(`/batches/${batchId}/trace-back`);
+      } catch (ancestorError) {
+        console.warn("S-28: Không tải được dữ liệu tổ tiên; vẫn hiển thị cây hậu duệ.", ancestorError);
+      }
+
+      window.LineageTree.render(treeContainer, data, {
+        ancestorData,
+        onOpenBatch: (id) => {
+          openBatchDetailsModal(Number(id));
+        }
+      });
+    }
+
 
     // 1. Điểm cuối chuỗi cung ứng & Đã tiêu thụ (Terminal batches)
     const termList = $("detail-terminal-batches-list");

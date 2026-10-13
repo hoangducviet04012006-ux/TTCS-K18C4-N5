@@ -979,7 +979,9 @@
               <div id="detail-terminal-batches-list" class="root-batches-grid"></div>
             </div>
 
-            <!-- Cây phả hệ phân tầng các lô liên quan -->
+            <!-- S-28: Cây phả hệ tương tác -->
+            <div id="detail-lineage-tree-container" class="s28-lineage-tree-container"></div>
+<!-- Cây phả hệ phân tầng các lô liên quan -->
             <div>
               <h4 style="margin-bottom: 12px; color: var(--color-primary-dark); font-size: 1rem;">🌳 CÁC LÔ NÔNG SẢN LIÊN QUAN TIẾP THEO</h4>
               <div id="detail-forward-levels-container" style="display: flex; flex-direction: column; gap: 14px;"></div>
@@ -1212,6 +1214,7 @@
 <div class="modal modal--lg recall-detail-modal" role="dialog" aria-modal="true" aria-labelledby="recall-detail-title"><header class="modal__header"><h3 id="recall-detail-title">Chi tiết Recall</h3><button class="modal__close" data-recall-close="modal-recall-detail" type="button" aria-label="Đóng">×</button></header><div class="modal__body"><div id="recall-detail-body"></div>
 <form id="recall-ack-form" hidden><p class="recall-warning">Chỉ xác nhận phần tổ chức mình đã xử lý. Xác nhận ghi vào lịch sử, không thể sửa/xóa; lô vẫn phong tỏa.</p><label class="field"><span class="field__label">Ghi chú xử lý</span><textarea id="recall-ack-notes" maxlength="5000" rows="3"></textarea></label><label><input id="recall-ack-confirm" type="checkbox" required> Tôi xác nhận tổ chức mình đã xử lý các lô liên quan.</label><p id="recall-ack-error" role="alert"></p><div class="modal__actions"><button id="recall-ack-submit" class="btn btn--primary" type="submit">Xác nhận xử lý</button></div></form>
 </div></div></div>
+  <script src="js/lineage_tree.js?v=1"></script>
   <script src="js/app.js?v=17"></script>
   <script src="js/recall.js?v=1"></script>
 </body>
