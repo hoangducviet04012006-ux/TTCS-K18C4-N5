@@ -1,0 +1,182 @@
+[
+  {
+    "channel": "chrome",
+    "test": "role:farm navigation, history, RBAC",
+    "passed": true
+  },
+  {
+    "channel": "chrome",
+    "test": "role:packing navigation, history, RBAC",
+    "passed": true
+  },
+  {
+    "channel": "chrome",
+    "test": "role:receiver navigation, history, RBAC",
+    "passed": true
+  },
+  {
+    "channel": "chrome",
+    "test": "role:transport navigation, history, RBAC",
+    "passed": true
+  },
+  {
+    "channel": "chrome",
+    "test": "role:distribution navigation, history, RBAC",
+    "passed": true
+  },
+  {
+    "channel": "chrome",
+    "test": "role:inspector navigation, history, RBAC",
+    "passed": true
+  },
+  {
+    "channel": "chrome",
+    "test": "role:admin navigation, history, RBAC",
+    "passed": true
+  },
+  {
+    "channel": "chrome",
+    "test": "role:org_admin navigation, history, RBAC",
+    "passed": true
+  },
+  {
+    "channel": "chrome",
+    "test": "farm UI create and edit",
+    "passed": true
+  },
+  {
+    "channel": "chrome",
+    "test": "harvest double submit, case search, split + integrity",
+    "passed": true
+  },
+  {
+    "channel": "chrome",
+    "test": "unrelated organization read/write denied; session preserved",
+    "passed": true
+  },
+  {
+    "channel": "chrome",
+    "test": "partial merge UI + handover pending",
+    "passed": true
+  },
+  {
+    "channel": "chrome",
+    "test": "receive UI, lineage, timeline, hash verification",
+    "passed": true
+  },
+  {
+    "channel": "chrome",
+    "test": "standalone BFS, timeline, hash-chain",
+    "passed": true
+  },
+  {
+    "channel": "chrome",
+    "test": "six screens laptop: no page overflow",
+    "passed": true
+  },
+  {
+    "channel": "chrome",
+    "test": "six screens desktop: no page overflow",
+    "passed": true
+  },
+  {
+    "channel": "chrome",
+    "test": "reject handover UI retains holder and valid chain",
+    "passed": true
+  },
+  {
+    "channel": "chrome",
+    "test": "401 return destination / 403 retains session / no JS error",
+    "passed": true
+  },
+  {
+    "channel": "msedge",
+    "test": "role:farm navigation, history, RBAC",
+    "passed": true
+  },
+  {
+    "channel": "msedge",
+    "test": "role:packing navigation, history, RBAC",
+    "passed": true
+  },
+  {
+    "channel": "msedge",
+    "test": "role:receiver navigation, history, RBAC",
+    "passed": true
+  },
+  {
+    "channel": "msedge",
+    "test": "role:transport navigation, history, RBAC",
+    "passed": true
+  },
+  {
+    "channel": "msedge",
+    "test": "role:distribution navigation, history, RBAC",
+    "passed": true
+  },
+  {
+    "channel": "msedge",
+    "test": "role:inspector navigation, history, RBAC",
+    "passed": true
+  },
+  {
+    "channel": "msedge",
+    "test": "role:admin navigation, history, RBAC",
+    "passed": true
+  },
+  {
+    "channel": "msedge",
+    "test": "role:org_admin navigation, history, RBAC",
+    "passed": true
+  },
+  {
+    "channel": "msedge",
+    "test": "farm UI create and edit",
+    "passed": true
+  },
+  {
+    "channel": "msedge",
+    "test": "harvest double submit, case search, split + integrity",
+    "passed": true
+  },
+  {
+    "channel": "msedge",
+    "test": "unrelated organization read/write denied; session preserved",
+    "passed": true
+  },
+  {
+    "channel": "msedge",
+    "test": "partial merge UI + handover pending",
+    "passed": true
+  },
+  {
+    "channel": "msedge",
+    "test": "receive UI, lineage, timeline, hash verification",
+    "passed": true
+  },
+  {
+    "channel": "msedge",
+    "test": "standalone BFS, timeline, hash-chain",
+    "passed": true
+  },
+  {
+    "channel": "msedge",
+    "test": "six screens laptop: no page overflow",
+    "passed": true
+  },
+  {
+    "channel": "msedge",
+    "test": "six screens desktop: no page overflow",
+    "passed": true
+  },
+  {
+    "channel": "msedge",
+    "test": "reject handover UI retains holder and valid chain",
+    "passed": true
+  },
+  {
+    "channel": "msedge",
+    "test": "401 return destination / 403 retains session / no JS error",
+    "passed": true
+  }
+]

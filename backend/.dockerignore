@@ -10,7 +10,18 @@ venv/
 .coverage
 htmlcov/
 *.db
+*.db-journal
+*.sqlite3
 ttcs.db
+backups/
+
+# Local credentials and environments
+.demo-password.local
+*.local
+.env
+.env.*
+
+# Git and Docker
 .git
 .gitignore
 Dockerfile

@@ -1,0 +1,164 @@
+AssertionError [ERR_ASSERTION]: Cannot read properties of null (reading 'addEventListener')
+Cannot read properties of null (reading 'addEventListener')
+Cannot read properties of null (reading 'addEventListener')
+Cannot read properties of null (reading 'addEventListener')
+Cannot read properties of null (reading 'addEventListener')
+Cannot read properties of null (reading 'addEventListener')
+Cannot read properties of null (reading 'addEventListener')
+Cannot read properties of null (reading 'addEventListener')
+Cannot read properties of null (reading 'addEventListener')
+Cannot read properties of null (reading 'addEventListener')
+
+10 !== 0
+
+    at main (D:\TTCS_K23C_N5\TTCS-K18C4-N5\docs\qa\sprint123_browser_check.cjs:140:14) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 10,
+  expected: 0,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+AssertionError [ERR_ASSERTION]: Cannot read properties of null (reading 'addEventListener')
+Cannot read properties of null (reading 'addEventListener')
+Cannot read properties of null (reading 'addEventListener')
+Cannot read properties of null (reading 'addEventListener')
+Cannot read properties of null (reading 'addEventListener')
+Cannot read properties of null (reading 'addEventListener')
+Cannot read properties of null (reading 'addEventListener')
+Cannot read properties of null (reading 'addEventListener')
+Cannot read properties of null (reading 'addEventListener')
+Cannot read properties of null (reading 'addEventListener')
+
+10 !== 0
+
+    at main (D:\TTCS_K23C_N5\TTCS-K18C4-N5\docs\qa\sprint123_browser_check.cjs:140:14) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 10,
+  expected: 0,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+[
+  {
+    "channel": "chrome",
+    "test": "role:farm",
+    "passed": true
+  },
+  {
+    "channel": "chrome",
+    "test": "role:packing",
+    "passed": true
+  },
+  {
+    "channel": "chrome",
+    "test": "role:transport",
+    "passed": true
+  },
+  {
+    "channel": "chrome",
+    "test": "role:distribution",
+    "passed": true
+  },
+  {
+    "channel": "chrome",
+    "test": "role:inspector",
+    "passed": true
+  },
+  {
+    "channel": "chrome",
+    "test": "role:admin",
+    "passed": true
+  },
+  {
+    "channel": "chrome",
+    "test": "role:org_admin",
+    "passed": true
+  },
+  {
+    "channel": "chrome",
+    "test": "farm UI create",
+    "passed": true
+  },
+  {
+    "channel": "chrome",
+    "test": "harvest double submit, case search, split + integrity",
+    "passed": true
+  },
+  {
+    "channel": "chrome",
+    "test": "partial merge UI + handover pending",
+    "passed": true
+  },
+  {
+    "channel": "chrome",
+    "test": "receive UI, lineage, timeline, hash verification",
+    "passed": true
+  },
+  {
+    "channel": "chrome",
+    "passed": false,
+    "error": "AssertionError [ERR_ASSERTION]: Cannot read properties of null (reading 'addEventListener')\nCannot read properties of null (reading 'addEventListener')\nCannot read properties of null (reading 'addEventListener')\nCannot read properties of null (reading 'addEventListener')\nCannot read properties of null (reading 'addEventListener')\nCannot read properties of null (reading 'addEventListener')\nCannot read properties of null (reading 'addEventListener')\nCannot read properties of null (reading 'addEventListener')\nCannot read properties of null (reading 'addEventListener')\nCannot read properties of null (reading 'addEventListener')\n\n10 !== 0\n\n    at main (D:\\TTCS_K23C_N5\\TTCS-K18C4-N5\\docs\\qa\\sprint123_browser_check.cjs:140:14)"
+  },
+  {
+    "channel": "msedge",
+    "test": "role:farm",
+    "passed": true
+  },
+  {
+    "channel": "msedge",
+    "test": "role:packing",
+    "passed": true
+  },
+  {
+    "channel": "msedge",
+    "test": "role:transport",
+    "passed": true
+  },
+  {
+    "channel": "msedge",
+    "test": "role:distribution",
+    "passed": true
+  },
+  {
+    "channel": "msedge",
+    "test": "role:inspector",
+    "passed": true
+  },
+  {
+    "channel": "msedge",
+    "test": "role:admin",
+    "passed": true
+  },
+  {
+    "channel": "msedge",
+    "test": "role:org_admin",
+    "passed": true
+  },
+  {
+    "channel": "msedge",
+    "test": "farm UI create",
+    "passed": true
+  },
+  {
+    "channel": "msedge",
+    "test": "harvest double submit, case search, split + integrity",
+    "passed": true
+  },
+  {
+    "channel": "msedge",
+    "test": "partial merge UI + handover pending",
+    "passed": true
+  },
+  {
+    "channel": "msedge",
+    "test": "receive UI, lineage, timeline, hash verification",
+    "passed": true
+  },
+  {
+    "channel": "msedge",
+    "passed": false,
+    "error": "AssertionError [ERR_ASSERTION]: Cannot read properties of null (reading 'addEventListener')\nCannot read properties of null (reading 'addEventListener')\nCannot read properties of null (reading 'addEventListener')\nCannot read properties of null (reading 'addEventListener')\nCannot read properties of null (reading 'addEventListener')\nCannot read properties of null (reading 'addEventListener')\nCannot read properties of null (reading 'addEventListener')\nCannot read properties of null (reading 'addEventListener')\nCannot read properties of null (reading 'addEventListener')\nCannot read properties of null (reading 'addEventListener')\n\n10 !== 0\n\n    at main (D:\\TTCS_K23C_N5\\TTCS-K18C4-N5\\docs\\qa\\sprint123_browser_check.cjs:140:14)"
+  }
+]

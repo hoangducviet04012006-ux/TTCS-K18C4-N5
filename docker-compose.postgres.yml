@@ -1,0 +1,23 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ttcs_postgres_stage1b
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ttcs_agritrace
+      POSTGRES_USER: ttcs_user
+      POSTGRES_PASSWORD: ttcs_secure_password_stage1b
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data_stage1b:/var/lib/postgresql/data
+      - ./backend/scripts/postgres_schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ttcs_user -d ttcs_agritrace"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pg_data_stage1b:
+    driver: local

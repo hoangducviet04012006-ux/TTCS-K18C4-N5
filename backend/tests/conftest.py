@@ -9,13 +9,15 @@ Chạy test từ thư mục ``backend``::
     python -m pytest
 """
 
+import os
+import tempfile
 from collections.abc import Generator
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import Engine, create_engine
 from sqlalchemy.orm import Session, sessionmaker
-from sqlalchemy.pool import StaticPool
 
 from app.database import Base, get_db
 from app.main import app
@@ -29,21 +31,44 @@ TEST_PASSWORD = "123456"
 TEST_USERNAME_ADMIN = "admin"
 TEST_USERNAME_FARMER = "farmer"
 
+# Email của 2 tài khoản test (S-04: dùng để kiểm thử đăng nhập bằng email).
+TEST_EMAIL_ADMIN = "admin@gmail.com"
+TEST_EMAIL_FARMER = "farmer@gmail.com"
+
+
+@pytest.fixture(autouse=True)
+def local_seed_environment(monkeypatch):
+    monkeypatch.setenv("TTCS_ENV", "test")
+    monkeypatch.setenv("DEMO_PASSWORD", TEST_PASSWORD)
+
 
 @pytest.fixture()
 def engine() -> Generator[Engine, None, None]:
-    """Engine SQLite in-memory (``StaticPool`` để mọi session dùng chung 1 kết nối)."""
+    """Engine SQLite trên **file tạm** (nhiều kết nối) cho mỗi test.
+
+    Dùng file tạm thay vì in-memory ``StaticPool`` (chỉ 1 kết nối dùng chung) để
+    các bài kiểm thử đồng thời (tách lô race condition) thực sự chạy trên nhiều
+    kết nối - phản ánh đúng môi trường production và tránh làm hỏng transaction
+    của nhau. File được tạo/xoá riêng cho từng test, hoàn toàn không đụng tới
+    ``backend/ttcs.db``.
+    """
+    fd, db_path = tempfile.mkstemp(prefix="ttcs_test_", suffix=".db")
+    os.close(fd)
     test_engine = create_engine(
-        "sqlite://",
+        f"sqlite:///{Path(db_path).as_posix()}",
         connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
     )
     Base.metadata.create_all(bind=test_engine)
+    from app.database import create_event_immutability_triggers
+    create_event_immutability_triggers(test_engine)
     try:
         yield test_engine
     finally:
-        Base.metadata.drop_all(bind=test_engine)
         test_engine.dispose()
+        try:
+            os.remove(db_path)
+        except OSError:
+            pass
 
 
 @pytest.fixture()
@@ -53,8 +78,10 @@ def session_factory(engine: Engine) -> sessionmaker[Session]:
 
 
 @pytest.fixture()
-def users(session_factory: sessionmaker[Session]) -> list[str]:
+def users(session_factory: sessionmaker[Session], monkeypatch) -> list[str]:
     """Tạo sẵn tổ chức mặc định và 2 tài khoản test (``admin`` + ``farmer``, mật khẩu ``123456``)."""
+    monkeypatch.setenv("DEMO_PASSWORD", TEST_PASSWORD)
+    monkeypatch.setenv("TTCS_ENV", "test")
     from app.models import Organization
     with session_factory() as session:
         org = Organization(
@@ -70,12 +97,14 @@ def users(session_factory: sessionmaker[Session]) -> list[str]:
             [
                 User(
                     username=TEST_USERNAME_ADMIN,
+                    email=TEST_EMAIL_ADMIN,
                     password=hash_password(TEST_PASSWORD),
                     role=ROLE_ADMIN,
                     organization_id=org.id,
                 ),
                 User(
                     username=TEST_USERNAME_FARMER,
+                    email=TEST_EMAIL_FARMER,
                     password=hash_password(TEST_PASSWORD),
                     role=ROLE_FARMER,
                     organization_id=org.id,

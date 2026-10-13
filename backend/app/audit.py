@@ -21,10 +21,11 @@ Ví dụ dùng trong router::
     db.commit()
 """
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session, joinedload
 
-from app.models import AuditLog, User
+from app.models import AuditLog, Batch, Farm, User
+from app.hash_chain import event_now
 
 #: Số dòng log trả về mặc định cho một lần gọi ``GET /audit-logs``.
 DEFAULT_AUDIT_LOG_LIMIT: int = 100
@@ -64,6 +65,7 @@ def record_action(
         action=action,
         entity=entity,
         entity_id=entity_id,
+        created_at=event_now(),
     )
     db.add(log)
     return log
@@ -74,6 +76,7 @@ def fetch_audit_logs(
     entity: str | None = None,
     user_id: int | None = None,
     limit: int = DEFAULT_AUDIT_LOG_LIMIT,
+    organization_id: int | None = None,
 ) -> list[AuditLog]:
     """Đọc bảng ``audit_logs`` cho API ``GET /audit-logs`` (chỉ admin gọi được).
 
@@ -100,6 +103,20 @@ def fetch_audit_logs(
         statement = statement.where(AuditLog.entity == entity)
     if user_id is not None:
         statement = statement.where(AuditLog.user_id == user_id)
+    if organization_id is not None:
+        # No historic organization snapshot exists in this schema. Fail closed:
+        # both the actor and the current target must belong to this organization.
+        statement = statement.where(
+            AuditLog.user.has(User.organization_id == organization_id),
+            or_(
+                (AuditLog.entity == "farm") & AuditLog.entity_id.in_(
+                    select(Farm.id).where(Farm.organization_id == organization_id)),
+                (AuditLog.entity == "batch") & AuditLog.entity_id.in_(
+                    select(Batch.id).where(Batch.current_org_id == organization_id)),
+                (AuditLog.entity == "user") & AuditLog.entity_id.in_(
+                    select(User.id).where(User.organization_id == organization_id)),
+            ),
+        )
 
     return list(db.scalars(statement).all())
 

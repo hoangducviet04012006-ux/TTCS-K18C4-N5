@@ -1,0 +1,29 @@
+.demo-logs/
+.sprint123-trial/
+.recall-trial/
+
+# Local credentials and environments (never commit)
+.demo-password.local
+*.local
+.env
+.env.*
+.env.local
+
+# Databases and backups
+*.db
+*.db-journal
+*.sqlite3
+**/backups/
+git_backups/
+*.bundle
+
+# Scratch & debug scripts
+scratch/
+backend/scratch/
+
+# Python & virtualenv
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/

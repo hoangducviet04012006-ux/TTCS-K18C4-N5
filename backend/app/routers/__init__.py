@@ -6,6 +6,6 @@ sau này là `cold_chain.py`...). Tất cả router được đăng ký tập tr
 `app/main.py`.
 """
 
-from app.routers import audit, auth, batches, farms, health, users
+from app.routers import audit, auth, batches, events, farms, handovers, health, products, users
 
-__all__ = ["audit", "auth", "batches", "farms", "health", "users"]
+__all__ = ["audit", "auth", "batches", "events", "farms", "handovers", "health", "products", "users"]

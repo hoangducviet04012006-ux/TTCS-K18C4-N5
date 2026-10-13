@@ -1,5 +1,9 @@
 # TTCS-K18C4-N5
+
+> **Demo chính thức Sprint 1–3:** chạy `start_demo.bat`, dùng database riêng `.sprint123-trial/demo_sprint123.db`. Xem [hướng dẫn chạy, mật khẩu local và xử lý cổng](docs/DEMO.md). Launcher không seed/reset/migration khi khởi động. Các hướng dẫn Docker, hai server, seed và mật khẩu trong tài liệu cũ dưới đây không phải cấu hình demo này.
 Dự án TTCS K18C4 - Truy xuất nguồn gốc và giám sát chuỗi lạnh nông sản
+
+Xem [cấu trúc bàn giao và quy tắc dữ liệu](docs/PROJECT_STRUCTURE.md).
 
 ## Cấu trúc thư mục
 
@@ -7,7 +11,11 @@ Dự án TTCS K18C4 - Truy xuất nguồn gốc và giám sát chuỗi lạnh n�
 | --- | --- |
 | `backend/` | FastAPI + SQLite + SQLAlchemy (chi tiết xem `backend/README.md`) |
 | `frontend/` | Demo giao diện: `index.html`, `css/style.css`, `js/app.js` — HTML5 + CSS + JavaScript thuần, không framework |
-| `docs/` | Tài liệu dự án |
+| `docs/` | Tài liệu dự án; kết quả kiểm thử và ảnh trong `docs/qa/` |
+| `scripts/` | Script phụ nội bộ; người dùng chỉ chạy `start_demo.bat` ở gốc |
+| `.sprint123-trial/` | Database demo hiện hữu và cấu hình local riêng; không đưa lên Git |
+| `.demo-logs/` | Log khởi động, không đưa lên Git |
+| `tools/backups/` | Bản sao script/cấu hình trước thay đổi, không đưa lên Git |
 
 ## 🚀 Khởi chạy nhanh bằng một lệnh (Docker Compose)
 
@@ -70,21 +78,24 @@ Frontend gọi API tại `http://127.0.0.1:8000` (hằng số `API_BASE_URL` tro
 Mở trang → hiện **màn hình đăng nhập** (`POST /auth/login`). Tài khoản demo do
 backend tạo tự động ở lần chạy đầu tiên:
 
-| Tài khoản | Mật khẩu | Thấy được trên giao diện |
+| Email hoặc tài khoản | Mật khẩu | Thấy được trên giao diện |
 | --- | --- | --- |
-| `admin` | `123456` | Toàn bộ: thẻ vùng trồng, lô nông sản **và thẻ "Tài khoản hệ thống" (`GET /users`)** |
-| `farmer` | `123456` | Vùng trồng + lô nông sản (thẻ "Tài khoản hệ thống" **bị ẩn**) |
+| `admin@gmail.com` (hoặc `admin`) | `123456` | Toàn bộ: thẻ vùng trồng, lô nông sản **và thẻ "Tài khoản hệ thống" (`GET /users`)** |
+| `farmer@gmail.com` (hoặc `farmer`) | `123456` | Vùng trồng + lô nông sản (thẻ "Tài khoản hệ thống" **bị ẩn**) |
 
+- **Đăng nhập bằng email (S-04):** ô nhập đầu tiên chấp nhận **email hoặc tên đăng
+  nhập** (email không phân biệt hoa/thường). Các nút *Đăng nhập nhanh* tự điền
+  email tài khoản demo.
 - **Không dùng JWT:** sau khi đăng nhập, frontend lưu `username`/`password` vào
   `sessionStorage` (khoá `ttcs.session`) và gửi kèm header **HTTP Basic** ở mỗi
   request cần quyền.
 - Đóng tab là mất phiên (sessionStorage); bấm nút **Đăng xuất** để xoá phiên ngay.
 - Backend trả **`401`** khi thiếu/sai thông tin đăng nhập và **`403`** khi đã đăng
   nhập nhưng sai vai trò (chi tiết xem `backend/README.md`, mục Sprint 4).
-- **Bảo mật (Sprint 6):** nhập sai mật khẩu **5 lần liên tiếp** → tài khoản bị
-  **tạm khoá 5 phút** (`403` kèm header `Retry-After`); trong thời gian khoá, gõ
-  **đúng** mật khẩu vẫn bị chặn. Hết 5 phút thì tự mở khoá và bộ đếm về 0
-  (chi tiết: `backend/README.md`, mục *Bảo mật đăng nhập*).
+- **Bảo mật (S-04 / Sprint 6):** nhập sai mật khẩu **5 lần liên tiếp** → tài khoản
+  bị **tạm khoá 15 phút** (`403` kèm thông báo + thời gian chờ còn lại); trong thời
+  gian khoá, gõ **đúng** mật khẩu vẫn bị chặn. Hết thời gian khoá thì tự mở khoá và
+  bộ đếm về 0 (chi tiết: `backend/README.md`, mục *Bảo mật đăng nhập*).
 
 ### CRUD & phân quyền (Sprint 5)
 
@@ -125,3 +136,26 @@ sinh log, và log **không** sửa/xoá được qua API.
   thành công.
 - Database cũ (`backend/ttcs.db`) **không cần xoá**: bảng `audit_logs` được tạo tự
   động khi server khởi động (`init_db()`), dữ liệu sẵn có vẫn nguyên vẹn.
+
+---
+
+## 🔒 Bảng chỉ thêm (Append-only) & Chuỗi băm bất biến (Sprint 2 / T-26, T-27)
+
+### 1. Quy ước bảo vệ Cơ sở dữ liệu
+Bảng `batch_events` lưu trữ toàn bộ lịch sử vòng đời của lô nông sản (thu hoạch, bàn giao, tiếp nhận, từ chối). Nhằm bảo đảm tính toàn vẹn và bất biến tuyệt đối của dữ liệu truy xuất nguồn gốc:
+- **Tuyệt đối không có API sửa/xóa:** Không cung cấp bất kỳ endpoint `PUT`, `PATCH`, hoặc `DELETE` nào trên tài nguyên `/batch_events` hay `/events`.
+- **Bảo vệ hai lớp (Defense-in-Depth):**
+  1. **Lớp ORM (SQLAlchemy):** Đăng ký event listener `before_update` và `before_delete` trên model `BatchEvent`. Mọi nỗ lực cập nhật hoặc xóa thông qua ORM session đều bị chặn ngay lập tức và ném ra `PermissionError("Bảng batch_events là bảng chỉ thêm (append-only)...")`.
+  2. **Lớp Cơ sở dữ liệu (SQLite Triggers):** Tự động tạo trigger `prevent_update_batch_events` và `prevent_delete_batch_events` với lệnh `RAISE(ABORT, ...)`. Kể cả khi câu lệnh SQL thô `UPDATE` hoặc `DELETE` được thực thi trực tiếp trên database file, hệ quản trị CSDL vẫn từ chối thực hiện.
+
+### 2. Kết luận từ Spike K-01: Tại sao chọn Hash-Chain SHA-256 thay vì Blockchain?
+Trong quá trình nghiên cứu kiến trúc (Spike K-01), nhóm phát triển đã so sánh việc ứng dụng Blockchain phân tán (Ethereum, Hyperledger Fabric) so với Chuỗi băm mật mã nội bộ (Cryptographic Hash-Chain):
+
+| Tiêu chí so sánh | Blockchain Phân tán | Hash-Chain SHA-256 (Hệ thống áp dụng) |
+| :--- | :--- | :--- |
+| **Chi phí vận hành** | Tốn phí giao dịch (Gas fees), tài nguyên duy trì các nodes | **0 chi phí phụ trội**, chạy trực tiếp trên CSDL quan hệ sẵn có |
+| **Độ trễ ghi nhận** | 5s – 15s (hoặc hơn) phụ thuộc thuật toán đồng thuận | **Tức thì (< 1ms)**, phù hợp môi trường nông hộ/đồng ruộng |
+| **Độ phức tạp hạ tầng** | Rất cao (Smart contract, ví Web3, RPC nodes, validator) | **Gọn nhẹ**, bảo trì đơn giản, chuẩn hoá định dạng Canonical JSON |
+| **Khả năng phát hiện giả mạo** | Bất biến nhờ cơ chế đồng thuận phân tán | **Toàn vẹn toán học (Tamper-evident)**: Chỉ cần thay đổi 1 byte dữ liệu hoặc xóa 1 bản ghi, hàm `verify_batch_chain` sẽ phát hiện ngay vị trí vi phạm qua đứt gãy SHA-256 |
+
+**Kết luận:** Với bài toán truy xuất nguồn gốc nông sản chuỗi lạnh cấp hợp tác xã và doanh nghiệp vừa và nhỏ, mô hình **Append-only Hash-Chain kết hợp Genesis Hash (`"0" * 64`) và Canonical JSON (`sort_keys=True`, `separators=(',', ':')`)** đáp ứng hoàn hảo yêu cầu kỹ thuật: minh bạch, bất biến, phát hiện gian lận tức thì mà không gây gánh nặng chi phí hay hạ tầng.

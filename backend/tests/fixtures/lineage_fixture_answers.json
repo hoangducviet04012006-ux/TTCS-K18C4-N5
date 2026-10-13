@@ -1,0 +1,101 @@
+{
+  "B-ROOT-01": {
+    "ancestors": [],
+    "roots": ["B-ROOT-01"],
+    "levels": {}
+  },
+  "B-ROOT-02": {
+    "ancestors": [],
+    "roots": ["B-ROOT-02"],
+    "levels": {}
+  },
+  "B-ROOT-03": {
+    "ancestors": [],
+    "roots": ["B-ROOT-03"],
+    "levels": {}
+  },
+  "B-SPLIT-01A": {
+    "ancestors": ["B-ROOT-01"],
+    "roots": ["B-ROOT-01"],
+    "levels": {
+      "1": ["B-ROOT-01"]
+    }
+  },
+  "B-SPLIT-01B": {
+    "ancestors": ["B-ROOT-01"],
+    "roots": ["B-ROOT-01"],
+    "levels": {
+      "1": ["B-ROOT-01"]
+    }
+  },
+  "B-SPLIT-02A": {
+    "ancestors": ["B-ROOT-02"],
+    "roots": ["B-ROOT-02"],
+    "levels": {
+      "1": ["B-ROOT-02"]
+    }
+  },
+  "B-SPLIT-02B": {
+    "ancestors": ["B-ROOT-02"],
+    "roots": ["B-ROOT-02"],
+    "levels": {
+      "1": ["B-ROOT-02"]
+    }
+  },
+  "B-SPLIT-03A": {
+    "ancestors": ["B-ROOT-03"],
+    "roots": ["B-ROOT-03"],
+    "levels": {
+      "1": ["B-ROOT-03"]
+    }
+  },
+  "B-SPLIT-03B": {
+    "ancestors": ["B-ROOT-03"],
+    "roots": ["B-ROOT-03"],
+    "levels": {
+      "1": ["B-ROOT-03"]
+    }
+  },
+  "B-MERGE-01": {
+    "ancestors": ["B-SPLIT-01A", "B-SPLIT-02A", "B-ROOT-01", "B-ROOT-02"],
+    "roots": ["B-ROOT-01", "B-ROOT-02"],
+    "levels": {
+      "1": ["B-SPLIT-01A", "B-SPLIT-02A"],
+      "2": ["B-ROOT-01", "B-ROOT-02"]
+    }
+  },
+  "B-MERGE-02": {
+    "ancestors": ["B-SPLIT-01B", "B-SPLIT-03A", "B-ROOT-01", "B-ROOT-03"],
+    "roots": ["B-ROOT-01", "B-ROOT-03"],
+    "levels": {
+      "1": ["B-SPLIT-01B", "B-SPLIT-03A"],
+      "2": ["B-ROOT-01", "B-ROOT-03"]
+    }
+  },
+  "B-MERGE-03": {
+    "ancestors": ["B-SPLIT-02B", "B-SPLIT-03B", "B-ROOT-02", "B-ROOT-03"],
+    "roots": ["B-ROOT-02", "B-ROOT-03"],
+    "levels": {
+      "1": ["B-SPLIT-02B", "B-SPLIT-03B"],
+      "2": ["B-ROOT-02", "B-ROOT-03"]
+    }
+  },
+  "B-FINAL-01": {
+    "ancestors": ["B-MERGE-01", "B-SPLIT-01A", "B-SPLIT-02A", "B-ROOT-01", "B-ROOT-02"],
+    "roots": ["B-ROOT-01", "B-ROOT-02"],
+    "levels": {
+      "1": ["B-MERGE-01"],
+      "2": ["B-SPLIT-01A", "B-SPLIT-02A"],
+      "3": ["B-ROOT-01", "B-ROOT-02"]
+    }
+  },
+  "B-FINAL-02": {
+    "ancestors": ["B-MERGE-01", "B-SPLIT-01A", "B-SPLIT-02A", "B-ROOT-01", "B-ROOT-02"],
+    "roots": ["B-ROOT-01", "B-ROOT-02"],
+    "levels": {
+      "1": ["B-MERGE-01"],
+      "2": ["B-SPLIT-01A", "B-SPLIT-02A"],
+      "3": ["B-ROOT-01", "B-ROOT-02"]
+    }
+  }
+}

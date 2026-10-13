@@ -1,0 +1,28 @@
+{
+  "file_sha256": "5e3a6e2012c8a7bea1d5fa7af66d96577b410bf5653bfec99a73a8a2876686e4",
+  "schema_sha256": "e4e81f024b6796bad0ee0beb38effd94b1a930839de77f4d1261b0790eaffc54",
+  "table_sha256": {
+    "audit_logs": "221909cc1d60fb60b93bb14d9ff3e62165fbf6a7e6077166469e8dccf9e94eb2",
+    "batch_events": "b4c126e974ddfb1444c7b6fa6908fa30165cc518f17c70c971518397d2be581a",
+    "batch_relations": "138dfba9426a31c3d8287debd768c8c56cf1f6c1ac246581326af355412daf11",
+    "batches": "0e562bdd415e80cea48f1c2b09ad0c1abb5d271306512d12dc335aa6924da9d6",
+    "farms": "2aa8453a6f506cea0e05b12192cc55425d10d8cc413cb19435880c46f371b5d4",
+    "handovers": "027f24b1cf4f8844bff3e3b8f89527ec628047bdec20a60f0a9fd2960e3e1589",
+    "organizations": "e54957ec64b708a2c6be1c50af6292657345d828a22fbdf4af9c8c8233738cb3",
+    "plots": "593b2948e668c242dfbd649889e340d37f6d59393cf3924d0a663edc40248a6d",
+    "products": "8c1c4dcee037dbefb5433527890f33a9d76ec8a55702bf168d7dfa7417e2a46b",
+    "user_sessions": "86e2a7995a00de2ad1c5c2c511abb91b2720f32a1ab33a343e0d6180139ce2fc",
+    "users": "455a43008f04f643d3d12d82d95cd9b93f2b223b835205591ad63770231bde54"
+  },
+  "integrity": [
+    [
+      "ok"
+    ]
+  ],
+  "counts": {
+    "users": 8,
+    "batches": 39,
+    "batch_events": 110
+  },
+  "orphans": 26
+}
