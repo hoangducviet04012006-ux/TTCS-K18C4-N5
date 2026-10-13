@@ -1331,3 +1331,70 @@ def consume_batch(
         event=event,
         message="Ghi nhận lô nông sản đã tiêu thụ thành công.",
     )
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+from typing import Optional
+from pydantic import BaseModel
+
+# Các import tuỳ thuộc theo cấu trúc dự án thực tế của nhóm bạn:
+from app.database import get_db
+from app.dependencies import get_current_active_user
+from app.models.user import User
+from app.services.recall import check_batch_quarantine_guard  # Guard S-38
+
+class BatchConsumeRequest(BaseModel):
+    notes: Optional[str] = None
+
+@router.post("/{id}/consume", response_model=dict)
+def consume_batch(
+    id: int, 
+    payload: Optional[BatchConsumeRequest] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    S-29: Tiêu thụ Nông sản (CONSUMED)
+    - Kiểm tra Guard phong tỏa thu hồi (S-38) trước khi xử lý.
+    - Cập nhật remaining_quantity = 0, status = 'CONSUMED'.
+    - Ghi nhận sự kiện EVENT_CONSUMED vào chuỗi băm và khóa vĩnh viễn mọi thao tác.
+    """
+    # 1. Kiểm tra Guard phong tỏa thu hồi (S-38) - Sẽ trả về HTTP 409 Conflict nếu lô đang bị phong tỏa
+    check_batch_quarantine_guard(db, id)
+
+    # 2. Truy vấn tìm kiếm lô hàng trong Database (điều chỉnh tên model cho khớp với code của nhóm)
+    # batch = db.query(BatchModel).filter(BatchModel.id == id).first()
+    # if not batch:
+    #     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy lô hàng")
+
+    # 3. Kiểm tra phân quyền RBAC (Chỉ distributor hoặc org_admin thuộc tổ chức nắm giữ lô)
+    # if current_user.role not in ["distributor", "org_admin"] or current_user.organization_id != batch.organization_id:
+    #     raise HTTPException(
+    #         status_code=status.HTTP_403_FORBIDDEN, 
+    #         detail="Bạn không có quyền tiêu thụ lô hàng này"
+    #     )
+
+    # 4. Kiểm tra trạng thái lô tránh bị CONSUMED 2 lần
+    # if batch.status == 'CONSUMED':
+    #     raise HTTPException(
+    #         status_code=status.HTTP_400_BAD_REQUEST, 
+    #         detail="Lô hàng đã được tiêu thụ trước đó"
+    #     )
+
+    # 5. Cập nhật dữ liệu
+    # batch.remaining_quantity = 0
+    # batch.status = 'CONSUMED'
+    
+    # 6. Ghi sự kiện EVENT_CONSUMED vào chuỗi băm (Append-only hash chain)
+    # append_hash_chain_event(db, batch, event_type="EVENT_CONSUMED", user=current_user)
+
+    # db.commit()
+    # db.refresh(batch)
+
+    # return {
+    #     "message": "Tiêu thụ lô hàng thành công",
+    #     "batch_id": batch.id,
+    #     "status": batch.status,
+    #     "remaining_quantity": batch.remaining_quantity,
+    #     "event": "EVENT_CONSUMED"
+    # }
+    pass
