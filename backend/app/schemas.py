@@ -322,6 +322,9 @@ class BatchResponse(BaseModel):
     """Dữ liệu API trả về cho một lô nông sản."""
 
     model_config = ConfigDict(from_attributes=True)
+    location_id: int | None = None
+    current_location: str | None = None
+    current_location_name: str | None = None
 
     id: int = Field(..., description="Mã định danh lô nông sản.")
     code: str | None = Field(default="", description="Mã lô ngẫu nhiên 8 ký tự (T-19).")
@@ -337,6 +340,12 @@ class BatchResponse(BaseModel):
     current_org_id: int | None = Field(default=None, description="ID tổ chức đang nắm giữ lô hàng.")
     current_org_name: str | None = Field(default=None, description="Tên tổ chức đang nắm giữ lô hàng.")
     status: str | None = Field(default="ACTIVE", description="Trạng thái lô hàng (ACTIVE, CLOSED...).")
+    origin_id: int | None = Field(default=None, description="ID gốc trong tập dữ liệu thực hành nếu là dữ liệu mô phỏng.")
+    dataset_source: str = Field(
+        default="operational",
+        description="Nguồn gốc dữ liệu: operational, practice_th1, practice_th2.",
+    )
+    is_simulation: bool = Field(default=False, description="Cờ đánh dấu dữ liệu mô phỏng thực hành.")
     is_pending: bool = Field(default=False, description="Lô đang có yêu cầu bàn giao chờ xác nhận (T-56, T-57).")
     pending_handover: PendingHandoverBrief | None = Field(
         default=None,
@@ -378,6 +387,13 @@ class AuditLogResponse(BaseModel):
     entity: str = Field(..., description="Đối tượng tác động: farm, batch.")
     entity_id: int = Field(..., description="ID bản ghi bị tác động.")
     created_at: datetime = Field(..., description="Thời điểm ghi log (UTC).")
+    source_ip: str | None = None
+    operation: str | None = None
+    organization_id: int | None = None
+    batch_ids: list[int] = Field(default_factory=list)
+    location_id: int | None = None
+    location_name: str | None = None
+    location_address: str | None = None
 
 
 # ------------------------------------------------------------- Handover (T-35, T-36, T-37, T-38) ---
@@ -724,6 +740,9 @@ class TraceForwardNode(BaseModel):
     """Thông tin một mắt xích hậu duệ trong cây truy xuôi (S-26, S-27)."""
 
     model_config = ConfigDict(from_attributes=True)
+    location_id: int | None = None
+    current_location: str | None = None
+    current_location_name: str | None = None
 
     batch_id: int
     code: str
@@ -754,6 +773,9 @@ class TerminalBatchInfo(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+    location_id: int | None = None
+    current_location: str | None = None
+    current_location_name: str | None = None
     batch_id: int
     code: str
     unit: str = "kg"
@@ -768,9 +790,21 @@ class TerminalBatchInfo(BaseModel):
     harvest_date: str | None = None
 
 
+class TraceForwardEdge(BaseModel):
+    """A stored relation between authorized returned lots."""
+
+    parent_batch_id: int
+    child_batch_id: int
+    relation_type: str
+    transferred_quantity: float | None = None
+
+
 class TraceForwardResponse(BaseModel):
     """Kết quả truy xuôi nguồn gốc phả hệ BFS (GET /batches/{id}/trace-forward - S-26, S-27)."""
 
+    edges: list[TraceForwardEdge] = Field(
+        default_factory=list, description="Quan hệ thật giữa các lô được phép xem trong kết quả."
+    )
     target_batch: dict[str, Any] = Field(..., description="Thông tin lô gốc đang truy xuôi.")
     descendants_by_level: dict[int, list[TraceForwardNode]] = Field(
         ..., description="Danh sách các thế hệ hậu duệ phân tầng theo khoảng cách."

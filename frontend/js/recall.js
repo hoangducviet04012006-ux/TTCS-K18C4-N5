@@ -3,6 +3,7 @@
 (() => {
   let generation = 0, detailVersion = 0, activeRecall = null;
   let busyCreate = false, busyAck = false;
+  let createStep = 0, reviewVersion = 0;
   const recalledBatchesMap = new Map(); // batch_id -> { recall_code, status, reason, is_root }
   const recalledBatchCodes = new Set();
 
@@ -10,10 +11,66 @@
   const canOpen = () => !!session && ["inspector", "org_admin"].includes(session.role);
   const canSelect = b => session?.role === "inspector" || (session?.role === "org_admin" && session.organization_id != null && b.current_org_id === session.organization_id);
   const e = escapeHtml;
-  const rootLabel = r => r.affected_batches.find(b => b.batch_id === r.root_batch_id)?.code || `#${r.root_batch_id}`;
+  const rootLabel = r => r.batch_code || r.affected_batches.find(b => b.batch_id === r.root_batch_id)?.code || `#${r.root_batch_id}`;
   const progress = r => `<span class="recall-progress"><progress max="${Math.max(1, r.progress.required)}" value="${r.progress.acknowledged}"></progress>${r.progress.acknowledged}/${r.progress.required}</span>`;
-  const anomaly = r => !r.anomaly ? "—" : r.anomaly.code === "NEW_DESCENDANTS_AFTER_COMPLETION" ? "Hậu duệ mới sau COMPLETED; tiếp tục phong tỏa" : "Đồ thị thay đổi sau ACK; tiếp tục phong tỏa";
+  const statusLabel = value => ({OPEN:"Đang xử lý",COMPLETED:"Đã đủ xác nhận",ACTIVE:"Đang hoạt động",SPLIT:"Đã tách",MERGED:"Đã gộp",CONSUMED:"Đã tiêu thụ"}[value] || "Chưa xác định");
+  const anomaly = r => !r.anomaly ? "—" : r.anomaly.code === "NEW_DESCENDANTS_AFTER_COMPLETION" ? "Có lô con mới sau khi hoàn tất; tiếp tục cách ly" : "Quan hệ lô thay đổi sau xác nhận; tiếp tục cách ly";
   const storageKey = () => `agritrace.recall.commands:${identity()}`;
+
+  function setCreateStep(step) {
+    createStep = step;
+    document.querySelectorAll('[data-recall-step]').forEach(panel => {
+      panel.hidden = Number(panel.dataset.recallStep) !== step;
+    });
+    document.querySelectorAll('[data-recall-step-label]').forEach(label => {
+      if (Number(label.dataset.recallStepLabel) === step) label.setAttribute('aria-current', 'step');
+      else label.removeAttribute('aria-current');
+    });
+    $('recall-step-back').hidden = step === 0 || !!pending('/recalls');
+    $('recall-step-next').hidden = step === 3;
+    $('recall-create-submit').hidden = step !== 3;
+    if (step === 0) $('recall-root').focus();
+    if (step === 1) $('recall-reason').focus();
+    if (step === 3) $('recall-create-confirm').focus();
+  }
+
+  async function nextCreateStep() {
+    if (busyCreate || !canOpen()) return;
+    const owner = identity(), version = ++reviewVersion;
+    const errorBox = $('recall-create-error');
+    errorBox.textContent = '';
+    if (createStep === 0) {
+      if (!$('recall-root').reportValidity()) return;
+      setCreateStep(1); return;
+    }
+    if (createStep === 2) { setCreateStep(3); return; }
+    if (createStep !== 1) return;
+    const reason = $('recall-reason').value.trim();
+    if (reason.length < 20) {
+      errorBox.textContent = 'Vui lòng nhập lý do thu hồi từ 20 ký tự.';
+      $('recall-reason').focus(); return;
+    }
+    const value = $('recall-root').value.trim();
+    $('recall-step-next').disabled = true;
+    try {
+      let batch;
+      if (/^[1-9]\d*$/.test(value)) batch = await apiRequest('/batches/' + Number(value));
+      else {
+        const rows = await apiRequest('/batches?search=' + encodeURIComponent(value) + '&limit=100');
+        batch = rows.find(b => String(b.code).toUpperCase() === value.toUpperCase());
+      }
+      if (owner !== identity() || version !== reviewVersion) return;
+      if (!batch || !canSelect(batch)) throw Error('Không tìm thấy lô được phép thu hồi. Kiểm tra lại mã lô.');
+      if (isBatchRecalled(batch.id)) throw Error('Lô đã có yêu cầu thu hồi. Hãy xem yêu cầu hiện có.');
+      $('recall-root').value = batch.code;
+      $('recall-review').innerHTML = `<h4>Kiểm tra trước khi xác nhận</h4><dl class="recall-review-fields"><dt>Mã lô</dt><dd>${e(batch.code)}</dd><dt>Sản phẩm</dt><dd>${e(batch.product_name)}</dd><dt>Tổ chức đang giữ</dt><dd>${e(batch.current_org_name || 'Chưa có dữ liệu')}</dd><dt>Lượng còn lại của lô gốc</dt><dd>${e(formatNumber(batch.remaining_quantity))} ${e(batch.unit || 'kg')}</dd><dt>Lý do</dt><dd>${e(reason)}</dd></dl><p class="recall-warning">Lô gốc và các lô phát sinh bị ảnh hưởng sẽ bị cách ly. Các tổ chức liên quan cần xác nhận xử lý.</p>`;
+      setCreateStep(2);
+    } catch (error) {
+      if (owner === identity() && version === reviewVersion) errorBox.textContent = error.message || 'Chưa kiểm tra được lô. Vui lòng thử lại.';
+    } finally {
+      if (owner === identity()) $('recall-step-next').disabled = false;
+    }
+  }
 
   function isBatchRecalled(idOrCode) {
     if (idOrCode == null) return false;
@@ -90,29 +147,30 @@
       previewEl.innerHTML = `
         <div style="background:#0f172a; border:1px solid ${recalled ? '#ef4444' : (orgAllowed ? '#277B52' : '#f59e0b')}; border-radius:6px; padding:8px 12px; margin-top:6px; font-size:0.85rem;">
           <div style="display:flex; justify-content:space-between; align-items:center;">
-            <span><strong>Mã lô:</strong> <code style="color:#facc15; font-size:0.95rem; font-weight:700;">${e(candidate.code || '#' + candidate.id)}</code></span>
-            <span>${recalled ? '<span class="badge badge--danger" style="background:#dc2626; color:#fff;">🚨 Có sự cố / Đã thu hồi</span>' : '<span class="badge badge--ok">✅ Hợp lệ</span>'}</span>
+            <span><strong>Mã lô:</strong> <code style="color:#25313d; font-size:0.95rem; font-weight:700;">${e(candidate.code || '#' + candidate.id)}</code></span>
+            <span>${recalled ? '<span class="badge badge--danger" style="background:#dc2626; color:#fff;">Có sự cố / Đã thu hồi</span>' : '<span class="badge badge--ok">Hợp lệ</span>'}</span>
           </div>
           <div style="margin-top:4px; color:#cbd5e1;">
             <span><strong>Sản phẩm:</strong> ${e(candidate.product_name || "—")}</span> ·
             <span><strong>Tồn kho:</strong> ${formatNumber(candidate.remaining_quantity != null ? candidate.remaining_quantity : candidate.quantity)} ${e(candidate.unit || "kg")}</span> ·
             <span><strong>Tổ chức giữ:</strong> ${e(candidate.current_org_name || "—")}</span>
           </div>
-          ${recalled ? '<div style="color:#f87171; font-weight:600; margin-top:4px;">⚠️ Lô hàng này đã có lệnh thu hồi đang xử lý hoặc bị phong tỏa! Không thể tạo trùng.</div>' : ''}
-          ${!orgAllowed ? '<div style="color:#fbbf24; font-weight:600; margin-top:4px;">⚠️ Bạn không thuộc tổ chức đang nắm giữ lô hàng này.</div>' : ''}
+          ${recalled ? '<div style="color:#f87171; font-weight:600; margin-top:4px;">Lô hàng này đã có lệnh thu hồi đang xử lý hoặc bị phong tỏa! Không thể tạo trùng.</div>' : ''}
+          ${!orgAllowed ? '<div style="color:#fbbf24; font-weight:600; margin-top:4px;">Bạn không thuộc tổ chức đang nắm giữ lô hàng này.</div>' : ''}
         </div>
       `;
     } else {
       previewEl.hidden = false;
       previewEl.innerHTML = `
         <div style="background:#0f172a; border:1px solid #475569; border-radius:6px; padding:6px 12px; margin-top:6px; font-size:0.85rem; color:#94a3b8;">
-          <span>🔍 Mã lô <strong>${e(val)}</strong> chưa có trong danh sách hiển thị hiện tại. Hệ thống sẽ kiểm tra tồn tại và quyền trên máy chủ.</span>
+          <span>Mã lô <strong>${e(val)}</strong> chưa có trong danh sách hiển thị hiện tại. Hệ thống sẽ kiểm tra tồn tại và quyền trên máy chủ.</span>
         </div>
       `;
     }
   }
 
   function reset() {
+    reviewVersion++;
     generation++; detailVersion++; activeRecall = null;
     for (const id of ["modal-recall-create", "modal-recall-detail"]) {
       const el = $(id);
@@ -136,6 +194,8 @@
   function applySession() {
     const openBtn = $("recall-open");
     if (openBtn) openBtn.hidden = !canOpen();
+    const quick = $("recall-quick-search-bar");
+    if (quick) quick.hidden = !canOpen();
     if (!session) reset();
   }
 
@@ -170,10 +230,10 @@
       if (listEl) {
         listEl.innerHTML = rows.map(r => `
           <tr>
-            <td><strong style="color:#facc15; font-family:monospace;">${e(r.recall_code)}</strong></td>
+            <td><strong style="color:#25313d; font-family:monospace;">${e(r.recall_code)}</strong></td>
             <td><strong>${e(rootLabel(r))}</strong></td>
             <td style="max-width:280px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${e(r.reason)}">${e(r.reason)}</td>
-            <td><span class="badge ${r.status === 'COMPLETED' ? 'badge--ok' : 'badge--danger'}" style="${r.status === 'OPEN' ? 'background:#dc2626; color:#fff;' : ''}">${e(r.status)}${r.quarantined ? ' · Phong tỏa' : ''}</span></td>
+            <td><span class="badge ${r.status === 'COMPLETED' ? 'badge--ok' : 'badge--danger'}" style="${r.status === 'OPEN' ? 'background:#dc2626; color:#fff;' : ''}">${e(statusLabel(r.status))}${r.quarantined ? ' · Phong tỏa' : ''}</span></td>
             <td>${e(formatDateTime(r.created_at))}</td>
             <td>${progress(r)}</td>
             <td>${e(anomaly(r))}</td>
@@ -186,8 +246,8 @@
       if (alertsEl) {
         alertsEl.innerHTML = alerts.map(r => `
           <div class="recall-warning" style="margin-bottom:8px; border-left:4px solid #dc2626; padding:8px 12px; background:rgba(220, 38, 38, 0.1);">
-            <strong>🚨 CẢNH BÁO THU HỒI: ${e(r.recall_code)}</strong> · Trạng thái: <strong>${e(r.status)}</strong> · ${r.quarantined ? "Đang phong tỏa" : ""}<br>
-            <span>Các lô trong phạm vi tổ chức bạn: <strong>${e(r.affected_batches.map(b => `${b.code}${b.status === "CONSUMED" ? " (CONSUMED — đã tiêu thụ)" : ""}`).join(", "))}</strong></span>
+            <strong>CẢNH BÁO THU HỒI: ${e(r.recall_code)}</strong> · Trạng thái: <strong>${e(statusLabel(r.status))}</strong> · ${r.quarantined ? "Đang phong tỏa" : ""}<br>
+            <span>Các lô trong phạm vi tổ chức bạn: <strong>${e(r.affected_batches.map(b => `${b.code}${b.status === "CONSUMED" ? " (đã tiêu thụ)" : ""}`).join(", "))}</strong></span>
             ${r.anomaly ? `<br><span style="color:#ef4444;">${e(anomaly(r))}</span>` : ""}
           </div>
         `).join("");
@@ -196,13 +256,14 @@
       if (statusEl) {
         statusEl.textContent = rows.length
           ? `${rows.length} lệnh thu hồi trong phạm vi được cấp quyền.`
-          : "Chưa có lệnh thu hồi nào trong hệ thống.";
+          : "Chưa có yêu cầu thu hồi trong phạm vi bạn được xem";
       }
 
       // Thông báo cho giao diện lô nông sản cập nhật lại badge trạng thái "Có sự cố"
       if (typeof renderBatches === "function") {
         renderBatches();
       }
+      renderBatchIncident();
     } catch (error) {
       if (version !== generation || owner !== identity()) return;
       if (statusEl) statusEl.textContent = error.message;
@@ -210,34 +271,53 @@
     }
   }
 
+  function renderBatchIncident() {
+    const meta=$("detail-overview-meta");
+    if(!meta || !currentDetailBatchId)return;
+    $("batch-recall-notice")?.remove();
+    const info=getBatchRecallInfo(currentDetailBatchId);
+    if(info){const notice=document.createElement("p");notice.id="batch-recall-notice";notice.className="recall-warning";notice.textContent="Có sự cố · "+info.recall_code+" · "+info.status+" · Đang cách ly. Lý do: "+info.reason;meta.prepend(notice);}
+  }
+
   function renderDetail(r) {
     activeRecall = r;
     const titleEl = $("recall-detail-title");
     if (titleEl) titleEl.textContent = `Chi tiết lệnh thu hồi ${r.recall_code}`;
+    const opts=r.filter_options||{organizations:[],locations:[]}, f=r.filters||{};
     const levels = [...new Set((r.affected_batches || []).map(b => b.level))].sort((a,b) => a-b);
     const bodyEl = $("recall-detail-body");
     if (bodyEl) {
       bodyEl.innerHTML = `
-        <div style="background:#0f172a; padding:12px 16px; border-radius:8px; margin-bottom:12px; border:1px solid #334155;">
-          <p><strong>Lô gốc sự cố:</strong> <span style="color:#facc15; font-family:monospace; font-weight:700;">${e(rootLabel(r))}</span> · Trạng thái lệnh: <strong>${e(r.status)}</strong> · Ngày tạo: ${e(formatDateTime(r.created_at))}</p>
+        <div style="background:#f8fafb; color:#25313d; padding:12px 16px; border-radius:8px; margin-bottom:12px; border:1px solid #dce2e7;">
+          <p><strong>Lô gốc sự cố:</strong> <span style="color:#25313d; font-family:monospace; font-weight:700;">${e(rootLabel(r))}</span> · Trạng thái lệnh: <strong>${e(statusLabel(r.status))}</strong> · Ngày tạo: ${e(formatDateTime(r.created_at))}</p>
           <p><strong>Lý do thu hồi:</strong> <em>${e(r.reason)}</em></p>
-          <p class="recall-warning">${r.quarantined ? "🚨 Tất cả các lô bị ảnh hưởng đã bị phong tỏa (chặn bàn giao, tách, gộp, tiêu thụ)." : ""} ${r.anomaly ? e(anomaly(r)) : ""}</p>
+          <p class="recall-warning">${r.quarantined ? "Tất cả các lô bị ảnh hưởng đã bị phong tỏa (chặn bàn giao, tách, gộp, tiêu thụ)." : ""} ${r.anomaly ? e(anomaly(r)) : ""}</p>
           <div style="margin:8px 0;"><strong>Tiến độ xác nhận:</strong> ${progress(r)}</div>
+          <p><strong>Hoàn tất lúc:</strong> ${r.completed_at ? e(formatDateTime(r.completed_at)) : "Chưa hoàn tất"}. Không có quyền bỏ cách ly thủ công.</p>
         </div>
-        <p>Đang hiển thị ${r.visible_batch_count} lô${r.total_affected_batch_count == null ? " theo phạm vi tổ chức" : ` / ${r.total_affected_batch_count} lô ảnh hưởng`}.</p>
-        ${Object.entries(r.metrics_by_unit || {}).map(([unit,m]) => `
-          <p><strong>Khối lượng (${e(unit)}):</strong> Tồn kho có thể thu hồi: <strong>${e(m.reclaimable_quantity)}</strong>; Đã tiêu thụ có chứng cứ: <strong>${e(m.known_consumed_quantity)}</strong>; Tổng đã tiêu thụ: <strong>${m.consumed_quantity == null ? "chưa xác định" : e(m.consumed_quantity)}</strong>.${m.unknown_consumed_batch_ids?.length ? ` Chưa xác định: ${e(m.unknown_consumed_batch_ids.map(id => '#' + id).join(", "))}.` : ""}</p>
+        <form id="recall-filter-form" class="audit-toolbar">
+          <label>Tổ chức<select name="organization_id"><option value="">Tất cả trong phạm vi</option>${opts.organizations.map(([id,name])=>`<option value="${id}" ${Number(f.organization_id)===id?"selected":""}>${e(name)}</option>`).join("")}</select></label>
+          <label>Vị trí hiện tại<select name="location_id"><option value="">Tất cả</option><option value="unknown" ${f.unknown_location?"selected":""}>Chưa có dữ liệu</option>${opts.locations.map(([id,name])=>`<option value="${id}" ${Number(f.location_id)===id?"selected":""}>${e(name)}</option>`).join("")}</select></label>
+          <label>Trạng thái<select name="batch_status"><option value="">Tất cả</option>${["ACTIVE","SPLIT","MERGED","CONSUMED"].map(s=>`<option value="${s}" ${f.batch_status===s?"selected":""}>${e(statusLabel(s))}</option>`).join("")}</select></label>
+          <button class="btn btn--primary" type="submit">Lọc lô thu hồi</button><button class="btn" type="button" data-recall-filter-reset>Đặt lại</button>
+        </form>
+        <div id="recall-graph"></div>
+        <p>${r.status === "COMPLETED" ? "Tất cả các tổ chức đã xác nhận. Tiếp tục cách ly lô." : `Theo dõi các tổ chức chưa xác nhận sau ${r.reminder?.escalation_after_hours||24} giờ. Thông báo hiển thị trong phần mềm; chưa gửi email hoặc SMS.`}</p>
+        <p>Đang hiển thị ${r.filtered_batch_count ?? r.visible_batch_count} lô${r.total_affected_batch_count == null ? " theo phạm vi tổ chức" : ` / ${r.total_affected_batch_count} lô ảnh hưởng`}.</p>
+        ${Object.entries(r.filtered_metrics_by_unit || r.metrics_by_unit || {}).map(([unit,m]) => `
+          <p><strong>Khối lượng (${e(unit)}):</strong> Tồn kho có thể thu hồi: <strong>${e(formatNumber(m.reclaimable_quantity))}</strong>; Đã tiêu thụ có chứng cứ: <strong>${e(formatNumber(m.known_consumed_quantity))}</strong>; Tổng đã tiêu thụ: <strong>${m.consumed_quantity == null ? "chưa xác định" : e(formatNumber(m.consumed_quantity))}</strong>.${m.unknown_consumed_batch_ids?.length ? ` Chưa xác định: ${e(m.unknown_consumed_batch_ids.map(id => '#' + id).join(", "))}.` : ""}</p>
         `).join("")}
         ${levels.map(level => `
           <h4>Tầng ${level}${level === 0 ? " · Lô gốc sự cố" : " · Hậu duệ phát tán"}</h4>
-          <div class="table-wrap"><table class="table"><thead><tr><th>Mã lô</th><th>Tổ chức đang giữ</th><th>Trạng thái lô</th><th>Tồn kho</th><th>Đã tiêu thụ</th><th>Gộp nhiều nguồn</th></tr></thead><tbody>
+          <div class="table-wrap"><table class="table"><thead><tr><th>Mã lô</th><th>Tổ chức đang giữ</th><th>Vị trí hiện tại</th><th>Trạng thái lô</th><th>Tồn kho</th><th>Đã tiêu thụ</th><th>Gộp nhiều nguồn</th></tr></thead><tbody>
           ${r.affected_batches.filter(b => b.level === level).map(b => `
             <tr>
-              <td><strong style="color:#facc15; font-family:monospace;">${e(b.code)}</strong></td>
+              <td><strong style="color:#25313d; font-family:monospace;">${e(b.code)}</strong></td>
               <td>${e(b.organization_name || "Chưa xác định")}</td>
-              <td><span class="badge ${b.status === 'CONSUMED' ? '' : 'badge--danger'}" style="${b.status !== 'CONSUMED' ? 'background:#dc2626; color:#fff;' : ''}">${e(b.status)}</span></td>
-              <td>${e(b.remaining_quantity)} ${e(b.unit)}</td>
-              <td>${b.consumed_quantity == null ? "Chưa xác định" : `${e(b.consumed_quantity)} ${e(b.unit)}`}</td>
+              <td>${e(b.current_location ? [b.current_location_name,b.current_location].filter(Boolean).join(" · ") : "Chưa có dữ liệu")}</td>
+              <td><span class="badge ${b.status === 'CONSUMED' ? '' : 'badge--danger'}" style="${b.status !== 'CONSUMED' ? 'background:#dc2626; color:#fff;' : ''}">${e(statusLabel(b.status))}</span></td>
+              <td>${e(formatNumber(b.remaining_quantity))} ${e(b.unit)}</td>
+              <td>${b.consumed_quantity == null ? "Chưa xác định" : `${e(formatNumber(b.consumed_quantity))} ${e(b.unit)}`}</td>
               <td>${b.is_merged_cross_origin ? "Có" : "—"}</td>
             </tr>
           `).join("")}
@@ -245,11 +325,12 @@
         `).join("")}
         <h4>Xác nhận xử lý của các tổ chức liên quan</h4>
         <ul>${(r.acknowledgments || []).map(a => `
-          <li><strong>${e(a.organization_name || `#${a.organization_id}`)}:</strong> <span class="badge ${a.status === 'ACKNOWLEDGED' ? 'badge--ok' : 'badge--warning'}">${e(a.status)}</span> ${a.acknowledged_at ? ` · ${e(formatDateTime(a.acknowledged_at))}` : ""} ${a.notes ? ` · Ghi chú: ${e(a.notes)}` : ""}</li>
+          <li><strong>${e(a.organization_name || `#${a.organization_id}`)}:</strong> <span class="badge ${a.status === 'ACKNOWLEDGED' ? 'badge--ok' : 'badge--warning'}">${a.status === "ACKNOWLEDGED" ? "Đã xác nhận" : "Chờ xác nhận"}</span> ${a.acknowledged_at ? ` · ${e(formatDateTime(a.acknowledged_at))}` : ""} ${a.notes ? ` · Ghi chú: ${e(a.notes)}` : ""}</li>
         `).join("")}</ul>
       `;
     }
 
+    window.RecallGraph?.mount($("recall-graph"),r);
     const own = (r.acknowledgments || []).find(a => a.organization_id === session?.organization_id);
     const ackForm = $("recall-ack-form");
     if (ackForm) {
@@ -267,7 +348,7 @@
     }
   }
 
-  async function openDetail(id) {
+  async function openDetail(id, filters={}) {
     const version = ++detailVersion, owner = identity();
     activeRecall = null;
     const ackForm = $("recall-ack-form");
@@ -278,7 +359,8 @@
     if (modalDetail) modalDetail.hidden = false;
 
     try {
-      const r = await apiRequest(`/recalls/${id}`);
+      const query=new URLSearchParams(filters).toString();
+      const r = await apiRequest(`/recalls/${id}${query ? "?"+query : ""}`);
       if (owner === identity() && version === detailVersion) renderDetail(r);
     } catch (error) {
       if (owner === identity() && version === detailVersion && bodyEl) bodyEl.textContent = error.message;
@@ -329,6 +411,9 @@
 
     const modalCreate = $("modal-recall-create");
     if (modalCreate) modalCreate.hidden = false;
+    reviewVersion++;
+    $('recall-review').replaceChildren();
+    setCreateStep(saved ? 3 : 0);
     if (rootEl) {
       if (!prefillBatch) rootEl.focus();
       else if (reasonEl) reasonEl.focus();
@@ -337,6 +422,7 @@
 
   async function submit(event, ack) {
     event.preventDefault();
+    if (!ack && createStep !== 3) { await nextCreateStep(); return; }
     if (!session || (ack ? busyAck : busyCreate)) return;
     const owner = identity();
     const prefix = ack ? "recall-ack" : "recall-create";
@@ -448,7 +534,7 @@
     } finally {
       if (owner === identity()) {
         if (ack) busyAck = false; else busyCreate = false;
-        setButtonLoading(button, false, "Đang xử lý…", ack ? "Xác nhận xử lý" : "🚨 Xác nhận đánh dấu sự cố & Mở lệnh");
+        setButtonLoading(button, false, "Đang xử lý…", ack ? "Xác nhận xử lý" : "Xác nhận tạo yêu cầu");
       }
     }
   }
@@ -460,9 +546,21 @@
     openCreate,
     isBatchRecalled,
     getBatchRecallInfo,
+    renderBatchIncident,
   };
 
   document.addEventListener("DOMContentLoaded", () => {
+    $('recall-step-next')?.addEventListener('click', nextCreateStep);
+    $('recall-step-back')?.addEventListener('click', () => {
+      if (!busyCreate) { reviewVersion++; $('recall-create-error').textContent = ''; setCreateStep(Math.max(0, createStep - 1)); }
+    });
+    $("recall-detail-body")?.addEventListener("submit", event=>{
+      if(event.target.id!=="recall-filter-form")return;event.preventDefault();
+      const fields=new FormData(event.target), filters={};
+      for(const [key,value] of fields){if(value){if(key==="location_id"&&value==="unknown")filters.unknown_location="true";else filters[key]=value;}}
+      if(activeRecall)openDetail(activeRecall.id,filters);
+    });
+    $("recall-detail-body")?.addEventListener("click",event=>{if(event.target.closest("[data-recall-filter-reset]")&&activeRecall)openDetail(activeRecall.id);});
     $("recall-refresh")?.addEventListener("click", load);
     $("recall-open")?.addEventListener("click", () => openCreate());
     $("btn-quick-recall")?.addEventListener("click", () => {

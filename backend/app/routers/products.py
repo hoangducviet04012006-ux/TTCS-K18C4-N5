@@ -10,6 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.audit import record_action
 from app.models import Product, User
 from app.schemas import ProductCreate, ProductResponse
 from app.security import require_admin
@@ -76,6 +77,8 @@ def create_product(
         unit=payload.unit,
     )
     db.add(product)
+    db.flush()
+    record_action(db, current_user, "create", "product", product.id)
     db.commit()
     db.refresh(product)
     return product

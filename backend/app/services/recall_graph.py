@@ -105,7 +105,16 @@ def consumed_evidence(db, batches):
         total = Decimal("0")
         for event in events:
             try:
-                value = Decimal(str(event.payload["previous_remaining_quantity"]))
+                if "previous_remaining_quantity" in event.payload:
+                    value = Decimal(str(event.payload["previous_remaining_quantity"]))
+                else:
+                    # Historic northern CONSUMED events store sold quantity/unit.
+                    # Read only verified single-event evidence; never infer from stock.
+                    if batch.status != "CONSUMED" or event.payload.get("unit") != batch.unit:
+                        raise ValueError("Unknown legacy consumed unit/state")
+                    value = Decimal(str(event.payload["quantity"]))
+                    if value > batch.initial_quantity:
+                        raise ValueError("Legacy sold quantity exceeds initial quantity")
                 if not value.is_finite() or value < 0:
                     raise ValueError("Invalid consumed evidence")
                 total += value

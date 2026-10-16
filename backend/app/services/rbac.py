@@ -69,6 +69,7 @@ LEGACY_ACCOUNT_ROLE_MAPPING: dict[str, str] = {
 
 # Ma trận phân quyền hành động nghiệp vụ (Quy định nghiêm ngặt Giai đoạn 1B.1)
 ROLE_PERMISSIONS: dict[str, tuple[str, ...]] = {
+    "LOCATION_MANAGE": (ROLE_DISTRIBUTOR, ROLE_ORG_ADMIN),
     "PRODUCT_CREATE": (ROLE_SYSTEM_ADMIN, ROLE_ADMIN),
     # Existing operational edits; system administrators do not produce data.
     "BATCH_UPDATE": (ROLE_FARMER, ROLE_PROCESSOR, ROLE_TRANSPORTER, ROLE_DISTRIBUTOR, ROLE_ORG_ADMIN),

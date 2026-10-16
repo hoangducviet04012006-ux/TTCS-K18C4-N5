@@ -8,7 +8,8 @@
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' width='32' height='32'%3E%3Cdefs%3E%3ClinearGradient id='favBg' x1='0' y1='0' x2='32' y2='32' gradientUnits='userSpaceOnUse'%3E%3Cstop offset='0%25' stop-color='%23103D2B'/%3E%3Cstop offset='100%25' stop-color='%23277B52'/%3E%3C/linearGradient%3E%3ClinearGradient id='favLeaf' x1='8' y1='24' x2='24' y2='6' gradientUnits='userSpaceOnUse'%3E%3Cstop offset='0%25' stop-color='%2352B788'/%3E%3Cstop offset='100%25' stop-color='%23B6E5A8'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='7' fill='url(%23favBg)'/%3E%3Cpath d='M 8,11 C 5,16 6,23 10,26 C 14,29 20,29 23,26' stroke='%23B6E5A8' stroke-width='1.8' stroke-linecap='round' fill='none' opacity='0.9'/%3E%3Ccircle cx='8.5' cy='11.5' r='1.5' fill='%23B6E5A8'/%3E%3Ccircle cx='23' cy='26' r='1.5' fill='%23B6E5A8'/%3E%3Cpath d='M 16,27 C 16,27 25,20 25,12 C 25,7 21,4 16,3 C 15.5,9 17,16 16,27 Z' fill='%23FFFFFF'/%3E%3Cpath d='M 16,23 C 15,18 10,18 8,14 C 7,11 9,7 13.5,6 C 14.5,10 15,16 16,23 Z' fill='url(%23favLeaf)'/%3E%3Cpath d='M 16,24 L 16.8,8' stroke='%23103D2B' stroke-width='1.3' stroke-linecap='round'/%3E%3Ccircle cx='16' cy='24' r='1.6' fill='%23FFFFFF' stroke='%23103D2B' stroke-width='0.8'/%3E%3Ccircle cx='16.4' cy='16' r='1.5' fill='%23B6E5A8' stroke='%23103D2B' stroke-width='0.8'/%3E%3Ccircle cx='16.8' cy='8' r='1.4' fill='%23FFFFFF'/%3E%3C/svg%3E" />
   <link rel="icon" type="image/svg+xml" href="assets/branding/favicon.svg" />
   <link rel="alternate icon" href="assets/branding/favicon.svg" />
-  <link rel="stylesheet" href="css/style.css?v=16" />
+  <link rel="stylesheet" href="css/style.css?v=20261014-phase-e-v1" />
+  <link rel="stylesheet" href="css/workspace.css?v=1" />
 </head>
 <body>
   <!-- ================================= HEADER ================================= -->
@@ -68,7 +69,7 @@
         <!-- Menu tài khoản người dùng dạng dropdown -->
         <div class="user-menu-container" id="header-user-menu" hidden>
           <button id="user-menu-btn" class="user-menu-trigger" type="button" aria-expanded="false" aria-haspopup="true" aria-label="Menu tài khoản">
-            <span class="user-menu-avatar" aria-hidden="true">👤</span>
+            <span class="user-menu-avatar" aria-hidden="true"></span>
             <span id="user-badge" class="user-menu-text">Chưa đăng nhập</span>
             <svg class="user-menu-arrow" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
           </button>
@@ -176,16 +177,23 @@
           <label id="sprint-demo-accounts" class="field login-quick__field" for="sprint-demo-account">
             <select id="sprint-demo-account" class="login-quick__select" aria-label="Đăng nhập nhanh tài khoản Demo">
               <option value="">Chọn tài khoản...</option>
-              <option value="s123_farm@demo.local">Nông dân · Hợp tác xã Đồng Tháp (HTX-DT)</option>
-              <option value="s123_packing@demo.local">Chế biến/đóng gói · Hợp tác xã Đồng Tháp (HTX-DT)</option>
-              <option value="s123_receiver@demo.local">Chế biến/tiếp nhận · Hợp tác xã Tiền Giang (HTX-TG)</option>
-              <option value="s123_transport@demo.local">Vận chuyển · Hợp tác xã Tiền Giang (HTX-TG)</option>
-              <option value="s123_distribution@demo.local">Phân phối · Doanh nghiệp Xuất nhập khẩu (DN-XNK)</option>
+              <option value="s123_farm@demo.local">Nông dân · Tân Cương – Thái Nguyên (Org1)</option>
+              <option value="s123_packing@demo.local">Chế biến/đóng gói · Tân Cương – Thái Nguyên (Org1)</option>
+              <option value="s123_receiver@demo.local">Chế biến/tiếp nhận · Chế biến và kho Hà Nội (Org2)</option>
+              <option value="s123_transport@demo.local">Vận chuyển · Chế biến và kho Hà Nội (Org2)</option>
+              <option value="s123_distribution@demo.local">Phân phối · Phân phối Bắc Ninh (Org3)</option>
               <option value="s123_inspector@demo.local">Thanh tra · Toàn cảnh nghiệp vụ</option>
-              <option value="s123_admin@demo.local">Quản trị hệ thống · Hợp tác xã Đồng Tháp (HTX-DT)</option>
-              <option value="s123_org_admin@demo.local">Quản trị tổ chức · Hợp tác xã Đồng Tháp (HTX-DT)</option>
+              <option value="s123_admin@demo.local">Quản trị hệ thống · Tân Cương – Thái Nguyên (Org1)</option>
+              <option value="s123_org_admin@demo.local">Quản trị tổ chức · Tân Cương – Thái Nguyên (Org1)</option>
             </select>
           </label>
+          <div class="login-practice-helpers" hidden>
+            <span>Tài khoản thực hành xác nhận thu hồi:</span>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              <button type="button" class="btn btn--light btn--sm" data-fill-account="practice_org2" data-fill-pass="ThucHanh2026!Org2" title="Đăng nhập quản trị Org 2">Org 2 (Hà Nội): practice_org2</button>
+              <button type="button" class="btn btn--light btn--sm" data-fill-account="practice_org3" data-fill-pass="ThucHanh2026!Org3" title="Đăng nhập quản trị Org 3">Org 3 (Bắc Ninh): practice_org3</button>
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -270,11 +278,27 @@
       </a>
     </div>
 
+    <div class="sidebar-section sidebar-section--phase-c">
+      <span class="sidebar-section-title">PHÂN PHỐI &amp; DANH MỤC</span>
+      <a id="nav-locations" href="#locations-card" class="sidebar-nav-item" hidden>
+        <svg class="sidebar-nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+        <span class="sidebar-nav-text">Địa điểm phân phối</span>
+      </a>
+      <a id="nav-imports" href="#imports-card" class="sidebar-nav-item" hidden>
+        <svg class="sidebar-nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M12 12v6"/><path d="m9 15 3-3 3 3"/></svg>
+        <span class="sidebar-nav-text">Nhập CSV</span>
+      </a>
+    </div>
+
     <div class="sidebar-section sidebar-section--admin">
       <span class="sidebar-section-title">HỆ THỐNG</span>
       <a id="nav-users" href="#users-card" class="sidebar-nav-item" hidden>
         <svg class="sidebar-nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         <span class="sidebar-nav-text">Tài khoản</span>
+      </a>
+      <a id="nav-products" href="#products-card" class="sidebar-nav-item" hidden>
+        <svg class="sidebar-nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="m9 12 2 2 4-4"/></svg>
+        <span class="sidebar-nav-text">Danh mục sản phẩm</span>
       </a>
       <a id="nav-audit" href="#audit-card" class="sidebar-nav-item" hidden>
         <svg class="sidebar-nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>
@@ -287,8 +311,8 @@
     </div>
   </nav>
   <div id="app-view" class="container" hidden>
-    <header class="screen-heading"><p class="screen-eyebrow">AGRITRACE · KHÔNG GIAN QUẢN LÝ</p><h2 id="screen-title" tabindex="-1">Tổng quan</h2><p id="screen-description"></p></header>
-    <section id="recent-activity" class="card"><h3>Hoạt động gần đây</h3><p class="card__desc">Mẫu tối đa 5 sự kiện từ 5 lô đầu trên trang, theo quyền Backend; không phải toàn bộ hoạt động.</p><div id="recent-activity-list" class="timeline"></div></section>
+    <header class="screen-heading"><h2 id="screen-title" tabindex="-1">Tổng quan</h2><p id="screen-description"></p></header>
+    <section id="recent-activity" class="card"><h3>Hoạt động gần đây</h3><p class="card__desc">Các sự kiện gần đây của tối đa 5 lô trên trang hiện tại.</p><div id="recent-activity-list" class="timeline"></div></section>
     <section id="traceability-card" class="card">
       <form id="trace-screen-form" class="screen-toolbar"><label class="field"><span class="field__label">Lô cần truy xuất</span><select id="trace-screen-batch" required></select></label><button class="btn btn--primary" type="submit">Xem nguồn gốc</button></form>
       <p id="trace-lineage-loading" role="status" hidden></p><div id="trace-lineage-body" hidden><div class="root-origins-card"><h3>Nguồn gốc thu hoạch</h3><div id="trace-root-batches-list" class="root-batches-grid"></div></div><h3>Phả hệ theo tầng</h3><div id="trace-lineage-levels-container"></div></div>
@@ -297,11 +321,88 @@
       <form id="events-screen-form" class="screen-toolbar"><label class="field"><span class="field__label">Lô cần xem lịch sử</span><select id="events-screen-batch" required></select></label><button class="btn btn--light" type="submit">Xem dòng thời gian</button><button id="btn-events-verify-chain" class="btn btn--primary" type="button">Kiểm tra tính toàn vẹn</button></form>
       <div id="events-timeline-valid-banner" class="integrity-valid-badge" hidden><span id="events-timeline-valid-text"></span></div><div id="events-timeline-alert-banner" class="integrity-alert-banner" hidden><span id="events-timeline-alert-text"></span></div><div id="events-timeline-list" class="timeline"><p class="empty">Chọn lô để xem nhật ký sự kiện.</p></div>
     </section>
+    <!-- ========================= CẢNH BÁO QUÁ HẠN BÀN GIAO (FARMER) ========================= -->
+    <aside id="farmer-overdue-banner" class="farmer-overdue-banner" hidden>
+      <div class="farmer-overdue-banner__icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      </div>
+      <div class="farmer-overdue-banner__content">
+        <strong id="farmer-overdue-title" class="farmer-overdue-banner__title">Cảnh báo bàn giao quá hạn 48 giờ</strong>
+        <p id="farmer-overdue-text" class="farmer-overdue-banner__text"></p>
+      </div>
+      <a href="#pending-handovers-card" class="btn btn--warning farmer-overdue-banner__btn">Theo dõi xử lý →</a>
+    </aside>
+
+    <!-- ========================== THAO TÁC NHANH (FARMER) ========================== -->
+    <section id="farmer-quick-actions" class="card farmer-quick-card" hidden>
+      <header class="card__header">
+        <div>
+          <h3 class="card__title">Thao tác nhanh cho Nông dân</h3>
+          <p class="card__desc">Lối tắt thực hiện ngay các nghiệp vụ thường nhật: Khai báo vùng trồng, ghi nhận thu hoạch và theo dõi bàn giao.</p>
+        </div>
+      </header>
+      <div class="farmer-quick-grid">
+        <!-- Thao tác 1: Thêm vùng trồng -->
+        <button id="btn-quick-add-farm" type="button" class="farmer-quick-btn farmer-quick-btn--farm" title="Mở biểu mẫu khai báo vùng trồng mới">
+          <div class="farmer-quick-btn__top">
+            <div class="farmer-quick-btn__icon farmer-quick-btn__icon--farm">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 20h10"/><path d="M10 20c5.5-2.5.8-6.4 3-10"/><path d="M9.5 9.4c1.1.8 1.8 2.2 2.3 3.7-2 .4-3.5.4-4.8-.3-1.2-.6-2.3-1.9-3-4.2 2.8-.5 4.4 0 5.5.8z"/><path d="M14.1 6a7 7 0 0 0-1.1 4c1.9-.1 3.3-.6 4.3-1.4 1-1 1.6-2.3 1.7-4.6-2.7.1-4 1-4.9 2z"/></svg>
+            </div>
+            <span class="farmer-quick-btn__tag farmer-quick-btn__tag--farm">Vùng canh tác</span>
+          </div>
+          <div class="farmer-quick-btn__body">
+            <strong class="farmer-quick-btn__title">Thêm vùng trồng</strong>
+            <p class="farmer-quick-btn__desc">Khai báo thửa đất / đồi chè canh tác mới của HTX</p>
+          </div>
+          <div class="farmer-quick-btn__footer">
+            <span class="farmer-quick-btn__action">Mở biểu mẫu</span>
+            <span class="farmer-quick-btn__arrow" aria-hidden="true">→</span>
+          </div>
+        </button>
+
+        <!-- Thao tác 2: Ghi nhận thu hoạch -->
+        <button id="btn-quick-harvest" type="button" class="farmer-quick-btn farmer-quick-btn--harvest" title="Mở biểu mẫu ghi nhận lô thu hoạch ban đầu">
+          <div class="farmer-quick-btn__top">
+            <div class="farmer-quick-btn__icon farmer-quick-btn__icon--harvest">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+            </div>
+            <span class="farmer-quick-btn__tag farmer-quick-btn__tag--harvest">Thu hoạch</span>
+          </div>
+          <div class="farmer-quick-btn__body">
+            <strong class="farmer-quick-btn__title">Ghi nhận thu hoạch</strong>
+            <p class="farmer-quick-btn__desc">Khai báo lô búp chè thu hoạch ban đầu từ thửa đất</p>
+          </div>
+          <div class="farmer-quick-btn__footer">
+            <span class="farmer-quick-btn__action">Nhập lô mới</span>
+            <span class="farmer-quick-btn__arrow" aria-hidden="true">→</span>
+          </div>
+        </button>
+
+        <!-- Thao tác 3: Theo dõi bàn giao -->
+        <button id="btn-quick-track-handover" type="button" class="farmer-quick-btn farmer-quick-btn--handover" title="Chuyển đến màn hình Theo dõi bàn giao">
+          <div class="farmer-quick-btn__top">
+            <div class="farmer-quick-btn__icon farmer-quick-btn__icon--handover">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
+            </div>
+            <span class="farmer-quick-btn__tag farmer-quick-btn__tag--handover">Chuỗi cung ứng</span>
+          </div>
+          <div class="farmer-quick-btn__body">
+            <strong class="farmer-quick-btn__title">Theo dõi bàn giao</strong>
+            <p id="farmer-quick-handover-desc" class="farmer-quick-btn__desc">Tiến độ xác nhận các lô đã gửi đối tác</p>
+          </div>
+          <div class="farmer-quick-btn__footer">
+            <span class="farmer-quick-btn__action">Xem tiến độ</span>
+            <span class="farmer-quick-btn__arrow" aria-hidden="true">→</span>
+          </div>
+        </button>
+      </div>
+    </section>
+
     <!-- =============================== THỐNG KÊ DASHBOARD =============================== -->
     <section id="overview" class="stats" aria-label="Thống kê nhanh">
       <article id="stat-farms-card" class="stat-card stat-card--farms">
         <div class="stat-card__header">
-          <span class="stat-card__label">Tổng vùng trồng</span>
+          <span class="stat-card__label">Vùng trồng đã tải</span>
           <div class="stat-card__badge-icon stat-card__badge-icon--farms">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 20h10"/><path d="M10 20c5.5-2.5.8-6.4 3-10"/><path d="M9.5 9.4c1.1.8 1.8 2.2 2.3 3.7-2 .4-3.5.4-4.8-.3-1.2-.6-2.3-1.9-3-4.2 2.8-.5 4.4 0 5.5.8z"/><path d="M14.1 6a7 7 0 0 0-1.1 4c1.9-.1 3.3-.6 4.3-1.4 1-1 1.6-2.3 1.7-4.6-2.7.1-4 1-4.9 2z"/></svg>
           </div>
@@ -345,6 +446,11 @@
         </span>
       </article>
 
+      <article id="stat-users-card" class="stat-card" hidden><span class="stat-card__label">Tài khoản (Trang hiện tại)</span><strong id="stat-users" class="stat-card__value">—</strong><span class="stat-card__hint">Theo trang và bộ lọc tài khoản · <a href="#users-card">Quản lý tài khoản →</a></span></article>
+      <article id="stat-products-card" class="stat-card" hidden><span class="stat-card__label">Danh mục sản phẩm</span><strong id="stat-products" class="stat-card__value">—</strong><span class="stat-card__hint">Danh mục dùng chung · <a href="#products-card">Quản lý sản phẩm →</a></span></article>
+      <article id="stat-orgs-card" class="stat-card" hidden><span class="stat-card__label">Tổ chức</span><strong id="stat-orgs" class="stat-card__value">—</strong><span class="stat-card__hint">Tổ chức trong hệ thống · <a href="#users-card">Quản trị →</a></span></article>
+      <article id="stat-outgoing-card" class="stat-card" hidden><span class="stat-card__label">Bàn giao gửi đi đang chờ</span><strong id="stat-outgoing" class="stat-card__value">—</strong><span class="stat-card__hint">Trang hiện tại · <a href="#batch-card">Xem lô bàn giao →</a></span></article>
+      <article id="stat-eligible-card" class="stat-card" hidden><span id="stat-eligible-label" class="stat-card__label">Lô đủ điều kiện tách</span><strong id="stat-eligible" class="stat-card__value">—</strong><span class="stat-card__hint">Trang hiện tại · Theo quyền và trạng thái đã tải · <a href="#batch-card">Xem lô →</a></span></article>
       <article id="stat-audit-card" class="stat-card stat-card--audit" hidden>
         <div class="stat-card__header">
           <span class="stat-card__label">Nhật ký hoạt động</span>
@@ -376,12 +482,12 @@
           <label class="field">
             <span class="field__label">Tên thửa đất / Vùng trồng <em>*</em></span>
             <input id="farm-name" type="text" maxlength="255" required
-                   placeholder="VD: Thửa 1 - Vườn xoài Cát Chu Tháp Mười" />
+                   placeholder="VD: Đồi 1 - Vùng chè búp tươi Tân Cương" />
           </label>
           <label class="field">
             <span class="field__label">Địa điểm / Vị trí canh tác <em>*</em></span>
             <input id="farm-location" type="text" maxlength="255" required
-                   placeholder="VD: Xã Mỹ Xương, TP. Cao Lãnh, Đồng Tháp" />
+                   placeholder="VD: Xã Tân Cương, TP. Thái Nguyên, Tỉnh Thái Nguyên" />
           </label>
         </div>
 
@@ -407,7 +513,7 @@
 
         <div class="form__actions">
           <button id="farm-submit" class="btn btn--primary" type="submit">Thêm thửa đất</button>
-          <button id="farm-cancel" class="btn btn--ghost" type="button" hidden>Huỷ sửa</button>
+          <button id="farm-cancel" class="btn btn--ghost" type="button" hidden>Hủy</button>
         </div>
       </form></details>
 
@@ -417,8 +523,8 @@
           <p id="farm-org-context" class="section-hint">Hiển thị các thửa đất thuộc quyền quản lý</p>
         </div>
         <div class="view-toggle">
-          <button id="btn-view-cards" class="btn btn--sm btn--active" type="button">🌾 Dạng thẻ</button>
-          <button id="btn-view-table" class="btn btn--sm btn--light" type="button">📋 Dạng bảng</button>
+          <button id="btn-view-cards" class="btn btn--sm btn--active" type="button">Dạng thẻ</button>
+          <button id="btn-view-table" class="btn btn--sm btn--light" type="button">Dạng bảng</button>
         </div>
       </div>
 
@@ -444,41 +550,119 @@
       <p id="farm-empty" class="empty" hidden>Hợp tác xã chưa có thửa đất nào được khai báo. Vui lòng thêm thửa đất mới ở biểu mẫu phía trên.</p>
     </section>
 
-    <!-- ==================== LÔ CHỜ TIẾP NHẬN BÀN GIAO ==================== -->
+    <!-- ==================== LÔ CHỜ TIẾP NHẬN / THEO DÕI BÀN GIAO ==================== -->
     <section id="pending-handovers-card" class="card card--highlight">
       <header class="card__header">
         <div class="card__header-flex">
           <div>
-            <h2 class="card__title">
-              📥 Lô hàng chờ xác nhận bàn giao
+            <h2 class="card__title" id="pending-handovers-title">
+              Lô hàng chờ xác nhận bàn giao
               <span id="badge-pending-count" class="badge badge--warning">0 lô</span>
             </h2>
-            <p class="card__desc">
+            <p class="card__desc" id="pending-handovers-desc">
               Danh sách các lô nông sản được tổ chức khác bàn giao đến tổ chức của bạn. Vui lòng xác nhận tiếp nhận hoặc từ chối.
             </p>
           </div>
-          <button id="btn-refresh-pending" class="btn btn--light btn--sm" type="button">🔄 Làm mới</button>
+          <button id="btn-refresh-pending" class="btn btn--light btn--sm" type="button">Làm mới</button>
         </div>
       </header>
 
-      <div class="table-wrap">
-        <table class="table">
-          <thead>
-            <tr>
-              <th>Mã lô</th>
-              <th>Tên sản phẩm</th>
-              <th class="is-right">Khối lượng</th>
-              <th>Tổ chức gửi</th>
-              <th>Thời gian gửi</th>
-              <th>Thời hạn / Cảnh báo</th>
-              <th>Ghi chú bàn giao</th>
-              <th class="is-center">Thao tác tiếp nhận</th>
-            </tr>
-          </thead>
-          <tbody id="pending-handovers-table-body"></tbody>
-        </table>
+      <!-- Tabs navigation: Chỉ hiển thị cho Farmer -->
+      <div id="farmer-handover-tabs" class="modal-tabs" style="margin-top: 14px; margin-bottom: 16px;" hidden>
+        <button id="tab-farmer-outgoing" class="modal-tab-btn is-active" type="button">
+          Lô đã gửi (Theo dõi tiến độ)
+        </button>
+        <button id="tab-farmer-incoming" class="modal-tab-btn" type="button">
+          Bàn giao gửi đến (Tiếp nhận)
+        </button>
       </div>
-      <p id="pending-handovers-empty" class="empty">Hiện không có lô hàng nào đang chờ tổ chức của bạn xác nhận.</p>
+
+      <!-- Panel 1: Dành riêng cho Farmer - Theo dõi các lô đã gửi & từ chối -->
+      <div id="panel-farmer-outgoing" hidden>
+        <!-- Bảng 1: Lô đã gửi đang chờ bên nhận xác nhận -->
+        <div class="section-toolbar" style="margin-top: 0;">
+          <div>
+            <h3 class="table-title">Lô đã gửi đang chờ bên nhận xác nhận</h3>
+            <p class="section-hint">Các lô nông sản nông trại đã tạo yêu cầu bàn giao, đang chờ đối tác tiếp nhận hoặc phản hồi.</p>
+          </div>
+        </div>
+
+        <div id="farmer-outgoing-table-wrap" class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Mã lô</th>
+                <th>Sản phẩm</th>
+                <th class="is-right">Khối lượng</th>
+                <th>Tổ chức tiếp nhận</th>
+                <th>Thời điểm gửi</th>
+                <th>Trạng thái / Thời hạn</th>
+                <th class="is-center">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody id="farmer-outgoing-table-body"></tbody>
+          </table>
+        </div>
+        <p id="farmer-outgoing-empty" class="empty" hidden>Hiện nông trại không có lô nào đang chờ đối tác xác nhận bàn giao.</p>
+
+        <!-- Bảng 2: Lô bị đối tác từ chối tiếp nhận -->
+        <div id="farmer-rejected-section" style="margin-top: 24px;">
+          <div class="section-toolbar">
+            <div>
+              <h3 class="table-title" style="color: #b91c1c;">Lô bị đối tác từ chối tiếp nhận (Cần xử lý)</h3>
+              <p class="section-hint">Các lô nông sản bị bên nhận từ chối kèm lý do phản hồi. Nông dân có thể kiểm tra, tách phân loại hoặc bàn giao lại.</p>
+            </div>
+            <button id="btn-check-rejected" class="btn btn--light btn--sm" type="button" title="Kiểm tra phản hồi từ chối từ các lô đang giữ">
+              Cập nhật phản hồi
+            </button>
+          </div>
+
+          <div id="farmer-rejected-table-wrap" class="table-wrap" hidden>
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Mã lô</th>
+                  <th>Sản phẩm</th>
+                  <th class="is-right">Khối lượng</th>
+                  <th>Đối tác từ chối</th>
+                  <th>Thời điểm từ chối</th>
+                  <th>Lý do từ chối</th>
+                  <th class="is-center">Thao tác khắc phục</th>
+                </tr>
+              </thead>
+              <tbody id="farmer-rejected-table-body"></tbody>
+            </table>
+          </div>
+          <p id="farmer-rejected-empty" class="empty">Không ghi nhận lô bị từ chối trong mẫu hiển thị hiện tại.</p>
+        </div>
+
+        <!-- Khối thông tin minh bạch về lô đã ACCEPTED -->
+        <div class="note-box" style="margin-top: 20px; padding: 12px 16px; background: rgba(34, 197, 94, 0.08); border: 1px solid rgba(34, 197, 94, 0.25); border-radius: 8px; font-size: 0.875rem; color: #166534; line-height: 1.5;">
+          <strong> Về các lô đã bàn giao thành công (đã tiếp nhận):</strong> Theo quy tắc nghiệp vụ chuỗi cung ứng , khi đối tác đã bấm xác nhận tiếp nhận lô hàng, quyền sở hữu chuyển sang đối tác và lô sẽ không còn trong danh sách lưu giữ của nông trại. Để xem lại lịch sử và hành trình các lô đã chuyển giao thành công, vui lòng tra cứu mã lô tại mục <strong>Truy xuất nguồn gốc</strong> hoặc <strong>Nhật ký sự kiện</strong>.
+        </div>
+      </div>
+
+      <!-- Panel 2: Luồng tiếp nhận bàn giao đến (Bảo toàn 100% ID, table, empty message cho Sprint 2 & 7 vai trò còn lại) -->
+      <div id="panel-incoming-handovers">
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Mã lô</th>
+                <th>Tên sản phẩm</th>
+                <th class="is-right">Khối lượng</th>
+                <th>Tổ chức gửi</th>
+                <th>Thời gian gửi</th>
+                <th>Thời hạn / Cảnh báo</th>
+                <th>Ghi chú bàn giao</th>
+                <th class="is-center">Thao tác tiếp nhận</th>
+              </tr>
+            </thead>
+            <tbody id="pending-handovers-table-body"></tbody>
+          </table>
+        </div>
+        <p id="pending-handovers-empty" class="empty">Hiện không có lô hàng nào đang chờ tổ chức của bạn xác nhận.</p>
+      </div>
     </section>
 
     <!-- ==================== QUẢN LÝ SẢN PHẨM & ĐƠN VỊ TÍNH ==================== -->
@@ -486,7 +670,7 @@
       <header class="card__header">
         <div class="card__header-flex">
           <div>
-            <h2 class="card__title">📦 Danh mục Sản phẩm &amp; Đơn vị tính (Toàn hệ thống)</h2>
+            <h2 class="card__title">Danh mục Sản phẩm &amp; Đơn vị tính (Toàn hệ thống)</h2>
             <p class="card__desc">
               Danh mục các loại nông sản dùng chung toàn hệ thống theo tiêu chuẩn chất lượng.
             </p>
@@ -515,8 +699,8 @@
     <section id="batch-card" class="card">
       <header class="card__header">
         <div>
-          <h2 class="card__title">Quản lý lô nông sản (Thu hoạch &amp; Truy xuất)</h2>
-          <p class="card__desc">
+          <h2 class="card__title" id="batch-card-title">Quản lý lô nông sản (Thu hoạch &amp; Truy xuất)</h2>
+          <p class="card__desc" id="batch-card-desc">
             Theo dõi thông tin thu hoạch, sản lượng và nguồn gốc xuất xứ của từng lô hàng.
           </p>
         </div>
@@ -524,10 +708,10 @@
 
       <!-- Khung thông báo thành công với mã lô cỡ lớn 28px+ -->
       <div id="batch-success-banner" class="batch-success-banner" hidden>
-        <div class="batch-success-banner__title">🎉 Thu hoạch thành công! Mã lô định danh ngẫu nhiên (An toàn đọc ngoài trời nắng):</div>
+        <div class="batch-success-banner__title">Thu hoạch thành công! Mã lô định danh:</div>
         <div id="batch-success-code-display" class="batch-success-code">ABCDEFGH</div>
         <div class="batch-success-actions">
-          <button id="btn-copy-batch-code" class="btn btn--light btn--sm" type="button">📋 Sao chép mã lô</button>
+          <button id="btn-copy-batch-code" class="btn btn--light btn--sm" type="button">Sao chép mã lô</button>
           <button id="btn-dismiss-batch-banner" class="btn btn--ghost btn--sm" type="button">Đóng thông báo</button>
         </div>
       </div>
@@ -570,7 +754,7 @@
 
         <div class="form__actions">
           <button id="batch-submit" class="btn btn--primary" type="submit">Tạo lô nông sản</button>
-          <button id="batch-cancel" class="btn btn--ghost" type="button" hidden>Huỷ sửa</button>
+          <button id="batch-cancel" class="btn btn--ghost" type="button" hidden>Hủy</button>
         </div>
       </form></details>
 
@@ -581,15 +765,16 @@
         </div>
       </div>
 
-      <!-- Thanh tìm kiếm Debounce 300ms và Bộ lọc theo Sản phẩm -->
+      <!-- Thanh tìm kiếm và Bộ lọc theo Sản phẩm -->
       <div class="filter-bar">
-        <input id="batch-search-input" type="text" placeholder="🔍 Tìm kiếm theo mã lô (Debounce 300ms)..." style="min-width: 280px;" />
-        <select id="batch-filter-product">
+        <input id="batch-search-input" aria-label="Tìm mã lô" type="search" placeholder="Tìm kiếm theo mã lô..." style="min-width: 280px;" />
+        <select id="batch-filter-product" aria-label="Lọc sản phẩm">
           <option value="">— Tất cả sản phẩm —</option>
         </select>
-        <button id="btn-refresh-batches" class="btn btn--light btn--sm" type="button">🔄 Tải lại</button>
-        <button id="btn-demo-lineage" class="btn btn--demo btn--sm" type="button" title="Truy xuất lô đã chọn hoặc lô đầu danh sách">🌳 Truy xuất lô đang giữ</button>
-        <button id="btn-open-merge-batches" class="btn btn--primary btn--sm" type="button" disabled title="Chọn ít nhất 2 lô cùng sản phẩm để gộp">🔀 Gộp lô đã chọn (0)</button>
+        <button id="btn-refresh-batches" class="btn btn--light btn--sm" type="button">Tải lại</button>
+        <button id="btn-demo-lineage" class="btn btn--demo btn--sm" type="button" title="Truy xuất lô đã chọn hoặc lô đầu danh sách">Truy xuất</button>
+        <button id="btn-open-merge-batches" class="btn btn--primary btn--sm" type="button" disabled title="Chọn ít nhất 2 lô cùng sản phẩm để gộp">Gộp lô đã chọn (0)</button>
+        <span id="merge-condition-hint" class="merge-condition-hint" hidden></span>
       </div>
 
       <div class="table-wrap">
@@ -598,20 +783,32 @@
             <tr>
               <th id="th-batch-select" style="width: 38px; text-align: center;"><input id="batch-select-all" type="checkbox" title="Chọn tất cả"></th>
               <th>Mã lô</th>
-              <th>Thửa đất xuất xứ</th>
               <th>Sản phẩm</th>
-              <th class="is-right">SL ban đầu</th>
-              <th class="is-right">SL còn lại</th>
-              <th>Ngày thu hoạch</th>
-              <th>Đơn vị nắm giữ</th>
-              <th>Trạng thái</th>
+              <th class="is-right">Lượng còn lại</th>
+              <th>Tổ chức đang giữ</th>
+              <th>Vị trí hiện tại</th><th>Trạng thái</th>
               <th class="is-center">Thao tác</th>
             </tr>
           </thead>
           <tbody id="batch-table-body"></tbody>
         </table>
       </div>
-      <div class="pagination"><button id="batch-prev" class="btn btn--light" type="button">Trang trước</button><span id="batch-page-label" aria-live="polite">Trang 1</span><button id="batch-next" class="btn btn--light" type="button">Trang sau</button></div>
+      <div class="pagination" id="batch-pagination-bar">
+        <div id="farmer-page-size-wrap" class="pagination__size-control" hidden>
+          <label for="batch-page-size" class="pagination__size-label">Số lô / trang:</label>
+          <select id="batch-page-size" class="pagination__size-select" aria-label="Số lô hiển thị trên một trang">
+            <option value="5" selected>5 lô / trang</option>
+            <option value="10">10 lô / trang</option>
+            <option value="20">20 lô / trang</option>
+          </select>
+        </div>
+        <div class="pagination__controls">
+          <button id="batch-prev" class="btn btn--light btn--sm" type="button" aria-label="Trang trước">← Trang trước</button>
+          <span id="batch-page-label" class="pagination__label" aria-live="polite">Trang 1</span>
+          <button id="batch-next" class="btn btn--light btn--sm" type="button" aria-label="Trang sau">Trang sau →</button>
+        </div>
+        <span id="batch-count-label" class="pagination__count-label" hidden></span>
+      </div>
       <p id="batch-empty" class="empty" hidden>Chưa có lô nông sản nào được ghi nhận. Vui lòng tạo lô mới ở biểu mẫu phía trên.</p>
     </section>
 
@@ -672,12 +869,18 @@
         </div>
       </header>
 
-      <div class="audit-toolbar">
+      <form id="audit-filter-form" class="audit-toolbar">
+        <label>Lô #<input id="audit-filter-batch" type="number" min="1" step="1" placeholder="ID lô"></label>
+        <label>Người #<input id="audit-filter-user" type="number" min="1" step="1" placeholder="ID người"></label>
+        <label>Đối tượng<select id="audit-filter-entity"><option value="">Tất cả</option><option value="batch">Lô</option><option value="farm">Thửa đất</option><option value="handover">Bàn giao</option><option value="recall">Thu hồi</option><option value="location">Địa điểm</option><option value="product">Sản phẩm</option><option value="user">Tài khoản</option></select></label>
+        <button class="btn btn--primary" type="submit">Lọc nhật ký</button>
+        <button id="audit-filter-reset" class="btn" type="button">Xóa bộ lọc</button>
         <button id="btn-load-audit" class="btn btn--primary" type="button">Làm mới nhật ký</button>
         <span class="audit-toolbar__hint">
-          Hiển thị các thao tác mới nhất theo thời gian thực
+          Mới nhất trước · tối đa 100 bản ghi mỗi trang · dữ liệu cũ thiếu IP/vị trí được để trống
         </span>
-      </div>
+      </form>
+      <div class="audit-toolbar"><button id="audit-prev" class="btn" type="button">Trang trước</button><span id="audit-page" aria-live="polite"></span><button id="audit-next" class="btn" type="button">Trang sau</button></div>
 
       <h3 class="table-title">Danh sách thao tác gần đây</h3>
       <div class="table-wrap">
@@ -690,6 +893,7 @@
               <th>Thao tác</th>
               <th>Đối tượng</th>
               <th class="is-right">Mã đối tượng</th>
+              <th>Lô liên quan</th><th>IP nguồn</th><th>Vị trí lúc thao tác</th>
             </tr>
           </thead>
           <tbody id="audit-table-body"></tbody>
@@ -703,26 +907,18 @@
 
     <!-- ==================== CÁN BỘ KIỂM TRA (INSPECTOR - T-29 & S-33) ==================== -->
 <section id="recall-card" class="card">
-<header class="card__header"><div><h2>🚨 Thu hồi lô hàng &amp; Quản lý sự cố (S-33)</h2><p class="card__desc">Tìm kiếm lô hàng theo mã lô, đánh dấu lô có sự cố và mở lệnh thu hồi kèm lý do bất biến. Hoàn tất xác nhận vẫn tiếp tục phong tỏa lô.</p></div><div class="form__actions"><button id="recall-refresh" class="btn btn--light" type="button">Tải lại Recall</button><button id="recall-open" class="btn btn--danger" type="button" hidden style="background:#dc2626; border-color:#dc2626;">🚨 Mở lệnh thu hồi</button></div></header>
-
-<div class="screen-toolbar" id="recall-quick-search-bar" style="margin-bottom:14px; display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap;">
-  <label class="field" style="flex:1; min-width:240px; margin-bottom:0;">
-    <span class="field__label">Tìm kiếm &amp; Chọn lô hàng theo mã lô để báo sự cố</span>
-    <input id="recall-search-code" type="text" maxlength="30" placeholder="Nhập mã lô (VD: 4M8KQ2PY hoặc S39-ROOT-A)..." autocomplete="off" />
-  </label>
-  <button id="btn-quick-recall" class="btn btn--danger" type="button" style="background:#dc2626; border-color:#dc2626; height:42px;">🚨 Báo sự cố &amp; Mở thu hồi</button>
-</div>
+<header class="card__header"><div><h2>Thu hồi và xử lý sự cố</h2><p class="card__desc">Tìm kiếm lô hàng theo mã lô, đánh dấu lô có sự cố và mở lệnh thu hồi kèm lý do bất biến. Hoàn tất xác nhận vẫn tiếp tục phong tỏa lô.</p></div><div class="form__actions"><button id="recall-refresh" class="btn btn--light" type="button">Làm mới danh sách</button><button id="recall-open" class="btn btn--primary" type="button" hidden>Tạo yêu cầu thu hồi</button></div></header>
 
 <p id="recall-status" role="status"></p><div id="recall-alerts" aria-label="Cảnh báo thu hồi"></div>
-<div class="table-wrap"><table class="table"><thead><tr><th>Mã Recall</th><th>Lô gốc</th><th>Lý do</th><th>Trạng thái</th><th>Ngày tạo</th><th>Xác nhận</th><th>Bất thường</th><th>Thao tác</th></tr></thead><tbody id="recall-list"></tbody></table></div>
-<p class="card__desc">Hệ thống áp dụng chính sách: Không cho phép tạo lệnh thu hồi trùng lặp cho cùng một lô khi lệnh trước đó vẫn đang xử lý.</p>
+<div class="table-wrap"><table class="table"><thead><tr><th>Mã thu hồi</th><th>Lô gốc</th><th>Lý do</th><th>Trạng thái</th><th>Ngày tạo</th><th>Xác nhận</th><th>Bất thường</th><th>Thao tác</th></tr></thead><tbody id="recall-list"></tbody></table></div>
+<p class="card__desc">Hệ thống áp dụng chính sách: Mỗi lô gốc chỉ có một lệnh thu hồi. Hoàn tất xác nhận vẫn tiếp tục cách ly; không có bỏ cách ly thủ công.</p>
 </section>
     <section id="inspector-card" class="card inspector-card">
       <header class="card__header">
         <div>
-          <h2 class="card__title">🛡️ Kiểm tra tính toàn vẹn (Cán bộ kiểm tra &amp; Quản trị viên)</h2>
+          <h2 class="card__title">Kiểm tra tính toàn vẹn (Cán bộ kiểm tra &amp; Quản trị viên)</h2>
           <p class="card__desc">
-            Xác thực tính toàn vẹn toán học của chuỗi sự kiện bất biến SHA-256 để phát hiện can thiệp hoặc giả mạo dữ liệu.
+            Kiểm tra chuỗi sự kiện để phát hiện dữ liệu sai lệch.
           </p>
         </div>
       </header>
@@ -732,11 +928,48 @@
           <span class="field__label">Mã lô nông sản cần kiểm tra <em>*</em></span>
           <input id="inspect-batch-code" type="text" maxlength="20" placeholder="Nhập mã lô (VD: 4M8KQ2PY) hoặc ID lô" />
         </label>
-        <button id="btn-inspect-chain" class="btn btn--primary" type="button" style="height: 40px; margin-bottom: 0;">🔍 Kiểm tra toàn vẹn</button>
+        <button id="btn-inspect-chain" class="btn btn--primary" type="button" style="height: 40px; margin-bottom: 0;">Kiểm tra toàn vẹn</button>
       </div>
 
       <div id="inspect-result-container" style="margin-top: 16px;" hidden></div>
     </section>
+
+    <section id="locations-card" class="card">
+      <h2>Địa điểm phân phối</h2>
+      <p>Quản lý kho và cửa hàng thuộc tổ chức của bạn.</p>
+      <form id="locations-form" class="form">
+        <div class="form__row">
+          <label class="field">Mã địa điểm<input id="location-code" required maxlength="50"></label>
+          <label class="field">Tên địa điểm<input id="location-name" required maxlength="255"></label>
+          <label class="field">Địa chỉ<input id="location-address" required maxlength="500"></label>
+        </div>
+        <button id="location-save" class="btn btn--primary" type="submit">Lưu địa điểm</button>
+        <button id="location-cancel" class="btn btn--light" type="button">Hủy chỉnh sửa</button>
+      </form>
+      <div class="table-wrap"><table><thead><tr><th>Mã</th><th>Tên</th><th>Địa chỉ</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody id="location-rows"></tbody></table></div>
+      <h3>Phân bổ cửa hàng / chuyển nội bộ</h3>
+      <form id="store-form" class="form">
+        <label class="field">Lô cần phân bổ<select id="store-batch" required></select></label>
+        <p id="store-current-quantity" aria-live="polite"></p>
+        <div id="store-items"></div>
+        <button id="store-add-row" class="btn btn--light" type="button">Thêm cửa hàng</button>
+        <button id="store-allocate" class="btn btn--primary" type="submit">Phân bổ toàn bộ lượng còn lại</button>
+        <button id="store-transfer" class="btn btn--light" type="submit" formnovalidate>Chuyển nguyên lô tới một địa điểm</button>
+      </form>
+      <p id="store-allocation-results" role="status"></p>
+    </section>
+    <section id="imports-card" class="card">
+      <h2>Nhập dữ liệu CSV</h2>
+      <p>UTF-8 hoặc UTF-8 BOM, tối đa 2 MB / 5.000 dòng. Có lỗi thì toàn bộ file được hoàn tác; bản ghi trùng hoàn toàn được bỏ qua, dữ liệu khác không bị ghi đè.</p>
+      <form id="csv-form" class="form">
+        <label class="field">Loại dữ liệu<select id="csv-entity" required></select></label>
+        <button id="csv-template" class="btn btn--light" type="button">Tải mẫu CSV</button>
+        <label class="field">File CSV<input id="csv-file" type="file" accept=".csv,text/csv" required></label>
+        <button id="csv-submit" class="btn btn--primary" type="submit">Nhập CSV</button>
+      </form>
+      <pre id="csv-results" class="csv-results" role="status"></pre>
+    </section>
+
   </div>
   <!-- /#app-view -->
 
@@ -745,12 +978,12 @@
     <div class="app-footer__inner">
       <div class="app-footer__copyright">
         <strong>Hệ thống AgriTrace · Quản lý và truy xuất nông sản</strong>
-        <div>Thực tập cơ sở · K18C4 - Nhóm 5</div>
+        <div></div>
       </div>
       <div class="app-footer__links">
         <span class="server-status">Máy chủ: <code id="stat-api">http://127.0.0.1:8000</code></span>
-        <a href="http://127.0.0.1:8000/docs" target="_blank" rel="noopener" class="api-doc-link">
-          Tài liệu API (Swagger UI) ↗
+        <a href="/docs" target="_blank" rel="noopener" class="api-doc-link">
+          Tài liệu hệ thống
         </a>
       </div>
     </div>
@@ -763,7 +996,7 @@
   <div id="modal-handover" class="modal-backdrop" hidden>
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-handover-title">
       <header class="modal__header">
-        <h3 id="modal-handover-title" class="modal__title">🚚 Bàn giao lô nông sản</h3>
+        <h3 id="modal-handover-title" class="modal__title">Bàn giao lô nông sản</h3>
         <button id="btn-close-handover-modal" class="modal__close" type="button" aria-label="Đóng">&times;</button>
       </header>
       <div class="modal__body">
@@ -779,7 +1012,7 @@
           </label>
           <label class="field">
             <span class="field__label">Ghi chú bàn giao (tùy chọn)</span>
-            <textarea id="handover-note" rows="3" maxlength="500" placeholder="VD: Bàn giao lô xoài phục vụ kiểm nghiệm và đóng gói xuất khẩu..."></textarea>
+            <textarea id="handover-note" rows="3" maxlength="500" placeholder="VD: Bàn giao lô chè búp tươi phục vụ chế biến và đóng gói xuất khẩu..."></textarea>
           </label>
           <div class="modal__actions">
             <button id="btn-cancel-handover" class="btn btn--ghost" type="button">Hủy bỏ</button>
@@ -794,7 +1027,7 @@
   <div id="modal-reject" class="modal-backdrop" hidden>
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-reject-title">
       <header class="modal__header">
-        <h3 id="modal-reject-title" class="modal__title">❌ Từ chối tiếp nhận lô hàng</h3>
+        <h3 id="modal-reject-title" class="modal__title">Từ chối tiếp nhận lô hàng</h3>
         <button id="btn-close-reject-modal" class="modal__close" type="button" aria-label="Đóng">&times;</button>
       </header>
       <div class="modal__body">
@@ -821,13 +1054,13 @@
   <div id="modal-timeline" class="modal-backdrop" hidden>
     <div class="modal modal--lg" role="dialog" aria-modal="true" aria-labelledby="modal-timeline-title" style="max-width: 720px;">
       <header class="modal__header">
-        <h3 id="modal-timeline-title" class="modal__title">📜 Dòng thời gian sự kiện lô nông sản</h3>
+        <h3 id="modal-timeline-title" class="modal__title">Dòng thời gian sự kiện lô nông sản</h3>
         <button id="btn-close-timeline-modal" class="modal__close" type="button" aria-label="Đóng">&times;</button>
       </header>
       <div class="modal__body">
         <!-- Thanh cảnh báo đỏ nổi bật khi phát hiện can thiệp giả mạo -->
         <div id="timeline-alert-banner" class="integrity-alert-banner" hidden>
-          <span style="font-size: 1.5rem;">🚨</span>
+          <span style="font-size: 1.5rem;"></span>
           <div id="timeline-alert-text">CẢNH BÁO: Chuỗi sự kiện có dấu hiệu bị can thiệp trái phép!</div>
         </div>
         <!-- Badge xanh khi chuỗi toàn vẹn -->
@@ -846,14 +1079,14 @@
   <div id="modal-add-product" class="modal-backdrop" hidden>
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-product-title">
       <header class="modal__header">
-        <h3 id="modal-product-title" class="modal__title">📦 Thêm sản phẩm mới (Toàn hệ thống)</h3>
+        <h3 id="modal-product-title" class="modal__title">Thêm sản phẩm mới (Toàn hệ thống)</h3>
         <button id="btn-close-product-modal" class="modal__close" type="button" aria-label="Đóng">&times;</button>
       </header>
       <div class="modal__body">
         <form id="product-form" class="form">
           <label class="field">
             <span class="field__label">Tên sản phẩm <em>*</em></span>
-            <input id="product-name" type="text" maxlength="100" required placeholder="VD: Xoài Cát Chu" />
+            <input id="product-name" type="text" maxlength="100" required placeholder="VD: Chè búp tươi Tân Cương" />
             <span class="field__hint">Tên sản phẩm duy nhất toàn hệ thống</span>
           </label>
           <label class="field">
@@ -878,15 +1111,15 @@
   <div id="modal-batch-details" class="modal-backdrop" hidden>
     <div class="modal modal--lg" role="dialog" aria-modal="true" aria-labelledby="detail-modal-title" style="max-width: 860px; width: 95%;">
       <header class="modal__header">
-        <h3 id="detail-modal-title" class="modal__title">🔍 Chi tiết Lô Nông Sản: <span id="detail-batch-title-code"></span></h3>
+        <h3 id="detail-modal-title" class="modal__title">Chi tiết Lô Nông Sản: <span id="detail-batch-title-code"></span></h3>
         <button id="btn-close-batch-details" class="modal__close" type="button" aria-label="Đóng">&times;</button>
       </header>
       <div class="modal__body">
         <!-- 3 Tab chuyển đổi mượt mà -->
         <div class="modal-tabs">
-          <button id="tab-btn-overview" class="modal-tab-btn is-active" type="button">📋 Tab 1: Tổng quan</button>
-          <button id="tab-btn-timeline" class="modal-tab-btn" type="button">📜 Tab 2: Dòng thời gian</button>
-          <button id="tab-btn-lineage" class="modal-tab-btn" type="button">🌳 Tab 3: Nguồn gốc xuất xứ</button>
+          <button id="tab-btn-overview" class="modal-tab-btn is-active" type="button">Tổng quan</button>
+          <button id="tab-btn-timeline" class="modal-tab-btn" type="button">Dòng thời gian</button>
+          <button id="tab-btn-lineage" class="modal-tab-btn" type="button">Nguồn gốc &amp; Phả hệ</button>
         </div>
 
         <!-- TAB 1: TỔNG QUAN -->
@@ -894,7 +1127,7 @@
           <div id="detail-overview-loading" style="text-align: center; padding: 20px;">Đang tải thông tin chi tiết...</div>
           <div id="detail-overview-body" hidden>
             <div id="detail-pending-banner" class="integrity-alert-banner" style="background:#fffbeb; border-color:#f59e0b; color:#b45309;" hidden>
-              <span>⏳</span>
+              <span></span>
               <div>Lô này đang có yêu cầu bàn giao chờ xác nhận. Các thao tác chuyển tiếp, tách và gộp tạm thời bị vô hiệu hoá.</div>
             </div>
 
@@ -902,20 +1135,20 @@
 
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
               <div style="background: #f8fafc; border: 1px solid var(--color-border); border-radius: 8px; padding: 14px;">
-                <h4 style="color: var(--color-primary); margin-bottom: 8px; font-size: 0.95rem;">⬅️ Lô cha trực tiếp (Lô nguồn)</h4>
+                <h4 style="color: var(--color-primary); margin-bottom: 8px; font-size: 0.95rem;">Lô cha trực tiếp (Lô nguồn)</h4>
                 <div id="detail-direct-parents-list" style="font-size: 0.9rem;"></div>
               </div>
               <div style="background: #f8fafc; border: 1px solid var(--color-border); border-radius: 8px; padding: 14px;">
-                <h4 style="color: var(--color-primary); margin-bottom: 8px; font-size: 0.95rem;">➡️ Lô con trực tiếp (Tách/Gộp)</h4>
+                <h4 style="color: var(--color-primary); margin-bottom: 8px; font-size: 0.95rem;">Lô con trực tiếp (Tách/Gộp)</h4>
                 <div id="detail-direct-children-list" style="font-size: 0.9rem;"></div>
               </div>
             </div>
 
             <!-- Các nút thao tác nghiệp vụ tại trung tâm chi tiết (ẩn nếu đang chờ bàn giao) -->
             <div id="detail-action-buttons-group" class="modal__actions" style="border-top: 1px solid var(--color-border); padding-top: 16px; justify-content: flex-start; gap: 10px; flex-wrap: wrap;">
-              <button id="btn-detail-handover" class="btn btn--primary" type="button">🚚 Bàn giao lô này</button>
-              <button id="btn-detail-split" class="btn btn--outline-primary" type="button" style="border: 1px solid var(--color-primary);">✂️ Tách lô</button>
-              <button id="btn-detail-consume" class="btn btn--warning" type="button" style="background-color: #d97706; color: white; border: none;" hidden>🍽️ Đã bán hết (CONSUMED)</button>
+              <button id="btn-detail-handover" class="btn btn--primary" type="button">Bàn giao lô này</button>
+              <button id="btn-detail-split" class="btn btn--outline-primary" type="button" style="border: 1px solid var(--color-primary);">Tách lô</button>
+              <button id="btn-detail-consume" class="btn btn--warning" type="button" style="background-color: #d97706; color: white; border: none;" hidden>Ghi nhận đã tiêu thụ</button>
             </div>
           </div>
         </div>
@@ -924,10 +1157,10 @@
         <div id="tab-content-timeline" class="tab-content" hidden>
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
             <p style="font-size: 0.9rem; color: var(--color-text-muted);">Theo dõi chuỗi sự kiện bất biến gắn với lô nông sản này.</p>
-            <button id="btn-detail-verify-chain" class="btn btn--sm btn--primary" type="button">🛡️ Kiểm tra tính toàn vẹn</button>
+            <button id="btn-detail-verify-chain" class="btn btn--sm btn--primary" type="button">Kiểm tra tính toàn vẹn</button>
           </div>
           <div id="detail-timeline-alert-banner" class="integrity-alert-banner" hidden>
-            <span style="font-size: 1.5rem;">🚨</span>
+            <span style="font-size: 1.5rem;"></span>
             <div id="detail-timeline-alert-text">CẢNH BÁO: Chuỗi sự kiện có dấu hiệu bị can thiệp trái phép!</div>
           </div>
           <div id="detail-timeline-valid-banner" class="integrity-valid-badge" hidden>
@@ -942,8 +1175,8 @@
           <!-- Nút chuyển đổi Xem nguồn gốc / Xem các lô liên quan -->
           <div style="display: flex; gap: 10px; margin-bottom: 14px; align-items: center; justify-content: space-between; flex-wrap: wrap; background: #f8fafc; padding: 8px 12px; border-radius: 6px; border: 1px solid #e2e8f0;">
             <div style="display: flex; gap: 8px;">
-              <button id="btn-lineage-backward" class="btn btn--sm btn--primary" type="button">⬅️ Xem nguồn gốc</button>
-              <button id="btn-lineage-forward" class="btn btn--sm btn--light" type="button">➡️ Xem các lô liên quan</button>
+              <button id="btn-lineage-backward" class="btn btn--sm btn--primary" type="button">Nguồn gốc trước</button>
+              <button id="btn-lineage-forward" class="btn btn--sm btn--light" type="button">Phả hệ hậu duệ</button>
             </div>
             <span id="lineage-mode-label" style="font-size: 0.85rem; color: var(--color-text-muted); font-weight: 500;">Chế độ: Xem nguồn gốc từ nông trại</span>
           </div>
@@ -955,7 +1188,7 @@
             <!-- Lô thu hoạch gốc ban đầu -->
             <div class="root-origins-card">
               <div class="root-origins-header">
-                <span>🌱</span>
+                <span></span>
                 <span>VÙNG TRỒNG &amp; NÔNG TRẠI THU HOẠCH GỐC</span>
               </div>
               <div id="detail-root-batches-list" class="root-batches-grid"></div>
@@ -963,7 +1196,7 @@
 
             <!-- Phả hệ nguồn gốc phân tầng -->
             <div>
-              <h4 style="margin-bottom: 12px; color: var(--color-primary-dark); font-size: 1rem;">🌿 PHẢ HỆ NGUỒN GỐC LÔ HÀNG</h4>
+              <h4 style="margin-bottom: 12px; color: var(--color-primary-dark); font-size: 1rem;">Phả hệ nguồn gốc lô hàng</h4>
               <div id="detail-lineage-levels-container" style="display: flex; flex-direction: column; gap: 14px;"></div>
             </div>
           </div>
@@ -973,7 +1206,7 @@
             <!-- Điểm cuối chuỗi cung ứng & Đã tiêu thụ -->
             <div class="root-origins-card" style="border-left: 4px solid #f59e0b;">
               <div class="root-origins-header" style="color: #b45309;">
-                <span>🏁</span>
+                <span></span>
                 <span>ĐIỂM CUỐI CHUỖI CUNG ỨNG &amp; PHÂN PHỐI</span>
               </div>
               <div id="detail-terminal-batches-list" class="root-batches-grid"></div>
@@ -981,7 +1214,8 @@
 
             <!-- Cây phả hệ phân tầng các lô liên quan -->
             <div>
-              <h4 style="margin-bottom: 12px; color: var(--color-primary-dark); font-size: 1rem;">🌳 CÁC LÔ NÔNG SẢN LIÊN QUAN TIẾP THEO</h4>
+              <h4 style="margin-bottom: 12px; color: var(--color-primary-dark); font-size: 1rem;">Các lô nông sản liên quan tiếp theo</h4>
+              <div id="detail-forward-graph"></div>
               <div id="detail-forward-levels-container" style="display: flex; flex-direction: column; gap: 14px;"></div>
             </div>
           </div>
@@ -994,7 +1228,7 @@
   <div id="modal-split-batch" class="modal-backdrop" hidden>
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-split-title" style="max-width: 620px;">
       <header class="modal__header">
-        <h3 id="modal-split-title" class="modal__title">✂️ Tách lô nông sản</h3>
+        <h3 id="modal-split-title" class="modal__title">Tách lô nông sản</h3>
         <button id="btn-close-split-modal" class="modal__close" type="button" aria-label="Đóng">&times;</button>
       </header>
       <div class="modal__body">
@@ -1046,7 +1280,7 @@
   <div id="modal-split-success" class="modal-backdrop" hidden>
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="split-success-title" style="max-width: 580px;">
       <header class="modal__header">
-        <h3 id="split-success-title" class="modal__title">🎉 Tách lô thành công!</h3>
+        <h3 id="split-success-title" class="modal__title">Tách lô thành công!</h3>
         <button id="btn-close-split-success" class="modal__close" type="button" aria-label="Đóng">&times;</button>
       </header>
       <div class="modal__body" style="text-align: center;">
@@ -1055,7 +1289,7 @@
         </p>
         <div id="split-success-codes-list" style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px;"></div>
         <div class="modal__actions" style="justify-content: center;">
-          <button id="btn-copy-all-split-codes" class="btn btn--primary" type="button">📋 Sao chép tất cả mã lô con</button>
+          <button id="btn-copy-all-split-codes" class="btn btn--primary" type="button">Sao chép tất cả mã lô con</button>
           <button id="btn-done-split-success" class="btn btn--ghost" type="button">Đóng</button>
         </div>
       </div>
@@ -1066,7 +1300,7 @@
   <div id="modal-merge-batch" class="modal-backdrop" hidden>
     <div class="modal modal--lg" role="dialog" aria-modal="true" aria-labelledby="modal-merge-title" style="max-width: 680px;">
       <header class="modal__header">
-        <h3 id="modal-merge-title" class="modal__title">🔀 Gộp các lô nông sản</h3>
+        <h3 id="modal-merge-title" class="modal__title">Gộp các lô nông sản</h3>
         <button id="btn-close-merge-modal" class="modal__close" type="button" aria-label="Đóng">&times;</button>
       </header>
       <div class="modal__body">
@@ -1111,7 +1345,7 @@
   <div id="modal-merge-success" class="modal-backdrop" hidden>
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="merge-success-title" style="max-width: 520px;">
       <header class="modal__header">
-        <h3 id="merge-success-title" class="modal__title">🎉 Gộp lô thành công!</h3>
+        <h3 id="merge-success-title" class="modal__title">Gộp lô thành công!</h3>
         <button id="btn-close-merge-success" class="modal__close" type="button" aria-label="Đóng">&times;</button>
       </header>
       <div class="modal__body" style="text-align: center;">
@@ -1121,7 +1355,7 @@
         <div id="merge-success-code-display" class="code-display-huge"></div>
         <div id="merge-success-meta" style="margin-bottom: 18px; color: var(--color-text-muted);"></div>
         <div class="modal__actions" style="justify-content: center;">
-          <button id="btn-copy-merge-code" class="btn btn--primary" type="button">📋 Sao chép mã lô</button>
+          <button id="btn-copy-merge-code" class="btn btn--primary" type="button">Sao chép mã lô</button>
           <button id="btn-done-merge-success" class="btn btn--ghost" type="button">Đóng</button>
         </div>
       </div>
@@ -1171,24 +1405,26 @@
     </form>
   </dialog>
   <noscript>
-    <p class="noscript">Trang này cần JavaScript để gọi API backend. Hãy bật JavaScript và tải lại trang.</p>
+    <p class="noscript">Hãy bật JavaScript và tải lại trang để sử dụng phần mềm.</p>
   </noscript>
 
 <div id="modal-recall-create" class="modal-backdrop" hidden>
-<div class="modal" role="dialog" aria-modal="true" aria-labelledby="recall-create-title"><header class="modal__header"><h3 id="recall-create-title">🚨 S-33: Đánh dấu sự cố &amp; Mở lệnh thu hồi</h3><button class="modal__close" data-recall-close="modal-recall-create" type="button" aria-label="Đóng">×</button></header><div class="modal__body">
-<form id="recall-create-form">
-<label class="field"><span class="field__label">Tìm kiếm &amp; Chọn lô hàng (Mã lô hoặc ID) <em>*</em></span>
+<div class="modal" role="dialog" aria-modal="true" aria-labelledby="recall-create-title"><header class="modal__header"><h3 id="recall-create-title">Tạo yêu cầu thu hồi</h3><button class="modal__close" data-recall-close="modal-recall-create" type="button" aria-label="Đóng">×</button></header><div class="modal__body">
+<form id="recall-create-form" novalidate>
+<ol class="recall-steps" aria-label="Các bước tạo yêu cầu"><li data-recall-step-label="0">1. Chọn lô</li><li data-recall-step-label="1">2. Nhập lý do</li><li data-recall-step-label="2">3. Kiểm tra</li><li data-recall-step-label="3">4. Xác nhận</li></ol>
+<div data-recall-step="0">
+<label class="field"><span class="field__label">Mã lô cần thu hồi <em>*</em></span>
 <input id="recall-root" list="recall-root-options" required autocomplete="off" placeholder="Nhập mã lô (VD: 4M8KQ2PY) hoặc ID lô...">
 <datalist id="recall-root-options"></datalist></label>
 <div id="recall-batch-preview" class="recall-batch-preview" hidden></div>
-<p class="card__desc" style="margin-top: 4px;">Người dùng có thể tìm theo mã lô trong hệ thống. Quyền mở lệnh (Inspector hoặc Org Admin giữ lô) được kiểm tra chặt chẽ trên máy chủ.</p>
+<p class="card__desc" style="margin-top: 4px;">Nhập mã lô cần thu hồi. Chỉ các lô được phép xử lý mới có thể tạo yêu cầu.</p>
 
 <div class="operator-meta-box" id="recall-operator-box" style="background: rgba(30, 41, 59, 0.6); padding: 8px 12px; border-radius: 6px; margin: 10px 0; font-size: 0.85rem; border: 1px solid rgba(148, 163, 184, 0.2);">
   <div><strong>Người thực hiện:</strong> <span id="recall-operator-name">—</span> (<span id="recall-operator-role">—</span>)</div>
   <div><strong>Thời gian thao tác:</strong> <span id="recall-operator-time">—</span></div>
 </div>
 
-<label class="field"><span class="field__label">Lý do thu hồi &amp; mô tả sự cố <em>*</em> (bắt buộc, tối thiểu 20 ký tự)</span>
+</div><div data-recall-step="1" hidden><label class="field"><span class="field__label">Lý do thu hồi <em>*</em> (bắt buộc, tối thiểu 20 ký tự)</span>
 <textarea id="recall-reason" minlength="20" maxlength="5000" required rows="4" placeholder="Nhập lý do chi tiết về sự cố hoặc cảnh báo an toàn thực phẩm (tối thiểu 20 ký tự)..."></textarea>
 <div style="display:flex; justify-content:space-between; font-size:0.8rem; color:#94a3b8; margin-top:2px;">
   <span>Bắt buộc nhập lý do trước khi xác nhận</span>
@@ -1196,23 +1432,47 @@
 </div>
 </label>
 
-<label style="display: flex; align-items: flex-start; gap: 8px; margin: 12px 0; cursor: pointer;">
+</div><div data-recall-step="2" hidden><div id="recall-review" aria-live="polite"></div></div><div data-recall-step="3" hidden><p class="recall-warning">Sau khi xác nhận, lô gốc và các lô phát sinh sẽ bị cách ly. Lý do thu hồi được lưu vào lịch sử.</p><label style="display: flex; align-items: flex-start; gap: 8px; margin: 12px 0; cursor: pointer;">
   <input id="recall-create-confirm" type="checkbox" required style="margin-top: 3px;">
   <span>Tôi xác nhận đánh dấu lô này <strong>Có sự cố</strong>, chuyển trạng thái cảnh báo và phong tỏa toàn bộ lô hàng cùng các hậu duệ.</span>
 </label>
 
-<p id="recall-create-error" class="login__error" role="alert" style="margin-bottom: 8px;"></p>
-<p class="card__desc">Hệ thống áp dụng Idempotency: nếu có sự cố mạng, gửi lại sẽ sử dụng cùng khóa thao tác để bảo đảm không sinh lệnh trùng lặp.</p>
+</div><p id="recall-create-error" class="login__error" role="alert" style="margin-bottom: 8px;"></p>
+<p class="card__desc">Nếu kết nối bị gián đoạn, bạn có thể gửi lại thao tác mà không tạo lệnh thu hồi trùng.</p>
 <div class="modal__actions">
   <button class="btn btn--light" data-recall-close="modal-recall-create" type="button">Hủy bỏ</button>
-  <button id="recall-create-submit" class="btn btn--danger" type="submit" style="background:#dc2626; border-color:#dc2626;">🚨 Xác nhận đánh dấu sự cố &amp; Mở lệnh</button>
+  <button id="recall-step-back" class="btn btn--light" type="button" hidden>Quay lại</button><button id="recall-step-next" class="btn btn--primary" type="button">Tiếp tục</button>
+  <button id="recall-create-submit" hidden class="btn btn--danger" type="submit" style="background:#dc2626; border-color:#dc2626;">Xác nhận tạo yêu cầu</button>
 </div>
 </form></div></div></div>
 <div id="modal-recall-detail" class="modal-backdrop" hidden>
-<div class="modal modal--lg recall-detail-modal" role="dialog" aria-modal="true" aria-labelledby="recall-detail-title"><header class="modal__header"><h3 id="recall-detail-title">Chi tiết Recall</h3><button class="modal__close" data-recall-close="modal-recall-detail" type="button" aria-label="Đóng">×</button></header><div class="modal__body"><div id="recall-detail-body"></div>
+<div class="modal modal--lg recall-detail-modal" role="dialog" aria-modal="true" aria-labelledby="recall-detail-title"><header class="modal__header"><h3 id="recall-detail-title">Chi tiết thu hồi</h3><button class="modal__close" data-recall-close="modal-recall-detail" type="button" aria-label="Đóng">×</button></header><div class="modal__body"><div id="recall-detail-body"></div>
 <form id="recall-ack-form" hidden><p class="recall-warning">Chỉ xác nhận phần tổ chức mình đã xử lý. Xác nhận ghi vào lịch sử, không thể sửa/xóa; lô vẫn phong tỏa.</p><label class="field"><span class="field__label">Ghi chú xử lý</span><textarea id="recall-ack-notes" maxlength="5000" rows="3"></textarea></label><label><input id="recall-ack-confirm" type="checkbox" required> Tôi xác nhận tổ chức mình đã xử lý các lô liên quan.</label><p id="recall-ack-error" role="alert"></p><div class="modal__actions"><button id="recall-ack-submit" class="btn btn--primary" type="submit">Xác nhận xử lý</button></div></form>
 </div></div></div>
-  <script src="js/app.js?v=17"></script>
-  <script src="js/recall.js?v=1"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const screenParam = urlParams.get('screen');
+      if (screenParam) {
+        sessionStorage.setItem(`ttcs.return:${window.location.origin}`, '#' + screenParam);
+      }
+      const autoLogin = urlParams.get('autologin');
+      if (autoLogin) {
+        setTimeout(() => {
+          const demoSel = document.getElementById("sprint-demo-account");
+          if (demoSel) {
+            demoSel.value = autoLogin.includes('@') ? autoLogin : `${autoLogin}@demo.local`;
+            demoSel.dispatchEvent(new Event('change'));
+          }
+        }, 300);
+      }
+    });
+  </script>
+  <script src="js/lineage_graph.js?v=2"></script>
+  <script src="js/app.js?v=28"></script>
+  <script src="js/recall_graph.js?v=1"></script>
+  <script src="js/recall.js?v=5"></script>
+  <script src="js/phase_c.js?v=5"></script>
+  <script src="js/workspace.js?v=1"></script>
 </body>
 </html>

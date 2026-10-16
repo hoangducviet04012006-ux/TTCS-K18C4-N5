@@ -2102,6 +2102,15 @@ input:focus, select:focus, textarea:focus { outline: 3px solid #c4e9cf; outline-
 .app-screen { min-width: 0; }
 .screen-heading { margin-bottom: 24px; }
 .screen-heading h2 { color: #185436; margin: 6px 0 8px; font-size: 1.8rem; }
+.screen-heading h2,
+#screen-title { outline: none; }
+.screen-heading h2:focus,
+.screen-heading h2:focus-visible,
+#screen-title:focus,
+#screen-title:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
 .screen-heading p { color: var(--color-text-muted); line-height: 1.6; }
 .screen-eyebrow { font-size: .72rem; font-weight: 700; letter-spacing: .12em; }
 .app-sidebar a.is-active { background: #1d6345 !important; color: #ffffff !important; font-weight: 600; box-shadow: inset 3.5px 0 #b6e5a8; }
@@ -2141,3 +2150,676 @@ input:focus, select:focus, textarea:focus { outline: 3px solid #c4e9cf; outline-
 .recall-progress { display:flex; align-items:center; gap:8px; }
 .recall-progress progress { width:90px; }
 #recall-alerts:empty { display:none; }
+
+/* ==========================================================================
+   FARMER DASHBOARD ADDONS (GIAO DIỆN TỔNG QUAN NÔNG DÂN)
+   ========================================================================== */
+
+/* 1. Cảnh báo bàn giao quá hạn 48h */
+.farmer-overdue-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: #fffbeb;
+  border: 1.5px solid #f59e0b;
+  border-left: 6px solid #d97706;
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 12px rgba(217, 119, 6, 0.08);
+  animation: fadeIn 0.25s ease-out;
+}
+.farmer-overdue-banner[hidden] {
+  display: none !important;
+}
+.farmer-overdue-banner__icon {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fef3c7;
+  color: #b45309;
+  border-radius: 50%;
+}
+.farmer-overdue-banner__content {
+  flex: 1;
+  min-width: 0;
+}
+.farmer-overdue-banner__title {
+  display: block;
+  font-size: 0.98rem;
+  color: #92400e;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.farmer-overdue-banner__text {
+  font-size: 0.88rem;
+  color: #78350f;
+  margin: 0;
+  line-height: 1.45;
+}
+.farmer-overdue-banner__btn {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* 2. Thao tác nhanh cho Nông dân */
+.farmer-quick-card {
+  margin-bottom: 24px;
+}
+.farmer-quick-card[hidden] {
+  display: none !important;
+}
+.farmer-quick-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 14px;
+}
+
+@media (max-width: 1024px) {
+  .farmer-quick-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .farmer-quick-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Thẻ nút Thao tác nhanh (Card Button Reset & Layout) */
+.farmer-quick-btn {
+  appearance: none;
+  -webkit-appearance: none;
+  font: inherit;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: stretch;
+  gap: 14px;
+  padding: 18px 20px;
+  background: #ffffff;
+  border: 1.5px solid #d7e0da;
+  border-radius: 12px;
+  cursor: pointer;
+  text-align: left;
+  box-shadow: 0 1px 3px rgba(16, 40, 24, 0.05), 0 4px 12px rgba(16, 40, 24, 0.03);
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
+  box-sizing: border-box;
+  outline: none;
+}
+
+.farmer-quick-btn:hover {
+  transform: translateY(-2px);
+  border-color: #277b52;
+  box-shadow: 0 6px 18px rgba(39, 123, 82, 0.12);
+  background-color: #fafdfb;
+}
+
+.farmer-quick-btn:focus-visible {
+  outline: 2px solid #277b52;
+  outline-offset: 2px;
+  border-color: #103d2b;
+}
+
+/* Phần trên: Icon (trái) + Nhãn phân loại (phải) */
+.farmer-quick-btn__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.farmer-quick-btn__icon {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease;
+}
+
+.farmer-quick-btn:hover .farmer-quick-btn__icon {
+  transform: scale(1.06);
+}
+
+.farmer-quick-btn__icon--farm {
+  background: #e8f5e9;
+  color: #2e7d32;
+  border: 1px solid #c8e6c9;
+}
+
+.farmer-quick-btn__icon--harvest {
+  background: #fef9c3;
+  color: #a16207;
+  border: 1px solid #fde047;
+}
+
+.farmer-quick-btn__icon--handover {
+  background: #e0f2fe;
+  color: #0369a1;
+  border: 1px solid #bae6fd;
+}
+
+.farmer-quick-btn__tag {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 3px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.farmer-quick-btn__tag--farm {
+  background: #f0fdf4;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.farmer-quick-btn__tag--harvest {
+  background: #fefce8;
+  color: #854d0e;
+  border: 1px solid #fef08a;
+}
+
+.farmer-quick-btn__tag--handover {
+  background: #f0f9ff;
+  color: #075985;
+  border: 1px solid #e0f2fe;
+}
+
+/* Phần thân: Tiêu đề và Mô tả nằm riêng rẽ rõ ràng */
+.farmer-quick-btn__body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+.farmer-quick-btn__title {
+  display: block;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #103d2b;
+  line-height: 1.35;
+  margin: 0;
+}
+
+.farmer-quick-btn__desc {
+  display: block;
+  font-size: 0.84rem;
+  color: #4b5563;
+  line-height: 1.45;
+  margin: 0;
+  font-weight: normal;
+}
+
+/* Phần chân: Nhãn thao tác & Mũi tên điều hướng */
+.farmer-quick-btn__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 10px;
+  border-top: 1px solid #f0f4f1;
+  margin-top: 4px;
+}
+
+.farmer-quick-btn__action {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #277b52;
+}
+
+.farmer-quick-btn__arrow {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #277b52;
+  transition: transform 0.18s ease;
+}
+
+.farmer-quick-btn:hover .farmer-quick-btn__arrow {
+  transform: translateX(4px);
+}
+
+/* 3. Hoạt động gần đây trên Dashboard Nông dân */
+.recent-event--farmer {
+  padding: 14px 18px;
+  background: #ffffff;
+  border: 1px solid #e2ece5;
+  border-radius: 10px;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  transition: all 0.15s ease;
+}
+.recent-event--farmer:hover {
+  background: #fbfdfc;
+  border-color: #b8dec7;
+  transform: translateX(2px);
+}
+.recent-event__main {
+  flex: 1;
+  min-width: 0;
+}
+.recent-event__header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.recent-event__code {
+  font-family: "Cascadia Mono", Consolas, monospace;
+  font-size: 0.92rem;
+  color: #0f172a;
+}
+.recent-event__badge {
+  font-size: 0.76rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: #f1f5f9;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+}
+.recent-event__badge--harvest {
+  background: #ecfdf5;
+  color: #065f46;
+  border-color: #a7f3d0;
+}
+.recent-event__badge--handover-init,
+.recent-event__badge--handover-pending,
+.recent-event__badge--handover-sent {
+  background: #fefce8;
+  color: #854d0e;
+  border-color: #fde047;
+}
+.recent-event__badge--handover-accept,
+.recent-event__badge--handover-accepted {
+  background: #eff6ff;
+  color: #1e40af;
+  border-color: #bfdbfe;
+}
+.recent-event__badge--handover-reject,
+.recent-event__badge--handover-rejected {
+  background: #fef2f2;
+  color: #991b1b;
+  border-color: #fecaca;
+}
+.recent-event__badge--split,
+.recent-event__badge--genesis-split {
+  background: #faf5ff;
+  color: #6b21a8;
+  border-color: #e9d5ff;
+}
+.recent-event__badge--merge,
+.recent-event__badge--export-merge {
+  background: #f0fdf4;
+  color: #166534;
+  border-color: #bbf7d0;
+}
+.recent-event__desc {
+  margin: 4px 0 0;
+  font-size: 0.84rem;
+  color: #475569;
+  line-height: 1.4;
+}
+.recent-event__time {
+  font-size: 0.78rem;
+  color: #64748b;
+  background: #f8fafc;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .farmer-overdue-banner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .farmer-overdue-banner__btn {
+    width: 100%;
+    text-align: center;
+  }
+  .recent-event--farmer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+}
+
+/* ==========================================================================
+   FARMER BATCH LIST & PAGINATION ENHANCEMENTS
+   ========================================================================== */
+
+#batch-card .table-wrap {
+  min-height: 240px;
+}
+
+/* Pagination Bar Styling */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid #eef3f0;
+}
+
+.pagination__size-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pagination__size-label {
+  font-size: 0.84rem;
+  font-weight: 500;
+  color: #475569;
+}
+
+.pagination__size-select {
+  padding: 5px 10px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  border-radius: 8px;
+  border: 1.5px solid #d1ded6;
+  background-color: #ffffff;
+  color: #103d2b;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.pagination__size-select:hover {
+  border-color: #277b52;
+}
+
+.pagination__size-select:focus-visible {
+  outline: 2px solid #277b52;
+  outline-offset: 1px;
+}
+
+.pagination__controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pagination__label {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #103d2b;
+  padding: 5px 12px;
+  background: #f0f7f3;
+  border-radius: 8px;
+  border: 1px solid #d2e4d9;
+  min-width: 72px;
+  text-align: center;
+}
+
+.pagination__count-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #64748b;
+  background: #f8fafc;
+  padding: 5px 12px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+/* Action Dropdown & Actions Cell */
+.batch-actions-cell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  position: relative;
+  white-space: nowrap;
+}
+
+.action-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.action-dropdown__toggle {
+  list-style: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 9px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 7px;
+  border: 1px solid #cfe0d5;
+  background: #ffffff;
+  color: #103d2b;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.action-dropdown__toggle::-webkit-details-marker,
+.action-dropdown__toggle::marker {
+  display: none;
+}
+
+.action-dropdown__toggle:hover {
+  background: #f0f8f3;
+  border-color: #277b52;
+  color: #277b52;
+}
+
+.action-dropdown[open] > .action-dropdown__toggle {
+  background: #e6f3eb;
+  border-color: #277b52;
+  color: #103d2b;
+  box-shadow: 0 0 0 2px rgba(39, 123, 82, 0.15);
+}
+
+.action-dropdown__arrow {
+  font-size: 10px;
+  transition: transform 0.15s ease;
+  color: #64748b;
+}
+
+.action-dropdown[open] .action-dropdown__arrow {
+  transform: rotate(180deg);
+}
+
+.action-dropdown__menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 50;
+  min-width: 154px;
+  background: #ffffff;
+  border: 1.5px solid #d5e2da;
+  border-radius: 10px;
+  box-shadow: 0 12px 28px rgba(16, 61, 43, 0.16), 0 2px 6px rgba(0, 0, 0, 0.06);
+  padding: 5px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Lật menu lên trên cho 2 dòng cuối của bảng để tránh tràn mép dưới */
+#batch-table-body tr:nth-last-child(-n+2) .action-dropdown__menu {
+  top: auto;
+  bottom: calc(100% + 4px);
+  box-shadow: 0 -10px 26px rgba(16, 61, 43, 0.16), 0 -2px 6px rgba(0, 0, 0, 0.06);
+}
+
+.action-dropdown__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 11px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  color: #1e293b;
+  transition: background 0.12s ease, color 0.12s ease;
+  white-space: nowrap;
+}
+
+.action-dropdown__item:hover {
+  background: #f0f7f3;
+  color: #103d2b;
+}
+
+.action-dropdown__item:focus-visible {
+  outline: 2px solid #277b52;
+  outline-offset: -1px;
+}
+
+@media (max-width: 780px) {
+  .pagination {
+    justify-content: center;
+    gap: 12px;
+  }
+}
+
+@media (max-width: 640px) {
+  .pagination {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .pagination__size-control {
+    justify-content: space-between;
+    width: 100%;
+  }
+  .pagination__controls {
+    justify-content: center;
+    width: 100%;
+  }
+  .pagination__count-label {
+    text-align: center;
+  }
+}
+
+/* Merge Condition Explanation Hint */
+.merge-condition-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: #475569;
+  background: #f8fafc;
+  padding: 5px 12px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  line-height: 1.4;
+  vertical-align: middle;
+  animation: fadeIn 0.15s ease-out;
+}
+
+.merge-condition-hint[hidden] {
+  display: none !important;
+}
+
+.merge-condition-hint--ok {
+  color: #166534;
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+  font-weight: 600;
+}
+
+.merge-condition-hint--warn {
+  color: #b45309;
+  background: #fffbeb;
+  border-color: #fde68a;
+  font-weight: 600;
+}
+
+
+
+
+/* Preserve readable role/organization labels at desktop and mobile sizes. */
+.user-menu-text, .user-dropdown__sub, .sidebar-nav-text {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  overflow-wrap: anywhere;
+}
+.user-menu-text { max-width: 240px; text-align: left; line-height: 1.35; }
+.user-dropdown { max-width: min(360px, calc(100vw - 24px)); }
+.app-header .badge--org { max-width: 360px; white-space: normal; overflow-wrap: anywhere; }
+@media (max-width: 600px) {
+  .user-menu-text { max-width: 155px; }
+  .app-header .badge--org { max-width: 100%; }
+  .user-dropdown { min-width: 200px; }
+}
+
+@media (max-width: 780px) {
+  .app-sidebar a.sidebar-nav-item { flex: 0 0 auto; }
+  .app-sidebar .sidebar-nav-text { white-space: nowrap; overflow-wrap: normal; }
+}
+
+/* S-28 interactive genealogy; scoped to the forward view. */
+.genealogy-toolbar { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.genealogy-count,.genealogy-help { color:#475569; font-size:.85rem; }
+.genealogy-help { margin:10px 0; }
+.genealogy-warning { padding:10px; background:#fff7ed; color:#9a3412; border-radius:6px; }
+.genealogy-scroll { overflow:auto; max-height:420px; max-width:100%; background:#f8fafc; border:1px solid #cbd5e1; border-radius:8px; }
+.genealogy-stage { position:relative; }
+.genealogy-stage svg { position:absolute; inset:0; pointer-events:none; }
+.genealogy-edge { fill:none; stroke:#64748b; stroke-width:2; }
+.genealogy-node { position:absolute; width:180px; height:100px; border:2px solid #94a3b8; border-radius:8px; background:white; }
+.genealogy-node--root { border-color:#15803d; background:#f0fdf4; }
+.genealogy-node--merge { border-color:#7c3aed; background:#faf5ff; }
+.genealogy-select { border:0; background:transparent; width:100%; height:100%; padding:8px 28px 8px 10px; text-align:left; cursor:pointer; color:#0f172a; display:flex; flex-direction:column; gap:5px; }
+.genealogy-select strong { overflow-wrap:anywhere; font-size:.86rem; line-height:1.15; }
+.genealogy-select span { font-size:.78rem; }
+.genealogy-select[aria-pressed="true"] { box-shadow:inset 0 0 0 2px #0369a1; border-radius:5px; }
+.genealogy-toggle { position:absolute; right:3px; bottom:4px; width:28px; height:28px; border:1px solid #94a3b8; border-radius:5px; background:white; color:#0f172a; cursor:pointer; }
+.genealogy-scroll:focus-visible,.genealogy-select:focus-visible,.genealogy-toggle:focus-visible,.genealogy-toolbar button:focus-visible { outline:3px solid #0284c7; outline-offset:2px; }
+.genealogy-detail { margin-top:12px; padding:12px; border:1px solid #cbd5e1; border-radius:8px; overflow-wrap:anywhere; }
+.genealogy-detail h5 { margin:0 0 10px; font-size:1rem; }
+.genealogy-detail dl { margin:0; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px 16px; }
+.genealogy-detail dt { color:#475569; font-size:.8rem; }
+.genealogy-detail dd { margin:2px 0 0; font-weight:500; }
+@media(max-width:600px) { .genealogy-detail dl { grid-template-columns:1fr; } .genealogy-scroll { max-height:340px; } }
+
+.store-allocation-row { display:flex; gap:12px; align-items:end; flex-wrap:wrap; margin:10px 0; }
+.store-allocation-row label { display:flex; flex-direction:column; flex:1; min-width:140px; }
+.csv-results { white-space:pre-wrap; overflow-wrap:anywhere; padding:12px; font:inherit; }
+
+/* S-31 audit filters: keep small screens within the page. */
+#audit-filter-form { display:flex; flex-wrap:wrap; gap:12px; align-items:flex-end; }
+#audit-filter-form label { display:grid; gap:4px; min-width:120px; flex:1 1 120px; }
+#audit-filter-form input, #audit-filter-form select { width:100%; min-width:0; }
+#audit-card .table-wrap { max-width:100%; overflow-x:auto; }
+#audit-card table { min-width:1000px; }
+
+/* Recall E: functional filter layout and readable incident information. */
+#recall-filter-form {display:flex;flex-wrap:wrap;gap:10px;margin:12px 0;}
+#recall-filter-form label {display:grid;gap:4px;flex:1 1 130px;min-width:0;}
+#recall-filter-form select {width:100%;}
+#recall-graph svg {display:block;font:12px sans-serif;}
+#batch-recall-notice {padding:10px;border-left:4px solid #b91c1c;}
+
+#modal-recall-detail .modal, #modal-recall-create .modal {max-height:calc(100dvh - 32px);overflow-y:auto;overflow-x:hidden;}
+#modal-recall-detail .modal__header {position:sticky;top:0;z-index:1;}
+#recall-detail-body table strong[style], #recall-list strong[style] {color:var(--color-text)!important;}

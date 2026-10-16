@@ -212,20 +212,28 @@ def verify_batch_chain(db: Session, batch_id: int) -> dict[str, Any]:
         )
 
         metadata = payload_data.get("_record")
-        metadata_tampered = metadata is not None and any([
-            metadata.get("batch_id") != event.batch_id,
-            metadata.get("event_type") != event.event_type,
-            metadata.get("organization_id") != event.organization_id,
-            metadata.get("user_id") != event.created_by_user_id,
-            metadata.get("timestamp") != event.timestamp.isoformat(),
-            metadata.get("event_data") != event.event_data,
-            metadata.get("notes") != event.notes,
-            metadata.get("from_org_id") != event.from_org_id,
-            metadata.get("to_org_id") != event.to_org_id,
-            event.record_hash != event.current_hash,
-            event.user_id != event.created_by_user_id,
-            event.created_at != event.timestamp,
-        ])
+        batch_id_valid = (
+            metadata.get("batch_id") == event.batch_id
+            or (
+                getattr(event, "origin_batch_id", None) is not None
+                and metadata.get("batch_id") == event.origin_batch_id
+            )
+        ) if metadata else True
+
+        metadata_tampered = metadata is not None and (
+            not batch_id_valid
+            or metadata.get("event_type") != event.event_type
+            or metadata.get("organization_id") != event.organization_id
+            or metadata.get("user_id") != event.created_by_user_id
+            or metadata.get("timestamp") != event.timestamp.isoformat()
+            or metadata.get("event_data") != event.event_data
+            or metadata.get("notes") != event.notes
+            or metadata.get("from_org_id") != event.from_org_id
+            or metadata.get("to_org_id") != event.to_org_id
+            or event.record_hash != event.current_hash
+            or event.user_id != event.created_by_user_id
+            or event.created_at != event.timestamp
+        )
         if computed_hash != event.current_hash or (event_data_tampered and metadata is None) or metadata_tampered:
             return {
                 "is_valid": False,

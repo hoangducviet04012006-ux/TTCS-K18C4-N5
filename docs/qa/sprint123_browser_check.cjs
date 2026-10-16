@@ -24,7 +24,7 @@ async function logout(page) { await page.locator('#btn-logout').click(); await p
 async function main() {
   const scope = await (await fetch(`${base}/demo-scope`)).json();
   assert.equal(scope.scope,'sprint123');
-  assert.equal(scope.database_name,'demo_sprint123.db');
+  assert(['demo_sprint123_north.db','demo_sprint123.db','demo_sprint123_realistic.db'].includes(scope.database_name));
   for (const channel of ['chrome','msedge']) {
     const browser = await chromium.launch({channel,headless:true});
     const context = await browser.newContext({viewport:{width:1440,height:960}});
@@ -46,7 +46,7 @@ async function main() {
         }
         const data = (await api(page,'/batches?limit=100')).data;
         const user = (await api(page,'/auth/me')).data;
-        assert((await page.locator('#demo-profile').textContent()).includes('demo_sprint123.db'));
+        assert((await page.locator('#demo-profile').textContent()).includes(scope.database_name));
         assert.equal(await page.locator('#recall-card').isVisible(),false);
         if (account !== 'inspector') assert(data.every(b=>b.current_org_id === user.organization_id));
         if (account === 'inspector') {
@@ -61,9 +61,9 @@ async function main() {
       await page.locator('#farm-entry summary').click();
       const farmName=`QA-${channel}-${Date.now()}`;
       await page.locator('#farm-name').fill(farmName);
-      await page.locator('#farm-location').fill('Dong Thap QA');
+      await page.locator('#farm-location').fill('Thai Nguyen QA');
       await page.locator('#farm-area').fill('2.5');
-      await page.locator('#farm-coordinates').fill('10.4532, 105.6321');
+      await page.locator('#farm-coordinates').fill('21.5583, 105.7725');
       await page.locator('#farm-owner').fill('QA Farmer');
       await page.locator('#farm-submit').click();
       await page.waitForFunction(name=>document.querySelector('#batch-farm-id').textContent.includes(name),farmName);
