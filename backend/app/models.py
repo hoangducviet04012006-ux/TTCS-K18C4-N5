@@ -340,6 +340,13 @@ class Batch(Base):
     )
     status: Mapped[str] = mapped_column(String(30), nullable=False, default="ACTIVE", server_default="ACTIVE")
 
+    # Thuộc tính nguồn gốc dữ liệu phục vụ kiến trúc hợp nhất thống nhất (Unified AgriTrace)
+    origin_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    dataset_source: Mapped[str] = mapped_column(
+        String(50), nullable=False, default="operational", server_default="operational"
+    )
+    is_simulation: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="0")
+
     # Các cột hỗ trợ tương thích ngược Sprint 1
     farm_id: Mapped[int | None] = mapped_column(ForeignKey("farms.id"), nullable=True, index=True)
     product_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
@@ -373,6 +380,18 @@ class Batch(Base):
         back_populates="parent_batch",
         cascade="all, delete-orphan",
     )
+
+    @property
+    def location_id(self):
+        return getattr(self, "_phase_c_location", {}).get("id")
+
+    @property
+    def current_location(self):
+        return getattr(self, "_phase_c_location", {}).get("address")
+
+    @property
+    def current_location_name(self):
+        return getattr(self, "_phase_c_location", {}).get("name")
 
     def __init__(self, **kwargs: Any) -> None:
         """Hỗ trợ tự động điền các trường mặc định và tương thích Sprint 1."""
@@ -699,6 +718,7 @@ class BatchEvent(Base):
     event_data: Mapped[str | None] = mapped_column(String(2000), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=_naive_utcnow)
     record_hash: Mapped[str] = mapped_column(String(64), nullable=False, default="", server_default="")
+    origin_batch_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     # Relationships
     batch: Mapped["Batch"] = relationship(back_populates="events")
@@ -789,6 +809,34 @@ class AuditLog(Base):
     @property
     def username(self) -> str:
         return self.user.username if self.user is not None else ""
+
+    @property
+    def source_ip(self):
+        return getattr(self, "_audit_details", {}).get("source_ip", None)
+
+    @property
+    def operation(self):
+        return getattr(self, "_audit_details", {}).get("operation", None)
+
+    @property
+    def organization_id(self):
+        return getattr(self, "_audit_details", {}).get("organization_id", None)
+
+    @property
+    def batch_ids(self):
+        return getattr(self, "_audit_details", {}).get("batch_ids", [])
+
+    @property
+    def location_id(self):
+        return getattr(self, "_audit_details", {}).get("location_id", None)
+
+    @property
+    def location_name(self):
+        return getattr(self, "_audit_details", {}).get("location_name", None)
+
+    @property
+    def location_address(self):
+        return getattr(self, "_audit_details", {}).get("location_address", None)
 
     def __repr__(self) -> str:  # pragma: no cover
         return (

@@ -44,6 +44,8 @@ from app.routers import (
     farms,
     handovers,
     health,
+    locations,
+    imports,
     products,
     users,
 )
@@ -121,10 +123,16 @@ app.add_middleware(
 
 
 # -------------------------------------------------------- Exception Handlers ---
+
 @app.middleware("http")
 async def log_denied_requests(request: Request, call_next):
     """S-05: record denied API attempts without writing business history."""
-    response = await call_next(request)
+    from app.services.audit_metadata import clean_ip, request_ip
+    token = request_ip.set(clean_ip(request.client.host if request.client else None))
+    try:
+        response = await call_next(request)
+    finally:
+        request_ip.reset(token)
     if response.status_code == 403:
         logging.getLogger("agritrace.security").warning(
             "access_denied method=%s path=%s client=%s status=403",
@@ -187,6 +195,8 @@ app.include_router(users.router)
 app.include_router(audit.router)
 app.include_router(handovers.router)
 app.include_router(products.router)
+app.include_router(locations.router)
+app.include_router(imports.router)
 
 # Recall keeps the existing root-level API convention.
 from app.routers import recalls  # noqa: E402

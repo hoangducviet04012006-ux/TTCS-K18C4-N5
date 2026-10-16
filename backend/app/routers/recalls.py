@@ -1,5 +1,6 @@
 """Recall APIs on a separately migrated SQLite test database."""
-from fastapi import APIRouter, Depends, Header, HTTPException
+from typing import Literal
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -83,10 +84,17 @@ def alerts(user: User = Depends(get_current_user), db: Session = Depends(get_db)
 
 
 @router.get("/{recall_id}")
-def retrieve(recall_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def retrieve(recall_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db),
+             organization_id: int | None = Query(None, ge=1), location_id: int | None = Query(None, ge=1),
+             unknown_location: bool = False, batch_status: Literal["ACTIVE", "SPLIT", "MERGED", "CONSUMED"] | None = None):
     require_recall_database(db)
     begin_read_snapshot(db)
-    return recall.detail(db, recall.get_recall(db, recall_id), user)
+    if location_id is not None and unknown_location:
+        raise HTTPException(422, "Chỉ chọn một bộ lọc vị trí.")
+    return recall.detail(db, recall.get_recall(db, recall_id), user, filters={
+        "organization_id": organization_id, "location_id": location_id,
+        "unknown_location": unknown_location, "batch_status": batch_status,
+    })
 
 
 @router.post("/{recall_id}/acknowledge")

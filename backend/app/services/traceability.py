@@ -267,30 +267,26 @@ def _detect_directed_cycle_3state(adj: dict[int, list[int]], root_id: int) -> in
     WHITE, GRAY, BLACK = 0, 1, 2
     color: dict[int, int] = {}
 
-    def dfs(u: int) -> int | None:
-        color[u] = GRAY
-        for v in adj.get(u, []):
-            st = color.get(v, WHITE)
-            if st == GRAY:
-                return v
-            if st == WHITE:
-                res = dfs(v)
-                if res is not None:
-                    return res
-        color[u] = BLACK
-        return None
-
-    # Khám phá DFS từ root_id
-    cycle = dfs(root_id)
-    if cycle is not None:
-        return cycle
-
-    # Khám phá bất kỳ thành phần nào khác đã ghi nhận trong đồ thị kề
-    for n in adj:
-        if color.get(n, WHITE) == WHITE:
-            cycle = dfs(n)
-            if cycle is not None:
-                return cycle
+    # Explicit DFS frames preserve the gray/black semantics without Python's
+    # recursion limit. A shared merge child is black, not a back edge.
+    for start in (root_id, *adj):
+        if color.get(start, WHITE) != WHITE:
+            continue
+        color[start] = GRAY
+        stack = [(start, iter(adj.get(start, [])))]
+        while stack:
+            node, children = stack[-1]
+            child = next(children, None)
+            if child is None:
+                color[node] = BLACK
+                stack.pop()
+                continue
+            state = color.get(child, WHITE)
+            if state == GRAY:
+                return child
+            if state == WHITE:
+                color[child] = GRAY
+                stack.append((child, iter(adj.get(child, []))))
 
     return None
 
@@ -619,12 +615,32 @@ def trace_forward(  # noqa: C901
                     "harvest_date": str(b.harvest_date),
                 })
 
+    # Fetch real relations only between represented nodes; never add ancestors
+    # outside the forward result to complete a merge.
+    represented_ids = {batch_id, *all_descendant_ids}
+    edges = [
+        {"parent_batch_id": rel.parent_batch_id,
+         "child_batch_id": rel.child_batch_id,
+         "relation_type": rel.relation_type,
+         "transferred_quantity": float(rel.transferred_quantity)}
+        for rel in db.scalars(
+            select(BatchRelation)
+            .where(BatchRelation.parent_batch_id.in_(represented_ids),
+                   BatchRelation.child_batch_id.in_(represented_ids))
+            .order_by(BatchRelation.parent_batch_id, BatchRelation.child_batch_id)
+        ).all()
+    ]
+
     result = {
+        "edges": edges,
         "target_batch": target_info,
         "descendants_by_level": descendants_by_level,
         "terminal_batches": terminal_batches,
         "total_descendants": len(all_descendant_ids),
     }
+
+    from app.services.locations import attach_forward_locations
+    attach_forward_locations(db, result)
 
     if use_cache:
         _FORWARD_CACHE[batch_id] = (now + CACHE_TTL_SECONDS, result)

@@ -13,14 +13,14 @@ ROOT = Path(__file__).resolve().parents[2]
 TRIAL = ROOT / ".sprint123-trial"
 CREDENTIALS = TRIAL / "credentials.local"
 ACCOUNTS = {
-    "admin": ("system_admin", "HTX-DT"),
-    "farm": ("farmer", "HTX-DT"),
-    "packing": ("processor", "HTX-DT"),
-    "receiver": ("processor", "HTX-TG"),
-    "transport": ("transporter", "HTX-TG"),
-    "distribution": ("distributor", "DN-XNK"),
+    "admin": ("system_admin", "HTX-TC"),
+    "farm": ("farmer", "HTX-TC"),
+    "packing": ("processor", "HTX-TC"),
+    "receiver": ("processor", "LOG-HN"),
+    "transport": ("transporter", "LOG-HN"),
+    "distribution": ("distributor", "NPP-BN"),
     "inspector": ("inspector", None),
-    "org_admin": ("org_admin", "HTX-DT"),
+    "org_admin": ("org_admin", "HTX-TC"),
 }
 
 
@@ -93,9 +93,11 @@ def prepare(path, passwords=None):
         for fixture_user in db.scalars(select(User)):
             fixture_user.is_active = False
         orgs = {o.code: o.id for o in db.scalars(select(Organization))}
+        fallback_map = {"HTX-TC": "HTX-DT", "LOG-HN": "HTX-TG", "NPP-BN": "DN-XNK"}
         for name, (role, org) in ACCOUNTS.items():
+            org_id = orgs.get(org) if org in orgs else orgs.get(fallback_map.get(org))
             hashed = hash_password(passwords[name])
-            db.add(User(username=f"s123_{name}", email=f"s123_{name}@demo.local", password=hashed, role=role, organization_id=orgs.get(org)))
+            db.add(User(username=f"s123_{name}", email=f"s123_{name}@demo.local", password=hashed, role=role, organization_id=org_id))
         db.commit()
     create_event_immutability_triggers(memory)
     with memory.connect() as conn:
@@ -123,6 +125,7 @@ def main():
     parser.add_argument("--db", required=True)
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--prepare-only", action="store_true")
+    parser.add_argument("--enable-recall", action="store_true", help="QA only, requires migrated Recall schema")
     args = parser.parse_args()
     target = validate_target(args.db)
     os.environ["DATABASE_URL"] = "sqlite:///" + target.as_posix()
@@ -135,8 +138,17 @@ def main():
         print("Prepared synthetic Sprint 1-3 demo only.")
         return
     check_database(target)
+    if args.enable_recall:
+        if not target.name.startswith("qa_"):
+            raise ValueError("Recall UI is enabled only on an explicit qa_*.db copy")
+        with sqlite3.connect(target.as_uri() + "?mode=ro", uri=True) as db:
+            for table in ("recalls", "recall_acknowledgments", "idempotency_records"):
+                db.execute(f'SELECT * FROM "{table}" LIMIT 0')
+            if not db.execute("SELECT 1 FROM sqlite_master WHERE name='uq_recall_event_evidence'").fetchone():
+                raise ValueError("Recall event evidence index missing")
     from app.main import app
     from fastapi.responses import HTMLResponse
+    from fastapi.responses import FileResponse
     from fastapi.staticfiles import StaticFiles
     import uvicorn
 
@@ -148,14 +160,27 @@ def main():
     @app.get("/", include_in_schema=False)
     def demo_index():
         html = (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
-        config = '<script>window.AGRITRACE_CONFIG={apiBase:window.location.origin,maxSprint:3};</script>'
-        config += ('<style>#recall-card,a[href="#recall-card"],#btn-lineage-forward,'
-                   '#btn-detail-consume,[data-action="consume-batch"]{display:none!important}</style>')
+        config = '<script>window.AGRITRACE_CONFIG={apiBase:window.location.origin,maxSprint:3,practiceMode:' + ("true" if target.parent.name == "practice" else "false") + ',recallEnabled:' + ("true" if args.enable_recall else "false") + '};</script>'
+        if not args.enable_recall:
+            config += '<style>#recall-card,a[href="#recall-card"]{display:none!important}</style>'
         html = html.replace('<script src="js/app.js', config + '<script src="js/app.js')
         return HTMLResponse(html, headers={"Cache-Control": "no-store"})
 
     app.mount("/js", StaticFiles(directory=ROOT / "frontend" / "js"), name="sprint-demo-js")
     app.mount("/css", StaticFiles(directory=ROOT / "frontend" / "css"), name="sprint-demo-css")
+    app.mount("/assets", StaticFiles(directory=ROOT / "frontend" / "assets"), name="sprint-demo-assets")
+    if target.parent.name == "practice":
+        @app.get("/practice-guide", include_in_schema=False)
+        def practice_guide():
+            return FileResponse(ROOT / "docs" / "practice-guide.html")
+
+        @app.get("/practice-files/{filename}", include_in_schema=False)
+        def practice_csv(filename: str):
+            from fastapi import HTTPException
+            allowed = {f"{prefix}-{kind}.csv" for prefix in ("TH1", "TH2") for kind in ("san-pham", "thua-dat")}
+            if filename not in allowed:
+                raise HTTPException(404, "Không tìm thấy tệp thực hành.")
+            return FileResponse(target.parent / filename, filename=filename)
     # No init_db/migration/startup seed: current synthetic schema is ready.
     uvicorn.run(app, host="127.0.0.1", port=args.port, lifespan="off")
 

@@ -13,8 +13,14 @@ from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 # ---------------------------------------------------------------- Cấu hình ---
 BASE_DIR: Path = Path(__file__).resolve().parent.parent
+DATA_DIR: Path = BASE_DIR.parent / "data"
+AGRITRACE_DB: Path = DATA_DIR / "agritrace.db"
+# DATABASE_FILE biểu thị file ttcs.db gốc để phục vụ cơ chế bảo vệ chống ghi đè/demo-login
 DATABASE_FILE: Path = BASE_DIR / "ttcs.db"
-DATABASE_URL: str = os.getenv("DATABASE_URL", f"sqlite:///{DATABASE_FILE.as_posix()}")
+DATABASE_URL: str = os.getenv(
+    "DATABASE_URL",
+    f"sqlite:///{AGRITRACE_DB.as_posix()}" if AGRITRACE_DB.exists() else f"sqlite:///{DATABASE_FILE.as_posix()}"
+)
 
 # Đảm bảo thư mục chứa file SQLite tồn tại (hỗ trợ mount volume Docker)
 if DATABASE_URL.startswith("sqlite:///"):
@@ -40,6 +46,9 @@ def get_db() -> Generator[Session, None, None]:
     """Dependency cung cấp Session cho mỗi request và tự đóng khi xong."""
     db: Session = SessionLocal()
     try:
+        if not hasattr(db.get_bind(), "_phase_c_ready"):
+            from app.services.locations import probe_schema
+            probe_schema(db)
         yield db
     finally:
         db.close()
@@ -361,9 +370,20 @@ def init_db() -> None:
     # Stage 3B.2A: original database must never be bootstrapped/migrated/seeded.
     if is_protected_engine(engine):
         return
+
+    # Bảo vệ cơ sở dữ liệu đã hợp nhất/hoàn thiện (tránh tự động seed, reset hoặc migration khi khởi động)
+    try:
+        with engine.connect() as conn:
+            marker = conn.exec_driver_sql(
+                "SELECT value FROM sprint_demo_marker WHERE name='scope'"
+            ).scalar()
+            if marker == "sprint123":
+                return
+    except Exception:
+        pass
     Base.metadata.create_all(
         bind=engine,
-        tables=[t for t in Base.metadata.sorted_tables if not t.info.get("recall_trial")],
+        tables=[t for t in Base.metadata.sorted_tables if not t.info.get("recall_trial") and not t.info.get("phase_c")],
     )
     migrate_user_security_columns()
     migrate_handover_and_batch_columns()

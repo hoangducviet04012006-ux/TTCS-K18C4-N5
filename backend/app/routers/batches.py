@@ -16,7 +16,7 @@ from decimal import Decimal
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
-from sqlalchemy import select, update
+from sqlalchemy import select, update, and_, literal_column
 from sqlalchemy.exc import IntegrityError, OperationalError, SQLAlchemyError
 from sqlalchemy.orm import Session, joinedload
 
@@ -70,6 +70,8 @@ from app.services.recall_database import prepare_physical_write
 from app.services.rbac import check_action_permission
 from app.services.traceability import clear_trace_cache, trace_backwards, trace_forward
 from app.utils.batch_code import generate_batch_code
+
+from app.services.locations import hydrate, schema_available, inherited_location, set_location, location_map
 
 router = APIRouter(
     prefix="/batches",
@@ -259,7 +261,7 @@ def create_batch(  # noqa: C901
         )
 
     db.refresh(batch)
-    return batch
+    return hydrate(db, [batch])[0]
 
 
 @router.get(
@@ -313,7 +315,7 @@ def list_batches(
         offset = (page - 1) * limit
         stmt = stmt.offset(offset).limit(limit)
 
-        return list(db.scalars(stmt).all())
+        return hydrate(db, list(db.scalars(stmt).all()))
     except SQLAlchemyError as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -343,7 +345,7 @@ def get_batch(
         )
     if not can_view_batch(db, current_user.organization_id, batch_id, user_role=current_user.role):
         raise HTTPException(403, "Bạn không có quyền xem lô nông sản này.")
-    return batch
+    return hydrate(db, [batch])[0]
 
 
 def _validate_batch_update(db: Session, batch: Batch, payload: BatchUpdate):
@@ -412,6 +414,7 @@ def update_batch(
             detail="Bạn không có quyền sửa lô nông sản của tổ chức khác.",
         )
 
+    ensure_not_recalled(db, batch.id)
     has_history, raw_qty, remaining = _validate_batch_update(db, batch, payload)
     before = {"plot_id": batch.plot_id, "product_id": batch.product_id,
               "initial_quantity": str(batch.initial_quantity), "remaining_quantity": str(batch.remaining_quantity),
@@ -474,7 +477,7 @@ def update_batch(
 
     clear_trace_cache()
     db.refresh(batch)
-    return batch
+    return hydrate(db, [batch])[0]
 
 
 @router.delete(
@@ -694,6 +697,9 @@ def merge_batches(  # noqa: C901
         db.add(new_batch)
         db.flush()
 
+        if schema_available(db):
+            set_location(db, new_batch.id, inherited_location(db, [p for p, _ in locked_parents]))
+
         # Tạo quan hệ BatchRelation loại 'MERGE' và ghi hash events
         for p, qty_take in locked_parents:
             rel = BatchRelation(
@@ -731,7 +737,8 @@ def merge_batches(  # noqa: C901
             user_id=current_user.id,
         )
 
-        record_action(db, current_user, ACTION_CREATE, ENTITY_BATCH, new_batch.id)
+        record_action(db, current_user, ACTION_CREATE, ENTITY_BATCH, new_batch.id,
+                      operation="merge", batch_ids=[new_batch.id, *parent_ids])
         db.commit()
     except (OperationalError, SQLAlchemyError) as exc:
         db.rollback()
@@ -747,6 +754,7 @@ def merge_batches(  # noqa: C901
         ) from exc
 
     db.refresh(new_batch)
+    hydrate(db, [new_batch])
     return BatchMergeResponse(
         merged_batch=new_batch,
         parent_batches=parent_summary,
@@ -912,6 +920,9 @@ def split_batch(  # noqa: C901
             db.add(child)
             db.flush()
 
+            if schema_available(db):
+                set_location(db, child.id, inherited_location(db, [parent]))
+
             rel = BatchRelation(
                 parent_batch_id=parent.id,
                 child_batch_id=child.id,
@@ -932,7 +943,8 @@ def split_batch(  # noqa: C901
                 org_id=user_org_id,
                 user_id=current_user.id,
             )
-            record_action(db, current_user, ACTION_CREATE, ENTITY_BATCH, child.id)
+            record_action(db, current_user, ACTION_CREATE, ENTITY_BATCH, child.id,
+                          operation="split", batch_ids=[parent.id, child.id])
 
             child_batches.append(child)
             child_codes.append(child.code)
@@ -950,11 +962,12 @@ def split_batch(  # noqa: C901
             org_id=user_org_id,
             user_id=current_user.id,
         )
-        record_action(db, current_user, ACTION_UPDATE, ENTITY_BATCH, parent.id)
+        record_action(db, current_user, ACTION_UPDATE, ENTITY_BATCH, parent.id, operation="split")
 
         # Chụp ảnh phản hồi NGAY khi transaction còn lành mạnh (trước commit).
         # Tránh việc đối tượng bị hết hạn sau commit (expire_on_commit) phải lazy-load
         # lại và có thể thất bại trong tình huống tách lô đồng thời (race condition).
+        hydrate(db, [parent, *child_batches])
         parent_response = BatchResponse.model_validate(parent)
         child_responses = [BatchResponse.model_validate(c) for c in child_batches]
         message_text = f"Tách thành công lô mẹ {parent.code} thành {len(child_batches)} lô con."
@@ -1024,18 +1037,23 @@ def get_batch_summary(
     db: Session = Depends(get_db),
 ) -> BatchSummaryResponse:
     """Tổng hợp chi tiết thông tin lô nông sản (T-58)."""
-    # Truy vấn 1: Lô kèm plot, product, current_org
-    batch = db.execute(
-        select(Batch)
-        .options(
-            joinedload(Batch.plot),
-            joinedload(Batch.product),
-            joinedload(Batch.current_org),
-            joinedload(Batch.farm),
-            joinedload(Batch.handovers),
+    # Include current location in the first business query when QA is migrated.
+    stmt = select(Batch).options(
+        joinedload(Batch.plot), joinedload(Batch.product),
+        joinedload(Batch.current_org), joinedload(Batch.farm),
+        joinedload(Batch.handovers),
+    ).where(Batch.id == batch_id)
+    ready = schema_available(db)
+    if ready:
+        from app.location_models import Location
+        stmt = stmt.add_columns(Location.id, Location.name, Location.address).outerjoin(
+            Location, and_(Location.id == literal_column("batches.location_id"),
+                           Location.organization_id == Batch.current_org_id)
         )
-        .where(Batch.id == batch_id)
-    ).unique().scalar_one_or_none()
+    row = db.execute(stmt).unique().first()
+    batch = row[0] if row else None
+    if batch is not None:
+        batch._phase_c_location = {"id": row[1], "name": row[2], "address": row[3]} if ready else {}
     if batch is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -1189,6 +1207,7 @@ def get_batch_trace_forward(
     # Tổ chức thường không được đọc thông tin nội bộ (location, owner, plot) của tổ chức khác nếu không có quyền.
     is_privileged = (current_user.role in (ROLE_INSPECTOR, "system_admin", "admin"))
 
+    view_permissions = {batch_id: True}
     masked_descendants: dict[int, list[dict[str, Any]]] = {}
     for lvl, nodes in result["descendants_by_level"].items():
         masked_nodes = []
@@ -1196,13 +1215,20 @@ def get_batch_trace_forward(
             node_copy = dict(node)
             desc_id = node_copy["batch_id"]
             if not is_privileged:
-                can_see = can_view_batch(db, current_user.organization_id, desc_id, user_role=current_user.role)
+                if desc_id not in view_permissions:
+                    view_permissions[desc_id] = can_view_batch(
+                        db, current_user.organization_id, desc_id, user_role=current_user.role
+                    )
+                can_see = view_permissions[desc_id]
                 if not can_see:
                     node_copy["location"] = "[Bảo mật]"
                     node_copy["owner"] = None
                     node_copy["plot_name"] = None
                     node_copy["farm_name"] = None
                     node_copy["is_masked"] = True
+                    node_copy["location_id"] = None
+                    node_copy["current_location"] = None
+                    node_copy["current_location_name"] = None
             masked_nodes.append(node_copy)
         masked_descendants[lvl] = masked_nodes
 
@@ -1211,12 +1237,25 @@ def get_batch_trace_forward(
         t_copy = dict(t_node)
         desc_id = t_copy["batch_id"]
         if not is_privileged:
-            can_see = can_view_batch(db, current_user.organization_id, desc_id, user_role=current_user.role)
+            if desc_id not in view_permissions:
+                view_permissions[desc_id] = can_view_batch(
+                    db, current_user.organization_id, desc_id, user_role=current_user.role
+                )
+            can_see = view_permissions[desc_id]
             if not can_see:
                 t_copy["location"] = "[Bảo mật]"
+                t_copy["location_id"] = None
+                t_copy["current_location"] = None
+                t_copy["current_location_name"] = None
         masked_terminals.append(t_copy)
 
+    from app.services.locations import restrict_forward_locations_and_edges
+    edges = restrict_forward_locations_and_edges(
+        db, current_user, batch_id, result, masked_descendants, masked_terminals, view_permissions
+    )
+
     return TraceForwardResponse(
+        edges=edges,
         target_batch=result["target_batch"],
         descendants_by_level=masked_descendants,
         terminal_batches=masked_terminals,
@@ -1246,6 +1285,8 @@ def consume_batch(
 ) -> BatchConsumeResponse:
     """Ghi nhận lô nông sản đã tiêu thụ (S-29)."""
     prepare_physical_write(db)
+    db.execute(update(Batch).where(Batch.id == batch_id).values(status=Batch.status))
+    db.expire_all()
     batch = db.get(Batch, batch_id)
     if batch is None:
         raise HTTPException(
@@ -1289,6 +1330,9 @@ def consume_batch(
             detail="Không thể tiêu thụ lô nông sản đang có yêu cầu bàn giao chờ xác nhận.",
         )
 
+    if batch.remaining_quantity is None or batch.remaining_quantity <= 0:
+        raise HTTPException(400, "Lô không còn khối lượng để tiêu thụ.")
+
     prev_qty = batch.remaining_quantity
     note_text = (payload.notes.strip() if (payload and payload.notes) else "") or "Lô hàng đã bán hết cho người tiêu dùng"
 
@@ -1297,6 +1341,7 @@ def consume_batch(
         "action": "CONSUMED",
         "batch_code": batch.code,
         "previous_remaining_quantity": str(prev_qty),
+        "location": location_map(db, [batch.id]).get(batch.id),
         "remaining_quantity": "0.00",
         "notes": note_text,
     }
@@ -1317,7 +1362,8 @@ def consume_batch(
     batch.quantity = 0.0
 
     # 7. Ghi audit log
-    record_action(db, current_user, ACTION_UPDATE, ENTITY_BATCH, batch.id)
+    record_action(db, current_user, ACTION_UPDATE, ENTITY_BATCH, batch.id,
+                  operation="sell_out", location=event_payload["location"])
 
     db.commit()
     db.refresh(batch)
@@ -1326,19 +1372,9 @@ def consume_batch(
     # 8. Xóa cache truy xuất
     clear_trace_cache(batch.id)
 
+    hydrate(db, [batch])
     return BatchConsumeResponse(
         batch=batch,
         event=event,
         message="Ghi nhận lô nông sản đã tiêu thụ thành công.",
     )
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
-from typing import Optional
-from pydantic import BaseModel
-
-# Các import tuỳ thuộc theo cấu trúc dự án thực tế của nhóm bạn:
-from app.database import get_db
-from app.dependencies import get_current_active_user
-from app.models.user import User
-from app.services.recall import check_batch_quarantine_guard  # Guard S-38
-

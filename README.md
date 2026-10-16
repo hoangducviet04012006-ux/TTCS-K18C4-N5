@@ -9,7 +9,7 @@
 > [!IMPORTANT]
 > **HƯỚNG DẪN KHỞI CHẠY DEMO CHÍNH THỨC (SPRINT 1–3):**
 > Tại thư mục gốc của dự án, nhấp đúp file **`start_demo.bat`** (hoặc chạy trong PowerShell: `.\start_demo.bat`).
-> Hệ thống sử dụng cơ sở dữ liệu demo độc lập: **`.sprint123-trial/demo_sprint123.db`**.
+> Hệ thống sử dụng cơ sở dữ liệu demo độc lập: **`.sprint123-trial/demo_sprint123_north.db`**.
 > **Lưu ý an toàn dữ liệu:** Cơ sở dữ liệu gốc `backend/ttcs.db` được bảo vệ nghiêm ngặt. Launcher tự động tìm kiếm cổng khả dụng từ `8765`, in PID và mở trình duyệt tự động; launcher không reset, seed đè hoặc chạy migration khi khởi động bình thường.
 > **Phân biệt phạm vi:** Bản demo hiện hữu chạy qua `start_demo.bat` phản ánh phiên bản hệ thống Sprint 1–2 đã kiểm chứng hoàn chỉnh. Các tính năng mở rộng của Sprint 3 (như tối ưu BFS S-26 và các story tiếp theo) hiện được tích hợp trên nhánh `develop` để kiểm thử tự động, chưa phát hành lên `main` cho bản demo người dùng cuối.
 > Chi tiết xem tại [Hướng dẫn Demo chi tiết](docs/DEMO.md) và [Cấu trúc bàn giao](docs/PROJECT_STRUCTURE.md).
@@ -44,7 +44,7 @@ Dự án được xây dựng và phát triển bởi đội ngũ 10 thành viê
 | `frontend/` | Demo giao diện tập trung: `index.html`, `css/style.css`, `js/app.js` — HTML5 + CSS + JavaScript thuần |
 | `docs/` | Tài liệu dự án: [DEMO.md](docs/DEMO.md), [PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md), [SPRINT3_IMPLEMENTATION_SPECIFICATION.md](docs/SPRINT3_IMPLEMENTATION_SPECIFICATION.md), [COMPLETION_REPORT.md](docs/COMPLETION_REPORT.md); QA artifacts trong `docs/qa/` |
 | `scripts/` | Script phụ nội bộ (`start_demo.ps1`); người dùng chỉ chạy `start_demo.bat` ở gốc |
-| `.sprint123-trial/` | Database demo (`demo_sprint123.db`) và cấu hình mật khẩu local riêng; không đưa lên Git |
+| `.sprint123-trial/` | Database demo (`demo_sprint123_north.db`) và cấu hình mật khẩu local riêng; không đưa lên Git |
 | `.demo-logs/` | Log khởi động hệ thống; không đưa lên Git |
 | `tools/backups/` | Bản sao script/cấu hình trước thay đổi; không đưa lên Git |
 | `.github/workflows/ci.yml` | Pipeline CI/CD tự động kiểm tra cú pháp, kiểm thử 299 tests và staging health check |
@@ -69,7 +69,7 @@ Tại thư mục gốc của dự án, chạy lệnh hoặc nhấp đúp file:
 .\start_demo.bat
 ```
 - Launcher tự động tìm cổng khả dụng bắt đầu từ `8765` (nếu bận sẽ tự thử cổng kế tiếp, tối đa 100 cổng).
-- Database demo độc lập: `.sprint123-trial/demo_sprint123.db`.
+- Database demo độc lập: `.sprint123-trial/demo_sprint123_north.db`.
 - Tự động in PID, URL và mở trình duyệt Web. Để chỉ định cổng bắt đầu tìm: `.\start_demo.bat -Port 8769`.
 - Để dừng đúng tiến trình: `Stop-Process -Id <PID>`.
 
@@ -119,14 +119,14 @@ Hệ thống thiết lập 8 tài khoản demo phân theo 7 vai trò trong chu�
 
 | Khóa tài khoản | Email đăng nhập | Vai trò | Tổ chức | Thao tác chính trên giao diện |
 | :--- | :--- | :--- | :--- | :--- |
-| `farm` | `s123_farm@demo.local` | `farmer` | HTX-DT | Vùng trồng, thu hoạch lô, tách lô |
-| `packing` | `s123_packing@demo.local` | `processor` | HTX-DT | Đóng gói, gộp lô, bàn giao sang HTX-TG |
-| `receiver` | `s123_receiver@demo.local` | `processor` | HTX-TG | Tiếp nhận bàn giao, kiểm tra chủ sở hữu mới |
-| `transport` | `s123_transport@demo.local` | `transporter` | HTX-TG | Vận chuyển, cập nhật nhật ký chuỗi lạnh |
-| `distribution` | `s123_distribution@demo.local` | `distributor` | DN-XNK | Tiếp nhận phân phối, xuất kho thương mại |
+| `farm` | `s123_farm@demo.local` | `farmer` | HTX-TC | Vùng trồng, thu hoạch lô, tách lô |
+| `packing` | `s123_packing@demo.local` | `processor` | HTX-TC | Đóng gói, gộp lô, bàn giao sang LOG-HN |
+| `receiver` | `s123_receiver@demo.local` | `processor` | LOG-HN | Tiếp nhận bàn giao, kiểm tra chủ sở hữu mới |
+| `transport` | `s123_transport@demo.local` | `transporter` | LOG-HN | Vận chuyển, cập nhật nhật ký chuỗi lạnh |
+| `distribution` | `s123_distribution@demo.local` | `distributor` | NPP-BN | Tiếp nhận phân phối, xuất kho thương mại |
 | `inspector` | `s123_inspector@demo.local` | `inspector` | Toàn cảnh | Xem phả hệ và lịch sử liên tổ chức |
-| `admin` | `s123_admin@demo.local` | `system_admin` | HTX-DT | Quản trị tài khoản, danh mục hệ thống |
-| `org_admin` | `s123_org_admin@demo.local` | `org_admin` | HTX-DT | Quản trị tài khoản nội bộ tổ chức |
+| `admin` | `s123_admin@demo.local` | `system_admin` | HTX-TC | Quản trị tài khoản, danh mục hệ thống |
+| `org_admin` | `s123_org_admin@demo.local` | `org_admin` | HTX-TC | Quản trị tài khoản nội bộ tổ chức |
 
 - **Mật khẩu local:** Cấu hình trong `.sprint123-trial/credentials.local` (file được bảo vệ, Git ignore, mở xem bằng `notepad .\.sprint123-trial\credentials.local`).
 - **Bảo mật đăng nhập (Lockout):** Nhập sai mật khẩu **5 lần liên tiếp** → tài khoản bị tạm khóa **15 phút** (`403` kèm header `Retry-After`).

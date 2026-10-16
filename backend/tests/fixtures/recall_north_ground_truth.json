@@ -1,0 +1,54 @@
+{
+  "scenario": "Existing northern CHE-TC-01 source, copied QA; no Southern Recall fixture",
+  "root_code": "CHE-TC-01",
+  "root_id": 1,
+  "levels": {
+    "0": [
+      "CHE-TC-01"
+    ],
+    "1": [
+      "CHE-LO-A1",
+      "CHE-LO-B1"
+    ],
+    "2": [
+      "CHE-GOP-HN01",
+      "CHE-GOP-ND02"
+    ],
+    "3": [
+      "CHE-TP-HN01",
+      "CHE-TP-BN02"
+    ]
+  },
+  "affected_batch_ids": [
+    1,
+    4,
+    5,
+    10,
+    11,
+    13,
+    14
+  ],
+  "affected_count": 7,
+  "descendant_count": 6,
+  "affected_edge_count": 6,
+  "organization_counts": {
+    "1": 5,
+    "2": 1,
+    "3": 1
+  },
+  "remaining_by_organization_kg": {
+    "1": 900,
+    "2": 500,
+    "3": 400
+  },
+  "total_reclaimable_kg": 1800,
+  "sold_kg": 0,
+  "policy": "Whole outputs of cross-origin merges are quarantined. Do not proportionally dilute the affected amount.",
+  "expected_ack_progress": [
+    0,
+    1,
+    2,
+    3
+  ],
+  "expected_required": 3
+}

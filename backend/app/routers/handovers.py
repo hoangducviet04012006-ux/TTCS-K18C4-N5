@@ -167,6 +167,8 @@ def create_handover(
         user_id=current_user.id,
     )
 
+    record_action(db, current_user, "update", "handover", handover.id,
+                  operation="handover_init", batch_ids=[batch.id])
     try:
         db.commit()
     except SQLAlchemyError as exc:
@@ -239,6 +241,8 @@ def accept_handover(
     was_overdue = handover.is_overdue or (now - handover.created_at).total_seconds() >= 48 * 3600
     from app.services.traceability import clear_trace_cache
     clear_trace_cache()
+    from app.services.locations import clear_on_handover
+    clear_on_handover(db, batch.id)
     batch.current_org_id = handover.to_org_id
     handover.is_overdue = False
 
@@ -266,6 +270,8 @@ def accept_handover(
         user_id=current_user.id,
     )
 
+    record_action(db, current_user, "update", "handover", handover.id,
+                  operation="handover_accept", batch_ids=[batch.id])
     try:
         db.commit()
     except SQLAlchemyError as exc:
@@ -361,6 +367,8 @@ def reject_handover(
         user_id=current_user.id,
     )
 
+    record_action(db, current_user, "update", "handover", handover.id,
+                  operation="handover_reject", batch_ids=[batch.id])
     try:
         db.commit()
     except SQLAlchemyError as exc:
