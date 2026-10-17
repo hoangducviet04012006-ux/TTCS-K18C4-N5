@@ -3687,6 +3687,29 @@ async function verifyDetailChain(batchId, prefix = "detail") {
   }
 }
 
+/** Xác thực toàn diện tính toàn vẹn phả hệ dữ liệu truy xuất nguồn gốc (Story S-50) */
+async function verifyTraceabilityIntegrity(batchId) {
+  const btn = $("btn-traceability-verify-integrity");
+  const idleText = "Kiểm tra toàn vẹn chuỗi truy xuất";
+  if (btn) setButtonLoading(btn, true, "Đang xác thực chuỗi…", idleText);
+  try {
+    const res = await apiRequest(`/batches/${batchId}/trace-integrity`);
+    const isValid = Boolean(res.valid ?? res.is_valid);
+    if (isValid) {
+      toast(res.message || "Toàn bộ chuỗi truy xuất nguồn gốc toàn vẹn 100%.", "success");
+    } else {
+      toast(`CẢNH BÁO: ${res.message}`, "error");
+    }
+    return res;
+  } catch (err) {
+    toast(`Lỗi xác thực toàn vẹn chuỗi truy xuất: ${err.message}`, "error");
+    throw err;
+  } finally {
+    if (btn) setButtonLoading(btn, false, "Đang xác thực chuỗi…", idleText);
+  }
+}
+window.verifyTraceabilityIntegrity = verifyTraceabilityIntegrity;
+
 /** Tab 3: Truy ngược cây phả hệ nguồn gốc BFS */
 async function loadDetailLineage(batchId, prefix = "detail") {
   const loading = $(`${prefix}-lineage-loading`);
