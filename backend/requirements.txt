@@ -21,3 +21,7 @@ flake8==7.1.1
 
 
 python-multipart==0.0.32
+
+# Sinh mã QR truy xuất nguồn gốc (Sprint Epic E-08 / Task S-46)
+qrcode[pil]>=8.0
+pillow>=10.0.0

@@ -11,11 +11,13 @@
 - DELETE /batches/{batch_id}: Xóa lô (chỉ admin).
 """
 
+import io
 from datetime import date
 from decimal import Decimal
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
+from fastapi.responses import Response, StreamingResponse
 from sqlalchemy import select, update, and_, literal_column
 from sqlalchemy.exc import IntegrityError, OperationalError, SQLAlchemyError
 from sqlalchemy.orm import Session, joinedload
@@ -72,6 +74,15 @@ from app.services.traceability import clear_trace_cache, trace_backwards, trace_
 from app.utils.batch_code import generate_batch_code
 
 from app.services.locations import hydrate, schema_available, inherited_location, set_location, location_map
+from app.services.qr_service import (
+    BatchQRResponse,
+    QRGenerateRequest,
+    QRGenerateResponse,
+    build_batch_trace_url,
+    generate_qr_base64,
+    generate_qr_png_bytes,
+    generate_qr_svg_bytes,
+)
 
 router = APIRouter(
     prefix="/batches",
@@ -323,6 +334,125 @@ def list_batches(
         ) from exc
 
 
+# ------------------------------------------------------------- Sprint S-46: QR Code ---
+@router.post(
+    "/qr/generate",
+    response_model=QRGenerateResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Sinh mã QR từ dữ liệu tùy biến qua POST body (S-46)",
+    description=(
+        "Sinh mã QR từ chuỗi dữ liệu hoặc URL bất kỳ (POST JSON body).\n"
+        "- Trả về Base64 data URL (mặc định), PNG StreamingResponse hoặc SVG vector."
+    ),
+)
+def generate_custom_qr_post(payload: QRGenerateRequest) -> Any:
+    """Sinh mã QR tùy biến từ payload JSON (S-46)."""
+    data = payload.data.strip()
+    if payload.format == "png":
+        png_bytes = generate_qr_png_bytes(
+            data=data,
+            box_size=payload.box_size,
+            border=payload.border,
+            error_correction=payload.error_correction,
+        )
+        return StreamingResponse(
+            io.BytesIO(png_bytes),
+            media_type="image/png",
+            headers={"Content-Disposition": 'inline; filename="qrcode.png"'},
+        )
+    elif payload.format == "svg":
+        svg_bytes = generate_qr_svg_bytes(
+            data=data,
+            box_size=payload.box_size,
+            border=payload.border,
+            error_correction=payload.error_correction,
+        )
+        return Response(
+            content=svg_bytes,
+            media_type="image/svg+xml",
+            headers={"Content-Disposition": 'inline; filename="qrcode.svg"'},
+        )
+    else:
+        qr_b64 = generate_qr_base64(
+            data=data,
+            box_size=payload.box_size,
+            border=payload.border,
+            error_correction=payload.error_correction,
+        )
+        return QRGenerateResponse(
+            data=data,
+            format="base64",
+            qr_base64=qr_b64,
+            content_type="image/png",
+            box_size=payload.box_size,
+            border=payload.border,
+            message="Sinh mã QR thành công.",
+        )
+
+
+@router.get(
+    "/qr/generate",
+    summary="Sinh mã QR từ query parameters (S-46)",
+    description=(
+        "Sinh mã QR từ chuỗi dữ liệu truyền qua query parameter `data`.\n"
+        "- Hỗ trợ format='png' (StreamingResponse), format='svg', hoặc format='base64' (JSON).\n"
+        "- Hỗ trợ tham số `download=true` để tải file về máy."
+    ),
+)
+def generate_custom_qr_get(
+    data: str = Query(..., min_length=1, max_length=4096, description="Chuỗi dữ liệu hoặc URL cần sinh QR"),
+    format: Literal["png", "base64", "svg"] = Query("base64", description="Định dạng trả về: png, base64 hoặc svg"),
+    box_size: int = Query(10, ge=1, le=50, description="Kích thước mỗi ô QR"),
+    border: int = Query(4, ge=1, le=20, description="Độ dày viền QR"),
+    error_correction: Literal["L", "M", "Q", "H"] = Query("M", description="Mức độ sửa lỗi"),
+    download: bool = Query(False, description="Tải tệp về thay vì xem inline"),
+) -> Any:
+    """Sinh mã QR tùy biến từ query params (S-46)."""
+    clean_data = data.strip()
+    if format == "png":
+        png_bytes = generate_qr_png_bytes(
+            data=clean_data,
+            box_size=box_size,
+            border=border,
+            error_correction=error_correction,
+        )
+        disposition = f'{"attachment" if download else "inline"}; filename="qrcode.png"'
+        return StreamingResponse(
+            io.BytesIO(png_bytes),
+            media_type="image/png",
+            headers={"Content-Disposition": disposition},
+        )
+    elif format == "svg":
+        svg_bytes = generate_qr_svg_bytes(
+            data=clean_data,
+            box_size=box_size,
+            border=border,
+            error_correction=error_correction,
+        )
+        disposition = f'{"attachment" if download else "inline"}; filename="qrcode.svg"'
+        return Response(
+            content=svg_bytes,
+            media_type="image/svg+xml",
+            headers={"Content-Disposition": disposition},
+        )
+    else:
+        qr_b64 = generate_qr_base64(
+            data=clean_data,
+            box_size=box_size,
+            border=border,
+            error_correction=error_correction,
+        )
+        return QRGenerateResponse(
+            data=clean_data,
+            format="base64",
+            qr_base64=qr_b64,
+            content_type="image/png",
+            box_size=box_size,
+            border=border,
+            message="Sinh mã QR thành công.",
+        )
+
+
 @router.get(
     "/{batch_id}",
     response_model=BatchResponse,
@@ -346,6 +476,84 @@ def get_batch(
     if not can_view_batch(db, current_user.organization_id, batch_id, user_role=current_user.role):
         raise HTTPException(403, "Bạn không có quyền xem lô nông sản này.")
     return hydrate(db, [batch])[0]
+
+
+@router.get(
+    "/{batch_id}/qr",
+    summary="Sinh mã QR cho lô nông sản (Task S-46)",
+    description=(
+        "Tạo mã QR trỏ tới đường dẫn truy xuất công khai của lô nông sản (Epic E-08 / Task S-46).\n\n"
+        "- Trả về StreamingResponse ảnh PNG khi format='png' (tiện cho thẻ <img> hoặc tải file).\n"
+        "- Trả về Response ảnh SVG khi format='svg' (in ấn bao bì sắc nét).\n"
+        "- Trả về JSON chứa Base64 data URL khi format='base64' (mặc định cho giao diện).\n"
+        "- Hỗ trợ tải tệp về máy khi download=true.\n"
+        "- Kích thước in ấn chuẩn 3cm theo đặc tả kỹ thuật S-46."
+    ),
+)
+def get_batch_qr(
+    batch_id: int = Path(..., ge=1, description="ID lô nông sản"),
+    format: Literal["png", "base64", "svg"] = Query("base64", description="Định dạng trả về: base64, png, svg"),
+    download: bool = Query(False, description="Tải tệp về thay vì xem trực tiếp"),
+    box_size: int = Query(10, ge=1, le=50, description="Kích thước pixel mỗi ô QR"),
+    border: int = Query(4, ge=1, le=20, description="Độ dày viền yên tĩnh"),
+    error_correction: Literal["L", "M", "Q", "H"] = Query("M", description="Mức sửa lỗi QR"),
+    base_url: str | None = Query(None, description="URL gốc tùy chỉnh cho trang truy xuất công khai"),
+    db: Session = Depends(get_db),
+) -> Any:
+    """Sinh mã QR cho lô nông sản cụ thể phục vụ in tem nhãn (S-46)."""
+    batch = db.get(Batch, batch_id)
+    if batch is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Không tìm thấy lô nông sản có id={batch_id}.",
+        )
+
+    trace_url = build_batch_trace_url(batch.code, base_url=base_url)
+
+    if format == "png":
+        png_bytes = generate_qr_png_bytes(
+            data=trace_url,
+            box_size=box_size,
+            border=border,
+            error_correction=error_correction,
+        )
+        disposition = f'{"attachment" if download else "inline"}; filename="qr_{batch.code}.png"'
+        return StreamingResponse(
+            io.BytesIO(png_bytes),
+            media_type="image/png",
+            headers={"Content-Disposition": disposition},
+        )
+    elif format == "svg":
+        svg_bytes = generate_qr_svg_bytes(
+            data=trace_url,
+            box_size=box_size,
+            border=border,
+            error_correction=error_correction,
+        )
+        disposition = f'{"attachment" if download else "inline"}; filename="qr_{batch.code}.svg"'
+        return Response(
+            content=svg_bytes,
+            media_type="image/svg+xml",
+            headers={"Content-Disposition": disposition},
+        )
+    else:
+        qr_b64 = generate_qr_base64(
+            data=trace_url,
+            box_size=box_size,
+            border=border,
+            error_correction=error_correction,
+        )
+        return BatchQRResponse(
+            batch_id=batch.id,
+            batch_code=batch.code,
+            product_name=batch.product_name,
+            target_url=trace_url,
+            qr_base64=qr_b64,
+            download_png_url=f"/batches/{batch.id}/qr?format=png&download=true",
+            download_svg_url=f"/batches/{batch.id}/qr?format=svg&download=true",
+            physical_size_cm=3.0,
+            message="Sinh mã QR cho lô nông sản thành công.",
+        )
 
 
 def _validate_batch_update(db: Session, batch: Batch, payload: BatchUpdate):
