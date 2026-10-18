@@ -15,7 +15,7 @@ Kiểm chứng các kịch bản:
 """
 
 from fastapi.testclient import TestClient
-from sqlalchemy import text
+from sqlalchemy import select, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.services.rate_limiter import clear_rate_limit_cache
@@ -509,3 +509,239 @@ def test_14_trace_integrity_cache_invalidates_on_data_change(
     res2 = client.get(f"/batches/{batch_id}/trace-integrity", headers=headers)
     assert res2.status_code == 200
     assert res2.json()["status"] == "VERIFIED"
+
+
+def test_15_rate_limiter_prioritizes_nginx_x_real_ip_over_spoofed_forwarded_for() -> None:
+    """Test 15: Chống giả mạo IP qua Nginx: Ưu tiên X-Real-IP và lấy đúng IP thực do proxy thêm vào."""
+    from unittest.mock import MagicMock
+    from fastapi import HTTPException, Request
+    import pytest
+    from app.services.rate_limiter import check_scan_rate_limit, get_trusted_client_ip
+
+    clear_rate_limit_cache()
+
+    # 1. Kịch bản qua Nginx: Client gửi giả mạo X-Forwarded-For: 10.99.99.99
+    # Nginx ghi nhận real client IP: 203.0.113.88
+    # Nginx ghi đè X-Real-IP: 203.0.113.88 và nối thêm vào X-Forwarded-For: 10.99.99.99, 203.0.113.88
+    proxy_request = MagicMock(spec=Request)
+    proxy_request.client.host = "127.0.0.1"  # Kết nối từ reverse proxy tin cậy Nginx
+    proxy_request.headers = {
+        "x-real-ip": "203.0.113.88",
+        "x-forwarded-for": "10.99.99.99, 203.0.113.88",
+    }
+
+    # Phải nhận đúng IP 203.0.113.88 từ X-Real-IP, tuyệt đối không bị lừa bởi 10.99.99.99
+    detected_ip = get_trusted_client_ip(proxy_request)
+    assert detected_ip == "203.0.113.88"
+
+    # 2. Kịch bản nếu không có X-Real-IP nhưng có chuỗi X-Forwarded-For
+    no_real_ip_request = MagicMock(spec=Request)
+    no_real_ip_request.client.host = "127.0.0.1"
+    no_real_ip_request.headers = {
+        "x-forwarded-for": "1.2.3.4, 203.0.113.88",
+    }
+    # Phải lấy IP cuối cùng do proxy thêm vào (203.0.113.88), không lấy IP đầu tiên (1.2.3.4) do client gửi
+    assert get_trusted_client_ip(no_real_ip_request) == "203.0.113.88"
+
+    # 3. Kịch bản client cố gắng bypass rate limit bằng cách đổi IP giả mạo trong X-Forwarded-For
+    # Nhưng Nginx vẫn gán đúng X-Real-IP: 203.0.113.88
+    client_attack_request = MagicMock(spec=Request)
+    client_attack_request.client.host = "127.0.0.1"
+
+    # Quét 30 mã đầu với fake IP trong X-Forwarded-For
+    for i in range(1, 31):
+        client_attack_request.headers = {
+            "x-real-ip": "203.0.113.88",
+            "x-forwarded-for": f"10.0.0.{i}, 203.0.113.88",
+        }
+        check_scan_rate_limit(client_attack_request, f"NGINX-SCAN-{i:03d}")
+
+    # Yêu cầu thứ 31 từ IP thật 203.0.113.88 dù có đổi header gì cũng bị chặn 429
+    client_attack_request.headers = {
+        "x-real-ip": "203.0.113.88",
+        "x-forwarded-for": "99.99.99.99, 203.0.113.88",
+    }
+    with pytest.raises(HTTPException) as exc_info:
+        check_scan_rate_limit(client_attack_request, "NGINX-SCAN-031")
+    assert exc_info.value.status_code == 429
+
+
+def test_16_trace_integrity_cache_invalidates_on_batch_relation_change(
+    client: TestClient, session_factory: sessionmaker[Session]
+) -> None:
+    """Test 16: Cache 60s tự động vô hiệu hóa ngay khi bảng BatchRelation thêm/xóa quan hệ cha/con."""
+    clear_trace_integrity_cache()
+    headers = _get_farmer_auth_headers()
+    farm_id, child_id, child_code = _create_sample_farm_and_batch(client)
+
+    from datetime import date
+    from app.models import Batch, BatchRelation
+
+    # 1. Tạo lô cha A
+    with session_factory() as session:
+        parent_a = Batch(
+            farm_id=farm_id,
+            product_name="Dâu tây giống F1",
+            quantity=2000.0,
+            harvest_date=date.today(),
+            current_org_id=1,
+        )
+        session.add(parent_a)
+        session.commit()
+        parent_a_id = parent_a.id
+
+        # Liên kết A là cha của child
+        rel_a_child = BatchRelation(
+            parent_batch_id=parent_a_id,
+            child_batch_id=child_id,
+            transferred_quantity=500.0,
+            relation_type="SPLIT",
+        )
+        session.add(rel_a_child)
+        session.commit()
+
+    # Thêm sự kiện cho lô con
+    client.post(
+        f"/batches/{child_id}/events",
+        json={"event_type": "PACKAGING", "event_data": "Đóng hộp"},
+        headers=headers,
+    )
+    # Thêm sự kiện cho lô cha
+    client.post(
+        f"/batches/{parent_a_id}/events",
+        json={"event_type": "HARVEST", "event_data": "Thu hoạch gốc"},
+        headers=headers,
+    )
+
+    # Lần 1: Thẩm định chuỗi phả hệ (2 lô: child và A) và lưu cache
+    res1 = client.get(f"/batches/{child_id}/trace-integrity", headers=headers)
+    assert res1.status_code == 200
+    assert res1.json()["total_batches_checked"] == 2
+    seal1 = res1.json()["verification_seal"]
+
+    # 2. Thêm quan hệ phả hệ mới: Tạo lô ông Root và liên kết Root -> A
+    with session_factory() as session:
+        root_batch = Batch(
+            farm_id=farm_id,
+            product_name="Hạt giống dâu thuần chủng",
+            quantity=5000.0,
+            harvest_date=date.today(),
+            current_org_id=1,
+        )
+        session.add(root_batch)
+        session.commit()
+        root_batch_id = root_batch.id
+
+        rel_root_a = BatchRelation(
+            parent_batch_id=root_batch_id,
+            child_batch_id=parent_a_id,
+            transferred_quantity=1000.0,
+            relation_type="SPLIT",
+        )
+        session.add(rel_root_a)
+        session.commit()
+        rel_root_a_id = rel_root_a.id
+
+    client.post(
+        f"/batches/{root_batch_id}/events",
+        json={"event_type": "SEED", "event_data": "Gieo hạt"},
+        headers=headers,
+    )
+
+    # Lần 2 (ngay lập tức trong 60s): Cache PHẢI tự động vô hiệu hóa vì BatchRelation thay đổi!
+    res2 = client.get(f"/batches/{child_id}/trace-integrity", headers=headers)
+    assert res2.status_code == 200
+    # Phải kiểm tra 3 lô thay vì 2
+    assert res2.json()["total_batches_checked"] == 3
+    assert res2.json()["verification_seal"] != seal1
+
+    # 3. Xóa quan hệ phả hệ Root -> A trong database
+    with session_factory() as session:
+        rel_to_delete = session.get(BatchRelation, rel_root_a_id)
+        if rel_to_delete:
+            session.delete(rel_to_delete)
+            session.commit()
+
+    # Lần 3 (ngay lập tức trong 60s): Cache PHẢI tự động vô hiệu hóa vì BatchRelation bị xóa!
+    res3 = client.get(f"/batches/{child_id}/trace-integrity", headers=headers)
+    assert res3.status_code == 200
+    # Trở lại 2 lô
+    assert res3.json()["total_batches_checked"] == 2
+
+
+def test_17_public_api_cleans_messages_and_does_not_leak_event_ids(
+    client: TestClient, session_factory: sessionmaker[Session]
+) -> None:
+    """Test 17: Bảo mật API công khai: Tuyệt đối không để lộ Event ID hay thông tin lỗi kỹ thuật nội bộ."""
+    clear_trace_integrity_cache()
+    clear_rate_limit_cache()
+    headers = _get_farmer_auth_headers()
+    _, batch_id, actual_code = _create_sample_farm_and_batch(client)
+
+    # Tạo 2 sự kiện
+    client.post(
+        f"/batches/{batch_id}/events",
+        json={"event_type": "EVT_A", "event_data": "Dữ liệu A"},
+        headers=headers,
+    )
+    client.post(
+        f"/batches/{batch_id}/events",
+        json={"event_type": "EVT_B", "event_data": "Dữ liệu B"},
+        headers=headers,
+    )
+
+    # Giả lập kẻ xấu can thiệp trực tiếp database bằng SQL làm hỏng chuỗi băm
+    with session_factory() as session:
+        from app.models import BatchEvent
+        last_evt = session.scalars(
+            select(BatchEvent).where(BatchEvent.batch_id == batch_id).order_by(BatchEvent.id.desc())
+        ).first()
+        assert last_evt is not None
+        tampered_evt_id = last_evt.id
+
+        session.execute(text("DROP TRIGGER IF EXISTS prevent_batch_events_update"))
+        session.execute(
+            text("UPDATE batch_events SET event_data = 'Dữ liệu bị sửa lén trực tiếp SQL' WHERE id = :id"),
+            {"id": tampered_evt_id},
+        )
+        session.commit()
+        session.execute(text(
+            "CREATE TRIGGER IF NOT EXISTS prevent_batch_events_update BEFORE UPDATE ON batch_events "
+            "BEGIN SELECT RAISE(ABORT, 'append-only'); END;"
+        ))
+        session.commit()
+
+    # 1. API nội bộ (/batches/{id}/trace-integrity): Thanh tra viên ĐƯỢC PHÉP xem chi tiết lỗi và Event ID
+    internal_res = client.get(f"/batches/{batch_id}/trace-integrity", auth=("admin", "123456"))
+    assert internal_res.status_code == 200
+    int_data = internal_res.json()
+    assert int_data["is_valid"] is False
+    assert int_data["tampered_node"] is not None
+    assert int_data["tampered_node"]["tampered_event_id"] == tampered_evt_id
+
+    # 2. API công khai (/public/trace/{code}/integrity): TUYỆT ĐỐI KHÔNG để lộ Event ID hay ID nội bộ
+    clear_trace_integrity_cache()
+    pub_res = client.get(f"/public/trace/{actual_code}/integrity")
+    assert pub_res.status_code == 200
+    pub_data = pub_res.json()
+
+    assert pub_data["is_valid"] is False
+    assert pub_data["status"] == "HASH_MISMATCH"
+
+    # Kiểm tra message công khai cố định, không lộ Event ID
+    assert "CẢNH BÁO" in pub_data["message"]
+    assert "Event ID" not in pub_data["message"]
+    assert f"#{tampered_evt_id}" not in pub_data["message"]
+
+    # Kiểm tra tampered_node công khai
+    assert pub_data["tampered_node"] is not None
+    assert "tampered_event_id" not in pub_data["tampered_node"]
+    assert "batch_id" not in pub_data["tampered_node"]
+    assert pub_data["tampered_node"]["message"] == "Phát hiện sai lệch tính toàn vẹn trong chuỗi dữ liệu."
+
+    # Quét toàn bộ JSON payload công khai để đảm bảo không rò rỉ ID sự kiện hay chi tiết nội bộ
+    pub_json_str = str(pub_data)
+    assert "tampered_event_id" not in pub_json_str
+    assert "current_org_name" not in pub_json_str
+    assert "Event ID" not in pub_json_str
+    assert f"#{tampered_evt_id}" not in pub_json_str

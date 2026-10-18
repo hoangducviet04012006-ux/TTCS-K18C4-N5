@@ -31,23 +31,35 @@ def clear_rate_limit_cache() -> None:
 
 
 def get_trusted_client_ip(request: Request) -> str:
-    """Xác định địa chỉ IP của client một cách an toàn, chống giả mạo header X-Forwarded-For."""
+    """Xác định địa chỉ IP của client một cách an toàn, chống giả mạo header khi chạy qua Reverse Proxy.
+
+    Nguyên tắc bảo mật:
+    - Nếu kết nối KHÔNG đến từ reverse proxy tin cậy, tuyệt đối không tin header client tự gửi,
+      sử dụng trực tiếp TCP peer IP (request.client.host).
+    - Khi kết nối đến từ reverse proxy tin cậy (Nginx nội bộ, test runner):
+      1. Ưu tiên số 1: Header 'X-Real-IP' do Nginx cấu hình ghi đè ($remote_addr).
+         Client không thể can thiệp hay giả mạo header này khi đi qua Nginx.
+      2. Nếu không có 'X-Real-IP', xét 'X-Forwarded-For'. Lưu ý: Client có thể gửi trước
+         một IP giả mạo làm phần tử đầu tiên ($proxy_add_x_forwarded_for nối thêm vào sau).
+         Do đó, IP do proxy tin cậy gần nhất ghi nhận là IP cuối cùng trong chuỗi.
+    """
     peer_ip = request.client.host if request.client else "127.0.0.1"
 
     # Nếu kết nối KHÔNG đến từ reverse proxy tin cậy, tuyệt đối không tin header client tự gửi
     if peer_ip not in TRUSTED_PROXIES:
         return peer_ip
 
-    # Khi kết nối từ proxy tin cậy (như Nginx nội bộ / test runner), lấy IP thực từ header
-    forwarded = request.headers.get("x-forwarded-for")
-    if forwarded:
-        first_ip = forwarded.split(",")[0].strip()
-        if first_ip:
-            return first_ip
-
+    # 1. Ưu tiên X-Real-IP do Nginx cấu hình ghi đè
     real_ip = request.headers.get("x-real-ip")
-    if real_ip:
+    if real_ip and real_ip.strip():
         return real_ip.strip()
+
+    # 2. Dự phòng: X-Forwarded-For (lấy IP an toàn do proxy tin cậy nối vào cuối chuỗi)
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded and forwarded.strip():
+        ips = [ip.strip() for ip in forwarded.split(",") if ip.strip()]
+        if ips:
+            return ips[-1]
 
     return peer_ip
 

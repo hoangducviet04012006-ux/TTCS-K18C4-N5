@@ -37,11 +37,11 @@ def clear_trace_integrity_cache(batch_id: int | None = None) -> None:
 def _compute_trace_integrity_fingerprint(
     db: Session, target: Batch, lineage_ids: list[int]
 ) -> tuple[Any, ...]:
-    """Tính toán fingerprint dữ liệu và trạng thái thu hồi của lô và chuỗi phả hệ.
+    """Tính toán fingerprint dữ liệu, quan hệ phả hệ và trạng thái thu hồi của lô.
 
-    Nếu bất kỳ sự kiện nào được ghi thêm, số lượng/trạng thái lô thay đổi,
-    hoặc có lệnh thu hồi (Recall) được mở/hoàn tất, fingerprint sẽ thay đổi
-    và làm vô hiệu hóa cache ngay lập tức.
+    Nếu bất kỳ sự kiện nào được ghi thêm, quan hệ cha/con (BatchRelation) thay đổi,
+    số lượng/trạng thái lô thay đổi, hoặc có lệnh thu hồi (Recall) được mở/hoàn tất,
+    fingerprint sẽ thay đổi và làm vô hiệu hóa cache ngay lập tức.
     """
     target_state = (target.status, str(target.remaining_quantity), target.current_org_id)
 
@@ -54,7 +54,21 @@ def _compute_trace_integrity_fingerprint(
     max_evt_id = evt_row[0] if evt_row else None
     evt_cnt = evt_row[1] if evt_row else 0
 
-    # 2. Trạng thái thu hồi (Recall) nếu có bảng recalls
+    # 2. Tóm tắt quan hệ phả hệ BatchRelation liên quan đến chuỗi (thêm/xóa quan hệ cha/con)
+    rel_stmt = (
+        select(
+            func.count(BatchRelation.id),
+            func.coalesce(func.max(BatchRelation.id), 0),
+            func.coalesce(func.sum(BatchRelation.id), 0),
+        ).where(
+            (BatchRelation.child_batch_id.in_(lineage_ids))
+            | (BatchRelation.parent_batch_id.in_(lineage_ids))
+        )
+    )
+    rel_row = db.execute(rel_stmt).first()
+    rel_summary = (rel_row[0], rel_row[1], rel_row[2]) if rel_row else (0, 0, 0)
+
+    # 3. Trạng thái thu hồi (Recall) nếu có bảng recalls
     recall_state: tuple[Any, ...] = ()
     try:
         from app.services.recall_database import recall_schema_available
@@ -69,17 +83,38 @@ def _compute_trace_integrity_fingerprint(
     except Exception:
         pass
 
-    return (target_state, max_evt_id, evt_cnt, recall_state)
+    return (target_state, max_evt_id, evt_cnt, rel_summary, recall_state)
 
 
 def sanitize_public_trace_integrity(result: dict[str, Any]) -> dict[str, Any]:
-    """Loại bỏ triệt để các ID cơ sở dữ liệu nội bộ và tên riêng tổ chức trung gian (S-48 & S-50).
+    """Loại bỏ triệt để các ID cơ sở dữ liệu nội bộ, Event ID và tên riêng đối tác (S-48 & S-50).
 
     Chỉ giữ lại các trường an toàn cho người tiêu dùng công khai:
     - batch_code, level, product_name, stage_name, total_events, is_valid, status,
       latest_hash, genesis_hash, error_type, message.
-    - Loại bỏ: batch_id, current_org_id, current_org_name, tampered_event_id.
+    - Làm sạch toàn bộ thông điệp lỗi: Sử dụng thông báo công khai cố định,
+      tuyệt đối không để lộ Event ID nội bộ hay chi tiết lỗi kỹ thuật.
     """
+    is_overall_valid = result.get("is_valid", False)
+    batch_code = result.get("batch_code", "")
+
+    # Thông báo tổng quan công khai cố định, an toàn
+    if is_overall_valid:
+        if result.get("total_events_checked", 0) > 0:
+            public_message = (
+                f"Dữ liệu truy xuất nguồn gốc của lô '{batch_code}' "
+                "đã được xác thực toàn vẹn 100% qua toàn bộ chuỗi cung ứng."
+            )
+        else:
+            public_message = (
+                f"Lô '{batch_code}' hợp lệ nhưng chưa có sự kiện nào được ghi nhận trong hệ thống."
+            )
+    else:
+        public_message = (
+            f"CẢNH BÁO: Dữ liệu truy xuất nguồn gốc của lô '{batch_code}' "
+            "không bảo đảm tính toàn vẹn. Vui lòng liên hệ đơn vị quản lý để kiểm tra."
+        )
+
     sanitized_nodes = []
     for node in result.get("nodes", []):
         level = node.get("level", 0)
@@ -88,18 +123,28 @@ def sanitize_public_trace_integrity(result: dict[str, Any]) -> dict[str, Any]:
         else:
             stage_name = f"Khâu cung ứng cấp {level}"
 
+        is_node_valid = node.get("is_valid", False)
+        if is_node_valid:
+            node_public_msg = (
+                "Dữ liệu mắt xích toàn vẹn và hợp lệ."
+                if node.get("total_events", 0) > 0
+                else "Mắt xích chưa có sự kiện ghi nhận."
+            )
+        else:
+            node_public_msg = "Phát hiện sai lệch chuỗi dữ liệu tại mắt xích này."
+
         sanitized_nodes.append({
             "batch_code": node.get("code") or node.get("batch_code"),
             "level": level,
             "product_name": node.get("product_name"),
             "stage_name": stage_name,
             "total_events": node.get("total_events", 0),
-            "is_valid": node.get("is_valid", False),
+            "is_valid": is_node_valid,
             "status": node.get("status", "VERIFIED"),
             "latest_hash": node.get("latest_hash"),
             "genesis_hash": node.get("genesis_hash"),
             "error_type": node.get("error_type"),
-            "message": node.get("message"),
+            "message": node_public_msg,
         })
 
     sanitized_tampered = None
@@ -109,13 +154,13 @@ def sanitize_public_trace_integrity(result: dict[str, Any]) -> dict[str, Any]:
             "batch_code": raw_tampered.get("batch_code"),
             "level": raw_tampered.get("level", 0),
             "error_type": raw_tampered.get("error_type"),
-            "message": raw_tampered.get("message"),
+            "message": "Phát hiện sai lệch tính toàn vẹn trong chuỗi dữ liệu.",
         }
 
     return {
-        "is_valid": result["is_valid"],
-        "valid": result["valid"],
-        "batch_code": result["batch_code"],
+        "is_valid": is_overall_valid,
+        "valid": is_overall_valid,
+        "batch_code": batch_code,
         "status": result["status"],
         "total_batches_checked": result["total_batches_checked"],
         "total_events_checked": result["total_events_checked"],
@@ -123,7 +168,7 @@ def sanitize_public_trace_integrity(result: dict[str, Any]) -> dict[str, Any]:
         "latest_hash": result.get("latest_hash"),
         "verification_seal": result["verification_seal"],
         "verified_at": result["verified_at"],
-        "message": result["message"],
+        "message": public_message,
         "nodes": sanitized_nodes,
         "tampered_node": sanitized_tampered,
     }
