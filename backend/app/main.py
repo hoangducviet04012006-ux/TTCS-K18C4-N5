@@ -44,9 +44,11 @@ from app.routers import (
     farms,
     handovers,
     health,
-    locations,
     imports,
+    locations,
     products,
+    qr,           # <-- Đăng ký thêm router QR (S-46)
+    temperature,  # <-- Đăng ký thêm router Temperature (S-41)
     users,
 )
 from app.schemas import HealthResponse
@@ -197,6 +199,8 @@ app.include_router(handovers.router)
 app.include_router(products.router)
 app.include_router(locations.router)
 app.include_router(imports.router)
+app.include_router(temperature.router)  # <-- Kích hoạt endpoint /temperature
+app.include_router(qr.router)           # <-- Kích hoạt endpoint /qr
 
 # Recall keeps the existing root-level API convention.
 from app.routers import recalls  # noqa: E402

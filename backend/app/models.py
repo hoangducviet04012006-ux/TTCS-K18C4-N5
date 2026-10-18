@@ -894,3 +894,15 @@ __all__ = [
 from app.recall_models import Recall, RecallAcknowledgment, IdempotencyRecord  # noqa: E402,F401
 from app.recall_models import register_event_evidence_index  # noqa: E402
 register_event_evidence_index(BatchEvent.__table__)
+from sqlalchemy import Column, Integer, Float, DateTime, ForeignKey
+from datetime import datetime
+from app.database import Base
+
+class TemperatureLog(Base):
+    __tablename__ = "temperature_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    trip_id = Column(Integer, ForeignKey("cold_trips.id"), nullable=False)
+    temperature = Column(Float, nullable=False)
+    recorded_at = Column(DateTime, nullable=False, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
