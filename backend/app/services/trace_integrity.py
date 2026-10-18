@@ -15,14 +15,14 @@ import time
 from typing import Any
 
 from fastapi import HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session, joinedload
 
 from app.hash_chain import GENESIS_HASH, verify_batch_chain
 from app.models import Batch, BatchEvent, BatchRelation
 
-# Bộ nhớ đệm in-memory (60s TTL)
-_TRACE_INTEGRITY_CACHE: dict[int, tuple[float, dict[str, Any]]] = {}
+# Bộ nhớ đệm in-memory (60s TTL) lưu (expires_at, lineage_ids, fingerprint, result)
+_TRACE_INTEGRITY_CACHE: dict[int, tuple[float, list[int], tuple[Any, ...], dict[str, Any]]] = {}
 CACHE_TTL_SECONDS: int = 60
 
 
@@ -32,6 +32,101 @@ def clear_trace_integrity_cache(batch_id: int | None = None) -> None:
         _TRACE_INTEGRITY_CACHE.pop(batch_id, None)
     else:
         _TRACE_INTEGRITY_CACHE.clear()
+
+
+def _compute_trace_integrity_fingerprint(
+    db: Session, target: Batch, lineage_ids: list[int]
+) -> tuple[Any, ...]:
+    """Tính toán fingerprint dữ liệu và trạng thái thu hồi của lô và chuỗi phả hệ.
+
+    Nếu bất kỳ sự kiện nào được ghi thêm, số lượng/trạng thái lô thay đổi,
+    hoặc có lệnh thu hồi (Recall) được mở/hoàn tất, fingerprint sẽ thay đổi
+    và làm vô hiệu hóa cache ngay lập tức.
+    """
+    target_state = (target.status, str(target.remaining_quantity), target.current_org_id)
+
+    # 1. Tóm tắt sự kiện của tất cả các lô trong phả hệ
+    evt_stmt = (
+        select(func.max(BatchEvent.id), func.count(BatchEvent.id))
+        .where(BatchEvent.batch_id.in_(lineage_ids))
+    )
+    evt_row = db.execute(evt_stmt).first()
+    max_evt_id = evt_row[0] if evt_row else None
+    evt_cnt = evt_row[1] if evt_row else 0
+
+    # 2. Trạng thái thu hồi (Recall) nếu có bảng recalls
+    recall_state: tuple[Any, ...] = ()
+    try:
+        from app.services.recall_database import recall_schema_available
+        if recall_schema_available(db):
+            from app.recall_models import Recall
+            recalls = db.execute(
+                select(Recall.id, Recall.status)
+                .where(Recall.root_batch_id.in_(lineage_ids))
+                .order_by(Recall.id)
+            ).all()
+            recall_state = tuple((r[0], r[1]) for r in recalls)
+    except Exception:
+        pass
+
+    return (target_state, max_evt_id, evt_cnt, recall_state)
+
+
+def sanitize_public_trace_integrity(result: dict[str, Any]) -> dict[str, Any]:
+    """Loại bỏ triệt để các ID cơ sở dữ liệu nội bộ và tên riêng tổ chức trung gian (S-48 & S-50).
+
+    Chỉ giữ lại các trường an toàn cho người tiêu dùng công khai:
+    - batch_code, level, product_name, stage_name, total_events, is_valid, status,
+      latest_hash, genesis_hash, error_type, message.
+    - Loại bỏ: batch_id, current_org_id, current_org_name, tampered_event_id.
+    """
+    sanitized_nodes = []
+    for node in result.get("nodes", []):
+        level = node.get("level", 0)
+        if level == 0:
+            stage_name = "Lô thành phẩm thương mại"
+        else:
+            stage_name = f"Khâu cung ứng cấp {level}"
+
+        sanitized_nodes.append({
+            "batch_code": node.get("code") or node.get("batch_code"),
+            "level": level,
+            "product_name": node.get("product_name"),
+            "stage_name": stage_name,
+            "total_events": node.get("total_events", 0),
+            "is_valid": node.get("is_valid", False),
+            "status": node.get("status", "VERIFIED"),
+            "latest_hash": node.get("latest_hash"),
+            "genesis_hash": node.get("genesis_hash"),
+            "error_type": node.get("error_type"),
+            "message": node.get("message"),
+        })
+
+    sanitized_tampered = None
+    if result.get("tampered_node"):
+        raw_tampered = result["tampered_node"]
+        sanitized_tampered = {
+            "batch_code": raw_tampered.get("batch_code"),
+            "level": raw_tampered.get("level", 0),
+            "error_type": raw_tampered.get("error_type"),
+            "message": raw_tampered.get("message"),
+        }
+
+    return {
+        "is_valid": result["is_valid"],
+        "valid": result["valid"],
+        "batch_code": result["batch_code"],
+        "status": result["status"],
+        "total_batches_checked": result["total_batches_checked"],
+        "total_events_checked": result["total_events_checked"],
+        "root_hashes": result.get("root_hashes", []),
+        "latest_hash": result.get("latest_hash"),
+        "verification_seal": result["verification_seal"],
+        "verified_at": result["verified_at"],
+        "message": result["message"],
+        "nodes": sanitized_nodes,
+        "tampered_node": sanitized_tampered,
+    }
 
 
 def verify_traceability_integrity(  # noqa: C901
@@ -89,11 +184,18 @@ def verify_traceability_integrity(  # noqa: C901
             detail=f"Không tìm thấy lô nông sản '{identifier}' trong hệ thống.",
         )
 
-    # 2. Kiểm tra Cache 60s
+    # 2. Kiểm tra Cache 60s có kiểm chứng Fingerprint chống dữ liệu cũ
     if use_cache and target.id in _TRACE_INTEGRITY_CACHE:
-        expires_at, cached_res = _TRACE_INTEGRITY_CACHE[target.id]
+        expires_at, lineage_ids, cached_fingerprint, cached_res = _TRACE_INTEGRITY_CACHE[target.id]
         if now_ts < expires_at:
-            return cached_res
+            current_fp = _compute_trace_integrity_fingerprint(db, target, lineage_ids)
+            if current_fp == cached_fingerprint:
+                return cached_res
+            else:
+                # Dữ liệu lô hoặc trạng thái thu hồi đã thay đổi -> Hủy cache ngay
+                _TRACE_INTEGRITY_CACHE.pop(target.id, None)
+        else:
+            _TRACE_INTEGRITY_CACHE.pop(target.id, None)
 
     # 3. Thuật toán BFS lặp duyệt ngược phả hệ (ancestors)
     queue: deque[tuple[int, int, tuple[int, ...]]] = deque()
@@ -268,8 +370,14 @@ def verify_traceability_integrity(  # noqa: C901
         "tampered_node": tampered_node_info,
     }
 
-    # 7. Lưu Cache 60s nếu dữ liệu hợp lệ
+    # 7. Lưu Cache 60s kèm Fingerprint nếu dữ liệu hợp lệ
     if use_cache and overall_valid:
-        _TRACE_INTEGRITY_CACHE[target.id] = (now_ts + CACHE_TTL_SECONDS, result)
+        fp = _compute_trace_integrity_fingerprint(db, target, ordered_batch_ids)
+        _TRACE_INTEGRITY_CACHE[target.id] = (
+            now_ts + CACHE_TTL_SECONDS,
+            ordered_batch_ids,
+            fp,
+            result,
+        )
 
     return result

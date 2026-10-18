@@ -384,3 +384,128 @@ def test_10_trace_integrity_rbac_inspector_vs_unauthorized(client: TestClient) -
     # Không đăng nhập -> 401 Unauthorized
     unauth_res = client.get(f"/batches/{batch_id}/trace-integrity")
     assert unauth_res.status_code == 401
+
+
+def test_11_public_trace_integrity_sanitizes_internal_data(client: TestClient) -> None:
+    """Test 11: Endpoint công khai S-48/S-50 KHÔNG để lộ batch_id, ID nội bộ, hay tên tổ chức."""
+    clear_trace_integrity_cache()
+    clear_rate_limit_cache()
+    headers = _get_farmer_auth_headers()
+    _, batch_id, actual_code = _create_sample_farm_and_batch(client)
+
+    client.post(
+        f"/batches/{batch_id}/events",
+        json={"event_type": "HARVEST_NOTE", "event_data": "Thu hoạch dâu sạch"},
+        headers=headers,
+    )
+
+    pub_res = client.get(f"/public/trace/{actual_code}/integrity")
+    assert pub_res.status_code == 200
+    pub_data = pub_res.json()
+
+    # Xác thực rằng batch_id KHÔNG tồn tại trong top-level
+    assert "batch_id" not in pub_data
+    assert pub_data["batch_code"] == actual_code
+    assert pub_data["is_valid"] is True
+
+    # Xác thực từng node không chứa ID nội bộ hay tên riêng đối tác
+    for node in pub_data["nodes"]:
+        assert "batch_id" not in node
+        assert "current_org_id" not in node
+        assert "current_org_name" not in node
+        assert "tampered_event_id" not in node
+        assert "stage_name" in node
+
+
+def test_12_rate_limiter_anti_spoofing_rejects_untrusted_forwarded_for() -> None:
+    """Test 12: Rate limiter chống giả mạo IP: Client kết nối từ IP ngoài không thể dùng X-Forwarded-For giả mạo."""
+    from unittest.mock import MagicMock
+    from fastapi import HTTPException, Request
+    import pytest
+    from app.services.rate_limiter import check_scan_rate_limit, get_trusted_client_ip
+
+    clear_rate_limit_cache()
+
+    # 1. Giả lập client kết nối trực tiếp từ IP untrusted ngoài Internet: 198.51.100.24
+    untrusted_request = MagicMock(spec=Request)
+    untrusted_request.client.host = "198.51.100.24"
+    untrusted_request.headers = {"x-forwarded-for": "10.0.0.1"}
+
+    # IP thực sự được nhận diện phải là 198.51.100.24, bỏ qua hoàn toàn header 10.0.0.1
+    detected_ip = get_trusted_client_ip(untrusted_request)
+    assert detected_ip == "198.51.100.24"
+
+    # Giả lập quét 30 mã từ IP này
+    for i in range(1, 31):
+        check_scan_rate_limit(untrusted_request, f"PROBE-{i:03d}")
+
+    # Yêu cầu 31 từ IP này dù đổi header x-forwarded-for thành gì cũng bị chặn 429
+    untrusted_request.headers = {"x-forwarded-for": "192.168.1.99"}
+    with pytest.raises(HTTPException) as exc_info:
+        check_scan_rate_limit(untrusted_request, "PROBE-031")
+    assert exc_info.value.status_code == 429
+
+
+def test_13_trace_integrity_cache_invalidates_on_new_event(client: TestClient) -> None:
+    """Test 13: Cache 60s tự động vô hiệu hóa ngay khi có sự kiện mới được thêm vào lô."""
+    clear_trace_integrity_cache()
+    headers = _get_farmer_auth_headers()
+    _, batch_id, batch_code = _create_sample_farm_and_batch(client)
+
+    client.post(
+        f"/batches/{batch_id}/events",
+        json={"event_type": "EVT_1", "event_data": "Sự kiện 1"},
+        headers=headers,
+    )
+
+    # Lần 1: Tính toán và lưu cache
+    res1 = client.get(f"/batches/{batch_id}/trace-integrity", headers=headers)
+    assert res1.status_code == 200
+    assert res1.json()["total_events_checked"] >= 1
+    seal1 = res1.json()["verification_seal"]
+
+    # Ghi thêm sự kiện thứ 2
+    client.post(
+        f"/batches/{batch_id}/events",
+        json={"event_type": "EVT_2", "event_data": "Sự kiện 2"},
+        headers=headers,
+    )
+
+    # Lần 2 (ngay lập tức trong 60s): Cache PHẢI được vô hiệu hóa tự động nhờ fingerprint
+    res2 = client.get(f"/batches/{batch_id}/trace-integrity", headers=headers)
+    assert res2.status_code == 200
+    assert res2.json()["total_events_checked"] >= 2
+    assert res2.json()["verification_seal"] != seal1
+
+
+def test_14_trace_integrity_cache_invalidates_on_data_change(
+    client: TestClient, session_factory: sessionmaker[Session]
+) -> None:
+    """Test 14: Cache 60s tự động vô hiệu hóa ngay khi dữ liệu lô hoặc trạng thái thay đổi."""
+    clear_trace_integrity_cache()
+    headers = _get_farmer_auth_headers()
+    _, batch_id, batch_code = _create_sample_farm_and_batch(client)
+
+    client.post(
+        f"/batches/{batch_id}/events",
+        json={"event_type": "HARVEST", "event_data": "Thu hoạch"},
+        headers=headers,
+    )
+
+    # Lần 1: Cache được lưu
+    res1 = client.get(f"/batches/{batch_id}/trace-integrity", headers=headers)
+    assert res1.status_code == 200
+    assert res1.json()["verified_at"] is not None
+
+    # Giả lập thay đổi trạng thái lô trực tiếp
+    with session_factory() as session:
+        from app.models import Batch
+        b = session.get(Batch, batch_id)
+        if b:
+            b.status = "CONSUMED"
+            session.commit()
+
+    # Lần 2: Cache phải tự động phát hiện fingerprint thay đổi và tính toán lại
+    res2 = client.get(f"/batches/{batch_id}/trace-integrity", headers=headers)
+    assert res2.status_code == 200
+    assert res2.json()["status"] == "VERIFIED"

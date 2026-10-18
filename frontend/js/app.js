@@ -3690,14 +3690,26 @@ async function verifyDetailChain(batchId, prefix = "detail") {
 /** Xác thực toàn diện tính toàn vẹn phả hệ dữ liệu truy xuất nguồn gốc (Story S-50) */
 async function verifyTraceabilityIntegrity(batchId) {
   const btn = $("btn-traceability-verify-integrity");
-  const idleText = "Kiểm tra toàn vẹn chuỗi truy xuất";
-  if (btn) setButtonLoading(btn, true, "Đang xác thực chuỗi…", idleText);
+  const idleText = "Kiểm tra tính toàn vẹn";
+  if (btn) setButtonLoading(btn, true, "Đang kiểm tra…", idleText);
   try {
     const res = await apiRequest(`/batches/${batchId}/trace-integrity`);
     const isValid = Boolean(res.valid ?? res.is_valid);
     if (isValid) {
+      setHidden("traceability-valid-banner", false);
+      setHidden("traceability-alert-banner", true);
+      const text = $("traceability-valid-text");
+      if (text) {
+        text.textContent = `✓ ${res.message || "Toàn bộ chuỗi truy xuất nguồn gốc toàn vẹn 100%."}`;
+      }
       toast(res.message || "Toàn bộ chuỗi truy xuất nguồn gốc toàn vẹn 100%.", "success");
     } else {
+      setHidden("traceability-valid-banner", true);
+      setHidden("traceability-alert-banner", false);
+      const text = $("traceability-alert-text");
+      if (text) {
+        text.textContent = `⚠ ${res.message || "Cảnh báo vi phạm toàn vẹn dữ liệu!"}`;
+      }
       toast(`CẢNH BÁO: ${res.message}`, "error");
     }
     return res;
@@ -3705,7 +3717,7 @@ async function verifyTraceabilityIntegrity(batchId) {
     toast(`Lỗi xác thực toàn vẹn chuỗi truy xuất: ${err.message}`, "error");
     throw err;
   } finally {
-    if (btn) setButtonLoading(btn, false, "Đang xác thực chuỗi…", idleText);
+    if (btn) setButtonLoading(btn, false, "Đang kiểm tra…", idleText);
   }
 }
 window.verifyTraceabilityIntegrity = verifyTraceabilityIntegrity;
@@ -5213,7 +5225,22 @@ function setupAppScreens() {
     setHidden("events-timeline-alert-banner", true);
     $("events-timeline-list").replaceChildren();
   });
-  $("trace-screen-batch").addEventListener("change", () => setHidden("trace-lineage-body", true));
+  const btnTraceIntegrity = $("btn-traceability-verify-integrity");
+  if (btnTraceIntegrity) {
+    btnTraceIntegrity.addEventListener("click", () => {
+      const id = Number($("trace-screen-batch").value);
+      if (id && session) {
+        verifyTraceabilityIntegrity(id);
+      } else if (!id) {
+        toast("Vui lòng chọn lô cần kiểm tra tính toàn vẹn chuỗi truy xuất.", "error");
+      }
+    });
+  }
+  $("trace-screen-batch").addEventListener("change", () => {
+    setHidden("traceability-valid-banner", true);
+    setHidden("traceability-alert-banner", true);
+    setHidden("trace-lineage-body", true);
+  });
 }
 
 function renderAppScreen(scroll = true) {

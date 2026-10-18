@@ -12,11 +12,17 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import Batch, User
-from app.schemas_integrity import TraceabilityIntegrityResponse
+from app.schemas_integrity import (
+    PublicTraceabilityIntegrityResponse,
+    TraceabilityIntegrityResponse,
+)
 from app.security import get_current_user
 from app.services.permissions import can_view_batch
 from app.services.rate_limiter import check_scan_rate_limit
-from app.services.trace_integrity import verify_traceability_integrity
+from app.services.trace_integrity import (
+    sanitize_public_trace_integrity,
+    verify_traceability_integrity,
+)
 
 router = APIRouter(
     tags=["Traceability Integrity"],
@@ -57,13 +63,15 @@ def get_batch_trace_integrity(
 
 @router.get(
     "/public/trace/{batch_code}/integrity",
-    response_model=TraceabilityIntegrityResponse,
+    response_model=PublicTraceabilityIntegrityResponse,
     status_code=status.HTTP_200_OK,
     summary="Xác thực toàn vẹn dữ liệu truy xuất nguồn gốc công khai quét QR (Story S-50)",
     description=(
         "Endpoint công khai dành cho người tiêu dùng và khách quét mã QR kiểm tra "
         "tính toàn vẹn toán học của dữ liệu truy xuất nguồn gốc. Không yêu cầu đăng nhập. "
-        "Được bảo vệ bằng bộ nhớ đệm Cache 60s và giới hạn tần suất Rate Limit 30 mã/phút/IP."
+        "Bảo vệ dữ liệu công khai theo chuẩn S-48 (không để lộ ID database và tên riêng đối tác). "
+        "Được bảo vệ bằng bộ nhớ đệm Cache 60s và giới hạn tần suất Rate Limit 30 mã/phút/IP "
+        "với cơ chế chống giả mạo header X-Forwarded-For."
     ),
     responses={
         status.HTTP_404_NOT_FOUND: {"description": "Không tìm thấy lô nông sản."},
@@ -74,19 +82,12 @@ def get_public_trace_integrity(
     request: Request,
     batch_code: str = Path(..., min_length=1, max_length=100, description="Mã lô nông sản cần xác thực."),
     db: Session = Depends(get_db),
-) -> TraceabilityIntegrityResponse:
+) -> PublicTraceabilityIntegrityResponse:
     """Xác thực toàn vẹn chuỗi truy xuất công khai không cần đăng nhập."""
-    # 1. Trích xuất địa chỉ IP client
-    client_ip = request.headers.get("x-forwarded-for")
-    if client_ip:
-        client_ip = client_ip.split(",")[0].strip()
-    else:
-        client_ip = request.client.host if request.client else "127.0.0.1"
+    # 1. Kiểm tra Rate Limiting chống dò quét mã lô (30 mã/phút) bảo vệ chống giả mạo IP
+    check_scan_rate_limit(request, batch_code)
 
-    # 2. Kiểm tra Rate Limiting chống dò quét mã lô (30 mã/phút)
-    check_scan_rate_limit(client_ip, batch_code)
-
-    # 3. Thẩm định tính toàn vẹn (tự động cache 60s)
+    # 2. Thẩm định tính toàn vẹn (tự động cache 60s)
     clean_code = batch_code.strip()
     target_batch = db.scalar(select(Batch.id).where(Batch.code == clean_code))
     if not target_batch:
@@ -96,4 +97,5 @@ def get_public_trace_integrity(
         )
 
     result = verify_traceability_integrity(db, batch_code=clean_code, use_cache=True)
-    return TraceabilityIntegrityResponse(**result)
+    sanitized = sanitize_public_trace_integrity(result)
+    return PublicTraceabilityIntegrityResponse(**sanitized)
