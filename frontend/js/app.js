@@ -3578,9 +3578,55 @@ function openTimelineModal(batchId) {
   switchDetailTab("timeline");
 }
 
+/** Tải mã QR PNG của mã lô thực từ API đã kiểm tra quyền. */
+async function downloadBatchQrPng() {
+  const batchId = currentDetailBatchId;
+  if (!batchId || !session) {
+    toast("Vui lòng đăng nhập và mở chi tiết một lô trước.", "error");
+    return;
+  }
+  const button = $("btn-detail-qr-download");
+  if (button) button.disabled = true;
+  try {
+    const response = await fetch(`${API_BASE_URL}/batches/${encodeURIComponent(batchId)}/qr`, {
+      method: "GET", credentials: "include",
+      headers: { "X-Requested-With": "XMLHttpRequest" },
+    });
+    if (!response.ok) {
+      let message = "Không thể tạo mã QR cho lô này.";
+      try {
+        const payload = await response.json();
+        if (payload && typeof payload.detail === "string") message = payload.detail;
+      } catch (_) { /* API có thể không trả JSON. */ }
+      throw new Error(message);
+    }
+    const blob = await response.blob();
+    if (!blob.type.includes("image/png")) throw new Error("API không trả về ảnh PNG hợp lệ.");
+    const objectUrl = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = objectUrl;
+    const code = String(currentDetailBatchCode || batchId).replace(/[^a-zA-Z0-9_-]/g, "_");
+    link.download = `QR-${code}.png`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(objectUrl);
+    toast("Đã tải ảnh QR mã lô dạng PNG.", "success");
+  } catch (error) {
+    toast(`Tải QR thất bại: ${error.message}`, "error");
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+
 /** Mở modal chi tiết lô trung tâm 3 Tab (S-25: T-58, T-59) */
 async function openBatchDetailsModal(batchId) {
   currentDetailBatchId = batchId;
+  const qrButton = $("btn-detail-qr-download");
+  if (qrButton && !qrButton.dataset.qrBound) {
+    qrButton.dataset.qrBound = "true";
+    qrButton.addEventListener("click", downloadBatchQrPng);
+  }
   const modal = $("modal-batch-details");
   if (!modal) return;
   modal.hidden = false;
