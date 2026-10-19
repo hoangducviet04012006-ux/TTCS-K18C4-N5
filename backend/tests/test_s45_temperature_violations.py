@@ -31,10 +31,8 @@ from app.models import (
     Batch,
     BatchEvent,
     Farm,
-    Handover,
     Organization,
     Product,
-    ROLE_ADMIN,
     ROLE_DISTRIBUTOR,
     ROLE_FARMER,
     ROLE_INSPECTOR,
@@ -46,11 +44,6 @@ from app.models import (
 from app.security import hash_password
 from app.services.cold_chain import (
     detect_violations_from_readings,
-    get_batch_violation_summary,
-    list_batch_violations,
-    list_trip_violations,
-    record_temperature_reading,
-    record_temperature_violation_for_batch,
     record_temperature_violation_for_trip,
 )
 from app.trip_models import (
@@ -59,8 +52,6 @@ from app.trip_models import (
     TRIP_STATUS_IN_TRANSIT,
     ColdTrip,
     ColdTripBatch,
-    TemperatureLog,
-    TemperatureViolation,
 )
 
 PASSWORD = "test-password-123"
@@ -102,7 +93,10 @@ def setup_s45_data(session_factory: sessionmaker[Session]) -> dict[str, Any]:
             username="trans_admin_s45", password=hash_password(PASSWORD), role=ROLE_ORG_ADMIN, organization_id=org_trans.id
         )
         u_other_trans = User(
-            username="other_trans_s45", password=hash_password(PASSWORD), role=ROLE_TRANSPORTER, organization_id=org_other_trans.id
+            username="other_trans_s45",
+            password=hash_password(PASSWORD),
+            role=ROLE_TRANSPORTER,
+            organization_id=org_other_trans.id,
         )
         u_distributor = User(
             username="dist_s45", password=hash_password(PASSWORD), role=ROLE_DISTRIBUTOR, organization_id=org_dist.id
@@ -120,7 +114,13 @@ def setup_s45_data(session_factory: sessionmaker[Session]) -> dict[str, Any]:
         session.flush()
 
         prod = Product(name="Thịt bò mát cao cấp", unit="kg")
-        farm = Farm(name="Trang trại chăn nuôi Thái Nguyên", location="Thái Nguyên", area=10.0, owner="HTX Xanh", organization_id=org_farm.id)
+        farm = Farm(
+            name="Trang trại chăn nuôi Thái Nguyên",
+            location="Thái Nguyên",
+            area=10.0,
+            owner="HTX Xanh",
+            organization_id=org_farm.id,
+        )
         session.add_all([prod, farm])
         session.flush()
 

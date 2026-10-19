@@ -1421,4 +1421,3 @@ def create_batch_temperature_violation(
 
     violation = record_temperature_violation_for_batch(db, batch_id, payload, user=current_user)
     return TemperatureViolationResponse.model_validate(violation)
-

@@ -27,7 +27,6 @@ from app.schemas_trips import (
 from app.security import get_current_user
 from app.services.cold_chain import (
     get_batch_violation_summary,
-    list_batch_violations,
     list_trip_readings,
     list_trip_violations,
     record_temperature_reading,
@@ -208,7 +207,8 @@ def cancel_trip(
     status_code=status.HTTP_201_CREATED,
     summary="Ghi nhận sự cố vi phạm nhiệt độ cho chuyến xe và các lô (S-45)",
     description=(
-        "Khi hệ thống phát hiện cảm biến nhiệt độ ghi nhận giá trị vi phạm (vượt ngưỡng hoặc kéo dài trên 30 phút theo S-43):\n\n"
+        "Khi hệ thống phát hiện cảm biến nhiệt độ ghi nhận giá trị vi phạm "
+        "(vượt ngưỡng hoặc kéo dài trên 30 phút theo S-43):\n\n"
         "- Tự động ghi nhận sự kiện `TEMPERATURE_VIOLATION` vào hash-chain bất biến của mọi lô đang chở trên chuyến.\n"
         "- Cập nhật trạng thái và gắn cờ cảnh báo `has_temperature_violation = True` cho từng lô.\n"
         "- Ghi nhật ký kiểm toán `AuditLog` cho chuyến xe và các lô liên quan.\n"
@@ -335,4 +335,3 @@ def create_batch_violation(
     """Ghi nhận vi phạm nhiệt độ trực tiếp cho một lô nông sản."""
     violation = record_temperature_violation_for_batch(db, batch_id, payload, user=current_user)
     return TemperatureViolationResponse.model_validate(violation)
-

@@ -10,7 +10,7 @@ Chức năng chính:
 3. S-43: Thuật toán cửa sổ trượt phát hiện vi phạm kéo dài >= 30 phút, gộp 2 lần vượt cách nhau < 5 phút.
 """
 
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Any
 
 from fastapi import HTTPException, status

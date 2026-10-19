@@ -8,7 +8,6 @@ Gồm 2 bảng:
 from datetime import datetime, timezone
 
 from sqlalchemy import (
-    Boolean,
     DateTime,
     Float,
     ForeignKey,
