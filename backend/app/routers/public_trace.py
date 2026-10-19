@@ -9,7 +9,12 @@ router = APIRouter(tags=["Public Traceability"])
 
 @router.get("/public/trace/{batch_code}", summary="Thông tin truy xuất công khai theo mã lô")
 def public_trace_by_code(batch_code: str, db: Session = Depends(get_db)):
-    batch = db.query(Batch).options(joinedload(Batch.product), joinedload(Batch.plot), joinedload(Batch.farm)).filter(Batch.code == batch_code).first()
+    batch = (
+        db.query(Batch)
+        .options(joinedload(Batch.product), joinedload(Batch.plot), joinedload(Batch.farm))
+        .filter(Batch.code == batch_code)
+        .first()
+    )
     if batch is None:
         raise HTTPException(status_code=404, detail="Không tìm thấy lô nông sản.")
     lineage = trace_backwards(db, batch.id)
