@@ -3578,45 +3578,56 @@ function openTimelineModal(batchId) {
   switchDetailTab("timeline");
 }
 
-/** Tải mã QR PNG của mã lô thực từ API đã kiểm tra quyền. */
-async function downloadBatchQrPng() {
+/** Hiển thị modal QR truy xuất; không tự tải ảnh xuống. */
+let currentBatchQrObjectUrl = null;
+async function showBatchQrModal() {
   const batchId = currentDetailBatchId;
-  if (!batchId || !session) {
-    toast("Vui lòng đăng nhập và mở chi tiết một lô trước.", "error");
-    return;
-  }
-  const button = $("btn-detail-qr-download");
-  if (button) button.disabled = true;
+  if (!batchId || !session) { toast("Vui lòng đăng nhập và mở chi tiết một lô trước.", "error"); return; }
+  const modal = $("modal-batch-qr");
+  const image = $("batch-qr-image");
+  const statusEl = $("batch-qr-status");
+  const urlEl = $("batch-qr-url");
+  const download = $("btn-download-batch-qr");
+  modal.hidden = false;
+  image.hidden = true; statusEl.hidden = false; statusEl.textContent = "Đang tải mã QR...";
+  urlEl.textContent = ""; urlEl.removeAttribute("href"); download.disabled = true;
+  $("batch-qr-product").textContent = ""; $("batch-qr-code").textContent = "";
   try {
-    const response = await fetch(`${API_BASE_URL}/batches/${encodeURIComponent(batchId)}/qr`, {
-      method: "GET", credentials: "include",
-      headers: { "X-Requested-With": "XMLHttpRequest" },
-    });
-    if (!response.ok) {
-      let message = "Không thể tạo mã QR cho lô này.";
-      try {
-        const payload = await response.json();
-        if (payload && typeof payload.detail === "string") message = payload.detail;
-      } catch (_) { /* API có thể không trả JSON. */ }
+    const infoResponse = await fetch(`${API_BASE_URL}/batches/${encodeURIComponent(batchId)}/qr-info`, {credentials:"include", headers:{"X-Requested-With":"XMLHttpRequest"}});
+    if (!infoResponse.ok) {
+      let message = "Không thể tải thông tin QR.";
+      try { const data = await infoResponse.json(); if (typeof data.detail === "string") message = data.detail; } catch (_) {}
       throw new Error(message);
     }
-    const blob = await response.blob();
+    const info = await infoResponse.json();
+    const qrResponse = await fetch(`${API_BASE_URL}/batches/${encodeURIComponent(batchId)}/qr`, {credentials:"include", headers:{"X-Requested-With":"XMLHttpRequest"}});
+    if (!qrResponse.ok) {
+      let message = "Không thể tạo mã QR.";
+      try { const data = await qrResponse.json(); if (typeof data.detail === "string") message = data.detail; } catch (_) {}
+      throw new Error(message);
+    }
+    const blob = await qrResponse.blob();
     if (!blob.type.includes("image/png")) throw new Error("API không trả về ảnh PNG hợp lệ.");
-    const objectUrl = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = objectUrl;
-    const code = String(currentDetailBatchCode || batchId).replace(/[^a-zA-Z0-9_-]/g, "_");
-    link.download = `QR-${code}.png`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(objectUrl);
-    toast("Đã tải ảnh QR mã lô dạng PNG.", "success");
+    if (currentBatchQrObjectUrl) URL.revokeObjectURL(currentBatchQrObjectUrl);
+    currentBatchQrObjectUrl = URL.createObjectURL(blob);
+    image.src = currentBatchQrObjectUrl; image.hidden = false;
+    $("batch-qr-product").textContent = info.product_name || "Nông sản";
+    $("batch-qr-code").textContent = `Mã lô: ${info.batch_code}`;
+    urlEl.href = info.trace_url; urlEl.textContent = info.trace_url;
+    statusEl.hidden = true; download.disabled = false;
+    download.onclick = () => {
+      const a = document.createElement("a"); a.href = currentBatchQrObjectUrl;
+      a.download = `QR-${String(info.batch_code).replace(/[^a-zA-Z0-9_-]/g, "_")}.png`;
+      document.body.appendChild(a); a.click(); a.remove();
+    };
   } catch (error) {
-    toast(`Tải QR thất bại: ${error.message}`, "error");
-  } finally {
-    if (button) button.disabled = false;
+    statusEl.textContent = error.message || "Đã xảy ra lỗi khi tải mã QR.";
+    statusEl.hidden = false; toast(`Không thể hiển thị QR: ${statusEl.textContent}`, "error");
   }
+}
+function closeBatchQrModal() {
+  const modal = $("modal-batch-qr"); if (modal) modal.hidden = true;
+  if (currentBatchQrObjectUrl) { URL.revokeObjectURL(currentBatchQrObjectUrl); currentBatchQrObjectUrl = null; }
 }
 
 /** Mở modal chi tiết lô trung tâm 3 Tab (S-25: T-58, T-59) */
@@ -3625,7 +3636,7 @@ async function openBatchDetailsModal(batchId) {
   const qrButton = $("btn-detail-qr-download");
   if (qrButton && !qrButton.dataset.qrBound) {
     qrButton.dataset.qrBound = "true";
-    qrButton.addEventListener("click", downloadBatchQrPng);
+    qrButton.addEventListener("click", showBatchQrModal);
   }
   const modal = $("modal-batch-details");
   if (!modal) return;
@@ -5850,6 +5861,9 @@ async function init() {
     apiEl.textContent = API_BASE_URL;
   }
   setupAppScreens();
+  $("btn-close-batch-qr")?.addEventListener("click", closeBatchQrModal);
+  $("btn-close-batch-qr-footer")?.addEventListener("click", closeBatchQrModal);
+  $("modal-batch-qr")?.addEventListener("click", event => { if (event.target.id === "modal-batch-qr") closeBatchQrModal(); });
   bindEvents();
   bindAccountControls();
   const handleBatchPageNav = (delta) => {
