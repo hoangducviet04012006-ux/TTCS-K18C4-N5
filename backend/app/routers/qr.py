@@ -1,7 +1,7 @@
 """Authenticated QR preview/download for a batch (S-46)."""
 from io import BytesIO
 import os
-from urllib.parse import quote, urlsplit
+from urllib.parse import urlencode, urlsplit
 
 import qrcode
 from fastapi import APIRouter, Depends, HTTPException, Path, status
@@ -34,7 +34,7 @@ def _trace_url(batch_code: str) -> str:
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="PUBLIC_TRACE_BASE_URL không được chứa query hoặc fragment.",
         )
-    return f"{base}/{quote(batch_code.strip(), safe='-_')}"
+    return f"{base}?{urlencode({'batch_code': batch_code.strip()})}"
 
 
 def _authorized_batch(batch_id: int, current_user: User, db: Session) -> Batch:
