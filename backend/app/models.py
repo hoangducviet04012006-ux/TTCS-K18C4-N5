@@ -93,6 +93,10 @@ EVENT_MERGE: str = "MERGE"
 EVENT_EXPORT_MERGE: str = "EXPORT_MERGE"
 EVENT_CONSUMED: str = "CONSUMED"
 
+# Các loại sự kiện vòng đời chuyến xe lạnh (Sprint 4 - S-40)
+EVENT_TRIP_DISPATCH: str = "TRIP_DISPATCH"
+EVENT_TRIP_DELIVER: str = "TRIP_DELIVER"
+
 # Các loại quan hệ phả hệ lô (Sprint 3 - T-39)
 RELATION_SPLIT: str = "SPLIT"
 RELATION_MERGE: str = "MERGE"
@@ -873,6 +877,8 @@ __all__ = [
     "RELATION_MERGE",
     "RELATION_SPLIT",
     "RELATION_TYPES",
+    "EVENT_TRIP_DELIVER",
+    "EVENT_TRIP_DISPATCH",
     "Farm",
     "HANDOVER_ACCEPTED",
     "HANDOVER_PENDING",
@@ -894,3 +900,6 @@ __all__ = [
 from app.recall_models import Recall, RecallAcknowledgment, IdempotencyRecord  # noqa: E402,F401
 from app.recall_models import register_event_evidence_index  # noqa: E402
 register_event_evidence_index(BatchEvent.__table__)
+
+# Register ColdTrip and ColdTripBatch tables in Base metadata for S-40
+from app.trip_models import ColdTrip, ColdTripBatch  # noqa: E402,F401
