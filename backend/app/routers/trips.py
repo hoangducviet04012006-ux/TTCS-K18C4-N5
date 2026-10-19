@@ -60,7 +60,7 @@ def create_trip(
 ) -> TripDetailResponse:
     """Tạo mới chuyến vận chuyển lạnh."""
     trip = create_cold_trip(db, current_user, payload)
-    return build_trip_detail_response(trip)
+    return build_trip_detail_response(trip, user=current_user, db=db)
 
 
 @router.get(
@@ -99,7 +99,13 @@ def get_trips(
     response_model=TripResponse,
     status_code=status.HTTP_200_OK,
     summary="Tra cứu chuyến đang chạy theo mã thùng lạnh (Hỗ trợ S-41)",
-    description="Tra cứu chuyến xe đang ở trạng thái IN_TRANSIT gắn với mã thùng lạnh để cảm biến nhiệt độ ghi nhận số đo.",
+    description=(
+        "Tra cứu chuyến xe đang ở trạng thái IN_TRANSIT gắn với mã thùng lạnh để cảm biến nhiệt độ ghi nhận số đo.\n\n"
+        "Kiểm tra phân quyền (RBAC & Organization Scope):\n"
+        "- Đơn vị vận chuyển chỉ tra cứu được chuyến của tổ chức mình (403 nếu khác tổ chức).\n"
+        "- Inspector và System Admin được tra cứu liên tổ chức để giám sát chuỗi lạnh.\n"
+        "- Trả về 404 nếu thùng lạnh không gắn với chuyến nào đang chạy."
+    ),
 )
 def get_active_trip_for_container(
     container_code: str = Path(..., description="Mã thùng lạnh cần tra cứu."),
@@ -107,7 +113,7 @@ def get_active_trip_for_container(
     db: Session = Depends(get_db),
 ) -> TripResponse:
     """Tra cứu chuyến xe đang chạy theo mã thùng lạnh."""
-    trip = find_active_trip_by_container(db, container_code)
+    trip = find_active_trip_by_container(db, container_code, user=current_user)
     if trip is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -121,7 +127,7 @@ def get_active_trip_for_container(
     response_model=TripDetailResponse,
     status_code=status.HTTP_200_OK,
     summary="Xem chi tiết chuyến vận chuyển (S-40)",
-    description="Lấy thông tin chi tiết một chuyến xe và danh sách đầy đủ các lô nông sản chở trên chuyến.",
+    description="Lấy thông tin chi tiết một chuyến xe và danh sách các lô nông sản chở trên chuyến theo phân quyền.",
 )
 def get_trip(
     trip_id: int = Path(..., ge=1, description="ID của chuyến xe cần xem."),
@@ -130,7 +136,7 @@ def get_trip(
 ) -> TripDetailResponse:
     """Lấy chi tiết một chuyến xe lạnh."""
     trip = get_cold_trip_detail(db, current_user, trip_id)
-    return build_trip_detail_response(trip)
+    return build_trip_detail_response(trip, user=current_user, db=db)
 
 
 @router.post(
@@ -153,7 +159,7 @@ def complete_trip(
 ) -> TripDetailResponse:
     """Kết thúc chuyến vận chuyển chuỗi lạnh."""
     trip = complete_cold_trip(db, current_user, trip_id, payload)
-    return build_trip_detail_response(trip)
+    return build_trip_detail_response(trip, user=current_user, db=db)
 
 
 @router.post(
@@ -176,4 +182,4 @@ def cancel_trip(
     """Hủy chuyến vận chuyển chuỗi lạnh."""
     reason = payload.notes if payload else None
     trip = cancel_cold_trip(db, current_user, trip_id, reason)
-    return build_trip_detail_response(trip)
+    return build_trip_detail_response(trip, user=current_user, db=db)

@@ -80,17 +80,48 @@ def check_transporter_permission(user: User) -> None:
         )
 
 
-def find_active_trip_by_container(db: Session, container_code: str) -> ColdTrip | None:
-    """Tìm chuyến xe đang chạy (IN_TRANSIT) của một thùng lạnh cụ thể (phục vụ S-41)."""
+def find_active_trip_by_container(
+    db: Session,
+    container_code: str,
+    user: User | None = None,
+) -> ColdTrip | None:
+    """Tìm chuyến xe đang chạy (IN_TRANSIT) của một thùng lạnh cụ thể (phục vụ S-41).
+
+    Nếu cung cấp `user`, hàm sẽ kiểm tra phân quyền RBAC và phạm vi tổ chức (organization scope):
+    - Đơn vị vận chuyển chỉ tra cứu được chuyến của tổ chức mình.
+    - Inspector và Admin được tra cứu liên tổ chức.
+    """
     clean_code = container_code.strip().upper()
-    return db.scalar(
+    trip = db.scalar(
         select(ColdTrip)
+        .options(
+            joinedload(ColdTrip.trip_batches),
+            joinedload(ColdTrip.transporter_org),
+        )
         .where(
             ColdTrip.container_code == clean_code,
             ColdTrip.status == TRIP_STATUS_IN_TRANSIT,
         )
         .limit(1)
     )
+    if trip is None:
+        return None
+
+    if user is not None:
+        role = get_effective_role(user)
+        if role not in (ROLE_INSPECTOR, ROLE_SYSTEM_ADMIN, ROLE_ADMIN):
+            if user.organization_id is None:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Tài khoản chưa được liên kết với tổ chức.",
+                )
+            if trip.transporter_org_id != user.organization_id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Bạn không có quyền tra cứu thông tin chuyến xe của tổ chức khác.",
+                )
+
+    return trip
 
 
 def _validate_batch_for_trip(db: Session, user: User, batch_id: int) -> Batch:
@@ -492,36 +523,77 @@ def build_trip_response(trip: ColdTrip) -> TripResponse:
     )
 
 
-def build_trip_detail_response(trip: ColdTrip) -> TripDetailResponse:
-    """Chuyển đổi ColdTrip ORM sang TripDetailResponse schema kèm thông tin lô chi tiết."""
-    batch_items: list[TripBatchItemResponse] = []
-    for tb in trip.trip_batches:
-        batch = tb.batch
-        product_name = ""
-        qty = 0.0
-        unit = "kg"
-        batch_code = ""
+def _build_batch_item(tb: ColdTripBatch, is_full_access: bool) -> TripBatchItemResponse:
+    """Chuyển đổi ColdTripBatch ORM sang schema TripBatchItemResponse."""
+    batch = tb.batch
+    product_name = ""
+    qty = 0.0
+    unit = "kg"
+    batch_code = ""
 
-        if batch:
-            batch_code = batch.code
-            unit = batch.unit
-            qty = float(batch.remaining_quantity or 0.0)
-            if batch.product:
-                product_name = batch.product.name
-            elif batch.product_name:
-                product_name = batch.product_name
+    if batch:
+        batch_code = batch.code
+        unit = batch.unit
+        qty = float(batch.remaining_quantity or 0.0)
+        if batch.product:
+            product_name = batch.product.name
+        elif batch.product_name:
+            product_name = batch.product_name
 
-        batch_items.append(
-            TripBatchItemResponse(
-                batch_id=tb.batch_id,
-                batch_code=batch_code,
-                product_name=product_name,
-                quantity=qty,
-                unit=unit,
-                attached_at=tb.attached_at,
-                detached_at=tb.detached_at,
-                notes=tb.notes,
-            )
+    return TripBatchItemResponse(
+        batch_id=tb.batch_id,
+        batch_code=batch_code,
+        product_name=product_name,
+        quantity=qty,
+        unit=unit,
+        attached_at=tb.attached_at,
+        detached_at=tb.detached_at,
+        notes=tb.notes if is_full_access else None,
+    )
+
+
+def build_trip_detail_response(
+    trip: ColdTrip,
+    user: User | None = None,
+    db: Session | None = None,
+) -> TripDetailResponse:
+    """Chuyển đổi ColdTrip ORM sang TripDetailResponse schema kèm phân quyền dữ liệu lô (S-40)."""
+    is_full_access = True
+    visible_trip_batches = list(trip.trip_batches)
+
+    if user is not None and db is not None:
+        role = get_effective_role(user)
+        if (
+            role not in (ROLE_INSPECTOR, ROLE_SYSTEM_ADMIN, ROLE_ADMIN)
+            and trip.transporter_org_id != user.organization_id
+        ):
+            is_full_access = False
+            visible_trip_batches = [
+                tb for tb in trip.trip_batches
+                if can_view_batch(db, user.organization_id, tb.batch_id, role)
+            ]
+
+    batch_items = [_build_batch_item(tb, is_full_access) for tb in visible_trip_batches]
+
+    if not is_full_access:
+        # Không tiết lộ thông tin tài xế, biển số, ghi chú nội bộ và tổng số lượng lô của tổ chức khác
+        return TripDetailResponse(
+            id=trip.id,
+            trip_code=trip.trip_code,
+            container_code=trip.container_code,
+            transporter_org_id=trip.transporter_org_id,
+            transporter_org_name=trip.transporter_org.name if trip.transporter_org else None,
+            status=trip.status,
+            driver_name=None,
+            vehicle_plate=None,
+            start_location=trip.start_location,
+            destination_location=trip.destination_location,
+            start_time=trip.start_time,
+            end_time=trip.end_time,
+            notes=None,
+            batch_count=len(batch_items),
+            created_at=trip.created_at,
+            batches=batch_items,
         )
 
     base = build_trip_response(trip)

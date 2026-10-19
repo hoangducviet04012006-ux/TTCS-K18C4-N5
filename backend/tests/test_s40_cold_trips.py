@@ -25,6 +25,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from app.hash_chain import verify_batch_chain
 from app.models import (
+    HANDOVER_ACCEPTED,
     HANDOVER_PENDING,
     ROLE_DISTRIBUTOR,
     ROLE_FARMER,
@@ -753,3 +754,165 @@ def test_concurrent_trip_creation_race_condition(
 
     assert len(successes) == 1, f"Expected exactly 1 success, got {len(successes)}: {results}"
     assert len(failures) == 1, f"Expected exactly 1 failure, got {len(failures)}: {results}"
+
+
+def test_security_active_container_rbac_and_org_scope(
+    client: TestClient,
+    setup_s40_test_data: dict[str, Any],
+    session_factory: sessionmaker[Session],
+) -> None:
+    """TC-S40-18: Kiểm tra an toàn phân quyền tra cứu chuyến theo container (RBAC & Org Scope).
+
+    - Transporter A mở chuyến với container CONT-ORG-A.
+    - Transporter B tra cứu CONT-ORG-A -> Bị từ chối 403 Forbidden.
+    - Farmer tra cứu CONT-ORG-A -> Bị từ chối 403 Forbidden.
+    - Distributor tra cứu CONT-ORG-A -> Bị từ chối 403 Forbidden.
+    - Inspector tra cứu CONT-ORG-A -> Thành công 200 OK.
+    - Transporter A tra cứu CONT-ORG-A -> Thành công 200 OK.
+    """
+    data = setup_s40_test_data
+    b1 = data["batch_1_id"]
+
+    # 1. Tạo tổ chức vận chuyển thứ 2 (Org Trans B) và user Transporter B
+    with session_factory() as session:
+        org_trans_b = Organization(
+            name="Logistics Nam Định (Transporter B)",
+            code="LOG-ND",
+            description="Đơn vị vận chuyển đối thủ",
+        )
+        session.add(org_trans_b)
+        session.flush()
+
+        u_trans_b = User(
+            username="trans_nd",
+            password=hash_password(PASSWORD),
+            role=ROLE_TRANSPORTER,
+            organization_id=org_trans_b.id,
+        )
+        session.add(u_trans_b)
+        session.commit()
+
+    # 2. Transporter A tạo chuyến xe với container CONT-ORG-A
+    create_res = client.post(
+        "/trips",
+        json={"container_code": "CONT-ORG-A", "batch_ids": [b1]},
+        auth=(data["u_transporter"], PASSWORD),
+    )
+    assert create_res.status_code == 201
+
+    # 3. Transporter B tra cứu container của Transporter A -> Bị từ chối 403
+    res_b = client.get("/trips/active-container/CONT-ORG-A", auth=("trans_nd", PASSWORD))
+    assert res_b.status_code == 403
+    assert "tổ chức khác" in res_b.json()["detail"]
+
+    # 4. Farmer tra cứu container của Transporter A -> Bị từ chối 403
+    res_farm = client.get("/trips/active-container/CONT-ORG-A", auth=(data["u_farmer"], PASSWORD))
+    assert res_farm.status_code == 403
+
+    # 5. Distributor tra cứu container của Transporter A -> Bị từ chối 403
+    res_dist = client.get("/trips/active-container/CONT-ORG-A", auth=(data["u_distributor"], PASSWORD))
+    assert res_dist.status_code == 403
+
+    # 6. Inspector tra cứu container theo quyền thanh tra -> Thành công 200 OK
+    res_insp = client.get("/trips/active-container/CONT-ORG-A", auth=(data["u_inspector"], PASSWORD))
+    assert res_insp.status_code == 200
+    assert res_insp.json()["container_code"] == "CONT-ORG-A"
+
+    # 7. Transporter A chính chủ tra cứu -> Thành công 200 OK
+    res_a = client.get("/trips/active-container/CONT-ORG-A", auth=(data["u_transporter"], PASSWORD))
+    assert res_a.status_code == 200
+    assert res_a.json()["container_code"] == "CONT-ORG-A"
+
+
+def test_security_trip_detail_batch_scoping_and_data_masking(
+    client: TestClient,
+    setup_s40_test_data: dict[str, Any],
+    session_factory: sessionmaker[Session],
+) -> None:
+    """TC-S40-19: Kiểm tra phân quyền dữ liệu trả về của get_cold_trip_detail.
+
+    - Chuyến xe chở 2 lô: Batch 1 (Farmer có quyền phả hệ) và Batch 2 (lô độc quyền của Transporter).
+    - Farmer gọi xem chuyến: Chỉ nhận thông tin Batch 1, Batch 2 bị lọc bỏ.
+    - Thông tin tài xế, biển số xe, ghi chú nội bộ bị ẩn (None) với Farmer.
+    - Tổ chức bên ngoài không có lô nào trên xe (Transporter B, Distributor) gọi xem: 403 Forbidden.
+    - Đơn vị vận chuyển chuyến xe (Transporter A) và Inspector: Nhận đầy đủ 2 lô và dữ liệu chuyến.
+    """
+    data = setup_s40_test_data
+    b1 = data["batch_1_id"]
+    b2 = data["batch_2_id"]
+
+    # Thiết lập quan hệ bàn giao để Farmer có quyền xem b1 (nhưng KHÔNG có quyền xem b2)
+    with session_factory() as session:
+        ho = Handover(
+            batch_id=b1,
+            from_org_id=data["org_farm_id"],
+            to_org_id=data["org_trans_id"],
+            status=HANDOVER_ACCEPTED,
+        )
+        session.add(ho)
+
+        # Tạo thêm user Transporter B không có lô nào trên xe
+        org_b = Organization(name="Vận tải B", code="TRANS-B", description="Bên thứ ba")
+        session.add(org_b)
+        session.flush()
+        u_b = User(
+            username="user_trans_b",
+            password=hash_password(PASSWORD),
+            role=ROLE_TRANSPORTER,
+            organization_id=org_b.id,
+        )
+        session.add(u_b)
+        session.commit()
+
+    # Transporter A mở chuyến chở cả 2 lô kèm thông tin tài xế và ghi chú nội bộ
+    trip_payload = {
+        "trip_code": "TRIP-SEC-DETAIL-01",
+        "container_code": "CONT-SEC-DETAIL",
+        "batch_ids": [b1, b2],
+        "driver_name": "Nguyễn Văn Bảo Mật",
+        "vehicle_plate": "29C-888.99",
+        "notes": "Thông tin điều phối nội bộ không được tiết lộ",
+    }
+    c_res = client.post("/trips", json=trip_payload, auth=(data["u_transporter"], PASSWORD))
+    assert c_res.status_code == 201
+    trip_id = c_res.json()["id"]
+
+    # 1. Farmer (chỉ có quyền xem b1) gọi GET /trips/{id}
+    farmer_res = client.get(f"/trips/{trip_id}", auth=(data["u_farmer"], PASSWORD))
+    assert farmer_res.status_code == 200
+    farmer_data = farmer_res.json()
+
+    # Xác nhận: Chỉ chứa duy nhất lô b1, không tiết lộ lô b2
+    returned_batch_ids = [b["batch_id"] for b in farmer_data["batches"]]
+    assert returned_batch_ids == [b1]
+    assert farmer_data["batch_count"] == 1
+
+    # Xác nhận: Thông tin tài xế, biển số và ghi chú bị ẩn đối với bên ngoài
+    assert farmer_data["driver_name"] is None
+    assert farmer_data["vehicle_plate"] is None
+    assert farmer_data["notes"] is None
+    assert farmer_data["batches"][0]["notes"] is None
+
+    # 2. Bên ngoài không có lô nào trên xe (Transporter B) gọi -> 403 Forbidden
+    res_b = client.get(f"/trips/{trip_id}", auth=("user_trans_b", PASSWORD))
+    assert res_b.status_code == 403
+
+    # 3. Distributor không có lô nào trên xe gọi -> 403 Forbidden
+    res_dist = client.get(f"/trips/{trip_id}", auth=(data["u_distributor"], PASSWORD))
+    assert res_dist.status_code == 403
+
+    # 4. Transporter A (đơn vị vận chuyển chuyến) gọi -> Nhận đầy đủ 2 lô và thông tin
+    res_trans = client.get(f"/trips/{trip_id}", auth=(data["u_transporter"], PASSWORD))
+    assert res_trans.status_code == 200
+    trans_data = res_trans.json()
+    assert len(trans_data["batches"]) == 2
+    assert trans_data["driver_name"] == "Nguyễn Văn Bảo Mật"
+    assert trans_data["vehicle_plate"] == "29C-888.99"
+    assert trans_data["notes"] == "Thông tin điều phối nội bộ không được tiết lộ"
+
+    # 5. Inspector gọi -> Nhận đầy đủ 2 lô và thông tin
+    res_insp = client.get(f"/trips/{trip_id}", auth=(data["u_inspector"], PASSWORD))
+    assert res_insp.status_code == 200
+    insp_data = res_insp.json()
+    assert len(insp_data["batches"]) == 2
+    assert insp_data["driver_name"] == "Nguyễn Văn Bảo Mật"
