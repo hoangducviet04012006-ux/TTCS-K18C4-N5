@@ -179,6 +179,8 @@ function formatEventType(type) {
     RECALL_AFFECTED: "Cách ly lô liên quan",
     RECALL_ACKNOWLEDGED: "Xác nhận xử lý",
     RECALL_COMPLETED: "Hoàn tất xác nhận",
+    TRIP_DISPATCH: "Khởi hành chuyến lạnh (lên xe)",
+    TRIP_DELIVER: "Hoàn thành chuyến lạnh (xuống xe)",
   };
   return map[String(type || "").toUpperCase()] || "Sự kiện nghiệp vụ";
 }
@@ -327,6 +329,10 @@ let currentDetailBatchCode = "";
 let currentDetailTab = "overview";
 let forwardLineageRequest = 0;
 let currentSplitBatch = null;
+
+// SCRUM-77 S-40: Quản lý chuyến xe lạnh
+let coldTrips = [];
+let currentDetailTripId = null;
 
 /** Kiểm tra một thời điểm có quá 48 giờ so với hiện tại hay không. */
 function checkIsOverdue(createdAtStr) {
@@ -495,6 +501,8 @@ const UI_ACTION_ROLES = Object.freeze({
   USER_MANAGE: ["system_admin", "admin", "org_admin"],
   AUDIT_VIEW: ["system_admin", "admin", "org_admin", "inspector"],
   INTEGRITY_VERIFY: ["farmer", "processor", "transporter", "distributor", "org_admin", "system_admin", "admin", "inspector"],
+  TRIP_CREATE: ["transporter", "org_admin"],
+  TRIP_COMPLETE: ["transporter", "org_admin"],
 });
 function hasUiAction(action) { return !!session && !!UI_ACTION_ROLES[action]?.includes(session.role); }
 function requireUiAction(action) {
@@ -1023,6 +1031,9 @@ async function handleLogout() {
   renderUsers();
   renderAuditLogs();
   renderPendingHandovers();
+  coldTrips = [];
+  currentDetailTripId = null;
+  renderColdTripsTable();
 
   applySessionToUi();
   toast(username ? `Đã đăng xuất tài khoản ${username}.` : "Đã đăng xuất.", "info");
@@ -2289,6 +2300,8 @@ function formatDashboardEventType(type) {
     TEMP_CHECK: "Kiểm tra nhiệt độ",
     INSPECTION: "Kiểm định chất lượng",
     STATUS_UPDATE: "Cập nhật trạng thái",
+    TRIP_DISPATCH: "Khởi hành chuyến lạnh (lên xe)",
+    TRIP_DELIVER: "Hoàn thành chuyến lạnh (xuống xe)",
   };
   return map[t] || "Sự kiện nghiệp vụ";
 }
@@ -2316,6 +2329,8 @@ function getEventDescription(event) {
   if (type === "SPLIT") return "Tách lô thành các lô nhỏ hơn";
   if (type === "MERGE") return "Gộp các lô thành lô mới";
   if (type === "CONSUMED") return "Lô hàng đã được ghi nhận tiêu thụ hết";
+  if (type === "TRIP_DISPATCH") return "Lô hàng được xếp lên thùng lạnh và khởi hành vận chuyển";
+  if (type === "TRIP_DELIVER") return "Lô hàng đã kết thúc hành trình vận chuyển lạnh và dỡ khỏi xe";
   return "";
 }
 
@@ -3186,6 +3201,88 @@ function bindEvents() {
       if (e.target === modalMergeSuccess) modalMergeSuccess.hidden = true;
     });
   }
+
+  // SCRUM-77 S-40: Sự kiện Chuyến xe lạnh
+  const btnRefreshTrips = $("btn-refresh-trips");
+  if (btnRefreshTrips) {
+    btnRefreshTrips.addEventListener("click", () => loadColdTrips());
+  }
+
+  const btnOpenCreateTrip = $("btn-open-create-trip-modal");
+  if (btnOpenCreateTrip) {
+    btnOpenCreateTrip.addEventListener("click", openCreateTripModal);
+  }
+
+  const btnCloseCreateTrip = $("btn-close-create-trip");
+  if (btnCloseCreateTrip) {
+    btnCloseCreateTrip.addEventListener("click", () => {
+      $("modal-create-trip").hidden = true;
+    });
+  }
+
+  const btnCancelCreateTrip = $("btn-cancel-create-trip");
+  if (btnCancelCreateTrip) {
+    btnCancelCreateTrip.addEventListener("click", () => {
+      $("modal-create-trip").hidden = true;
+    });
+  }
+
+  const modalCreateTrip = $("modal-create-trip");
+  if (modalCreateTrip) {
+    modalCreateTrip.addEventListener("click", (e) => {
+      if (e.target === modalCreateTrip) modalCreateTrip.hidden = true;
+    });
+  }
+
+  const createTripForm = $("create-trip-form");
+  if (createTripForm) {
+    createTripForm.addEventListener("submit", handleCreateTripSubmit);
+  }
+
+  const btnCloseTripDetail = $("btn-close-trip-detail");
+  if (btnCloseTripDetail) {
+    btnCloseTripDetail.addEventListener("click", () => {
+      $("modal-trip-detail").hidden = true;
+    });
+  }
+
+  const btnDismissTripDetail = $("btn-dismiss-trip-detail");
+  if (btnDismissTripDetail) {
+    btnDismissTripDetail.addEventListener("click", () => {
+      $("modal-trip-detail").hidden = true;
+    });
+  }
+
+  const modalTripDetail = $("modal-trip-detail");
+  if (modalTripDetail) {
+    modalTripDetail.addEventListener("click", (e) => {
+      if (e.target === modalTripDetail) modalTripDetail.hidden = true;
+    });
+  }
+
+  const btnCompleteTripAction = $("btn-complete-trip-action");
+  if (btnCompleteTripAction) {
+    btnCompleteTripAction.addEventListener("click", () => {
+      const tripId = btnCompleteTripAction.dataset.tripId;
+      if (tripId) handleCompleteTrip(Number(tripId));
+    });
+  }
+
+  const tripsTableBody = $("trips-table-body");
+  if (tripsTableBody) {
+    tripsTableBody.addEventListener("click", (e) => {
+      const viewBtn = e.target.closest(".btn-view-trip");
+      if (viewBtn && viewBtn.dataset.tripId) {
+        openTripDetailModal(Number(viewBtn.dataset.tripId));
+        return;
+      }
+      const completeBtn = e.target.closest(".btn-complete-trip");
+      if (completeBtn && completeBtn.dataset.tripId) {
+        handleCompleteTrip(Number(completeBtn.dataset.tripId));
+        return;
+      }
+    });
+  }
 }
 
 /* =====================================================================
@@ -3238,6 +3335,10 @@ const TIMELINE_PAYLOAD_LABELS = {
   harvest_date: " Ngày thu hoạch",
   parent_batch_code: " Mã lô nguồn",
   merged_batch_code: " Mã lô gộp",
+  trip_code: " Mã chuyến xe",
+  container_code: " Thùng lạnh",
+  vehicle_plate: " Biển số xe",
+  driver_name: " Tài xế",
 };
 
 /**
@@ -3250,6 +3351,34 @@ const TIMELINE_PAYLOAD_LABELS = {
 function renderTimelineBody(evt, p) {
   const type = String(evt.event_type || "").toUpperCase();
   const fallbackDesc = evt.event_data || p.description || p.note || p.message || "";
+
+  if (type === "TRIP_DISPATCH" || type === "TRIP_DELIVER") {
+    const isDispatch = type === "TRIP_DISPATCH";
+    return `
+      <div class="tl-summary">
+        <div class="tl-metric">
+          <span class="tl-metric__label"> Mã chuyến xe</span>
+          <strong>${escapeHtml(p.trip_code || "—")}</strong>
+        </div>
+        <div class="tl-metric">
+          <span class="tl-metric__label"> Thùng lạnh</span>
+          <code>${escapeHtml(p.container_code || "—")}</code>
+        </div>
+        ${p.vehicle_plate ? `
+        <div class="tl-metric">
+          <span class="tl-metric__label"> Biển số xe</span>
+          <strong>${escapeHtml(p.vehicle_plate)}</strong>
+        </div>` : ""}
+        ${p.driver_name ? `
+        <div class="tl-metric">
+          <span class="tl-metric__label"> Tài xế</span>
+          <strong>${escapeHtml(p.driver_name)}</strong>
+        </div>` : ""}
+      </div>
+      <div class="tl-note" style="margin-top: 6px;">
+        ${isDispatch ? "Lô hàng được xếp lên thùng lạnh và bắt đầu vận chuyển giám sát nhiệt độ." : "Lô hàng đã kết thúc vận chuyển và dỡ khỏi thùng lạnh an toàn."}
+      </div>`;
+  }
 
   if (type === "MERGE") {
     const parents = Array.isArray(p.parent_batches) ? p.parent_batches : [];
@@ -3686,6 +3815,41 @@ async function verifyDetailChain(batchId, prefix = "detail") {
     setButtonLoading(btn, false, "Đang kiểm tra…", idleText);
   }
 }
+
+/** Xác thực toàn diện tính toàn vẹn phả hệ dữ liệu truy xuất nguồn gốc (Story S-50) */
+async function verifyTraceabilityIntegrity(batchId) {
+  const btn = $("btn-traceability-verify-integrity");
+  const idleText = "Kiểm tra tính toàn vẹn";
+  if (btn) setButtonLoading(btn, true, "Đang kiểm tra…", idleText);
+  try {
+    const res = await apiRequest(`/batches/${batchId}/trace-integrity`);
+    const isValid = Boolean(res.valid ?? res.is_valid);
+    if (isValid) {
+      setHidden("traceability-valid-banner", false);
+      setHidden("traceability-alert-banner", true);
+      const text = $("traceability-valid-text");
+      if (text) {
+        text.textContent = `✓ ${res.message || "Toàn bộ chuỗi truy xuất nguồn gốc toàn vẹn 100%."}`;
+      }
+      toast(res.message || "Toàn bộ chuỗi truy xuất nguồn gốc toàn vẹn 100%.", "success");
+    } else {
+      setHidden("traceability-valid-banner", true);
+      setHidden("traceability-alert-banner", false);
+      const text = $("traceability-alert-text");
+      if (text) {
+        text.textContent = `⚠ ${res.message || "Cảnh báo vi phạm toàn vẹn dữ liệu!"}`;
+      }
+      toast(`CẢNH BÁO: ${res.message}`, "error");
+    }
+    return res;
+  } catch (err) {
+    toast(`Lỗi xác thực toàn vẹn chuỗi truy xuất: ${err.message}`, "error");
+    throw err;
+  } finally {
+    if (btn) setButtonLoading(btn, false, "Đang kiểm tra…", idleText);
+  }
+}
+window.verifyTraceabilityIntegrity = verifyTraceabilityIntegrity;
 
 /** Tab 3: Truy ngược cây phả hệ nguồn gốc BFS */
 async function loadDetailLineage(batchId, prefix = "detail") {
@@ -5025,6 +5189,244 @@ function handleTableAction(event) {
   }
 }
 
+/* ------------------------------------------- SCRUM-77 S-40: Chuyến xe lạnh --- */
+function canCreateTrip() {
+  return session && ["transporter", "org_admin", "system_admin"].includes(session.role);
+}
+
+async function loadColdTrips() {
+  const actor = session;
+  if (!actor) return;
+  try {
+    const data = await apiRequest("/trips");
+    if (actor !== session) return;
+    coldTrips = Array.isArray(data) ? data : [];
+    renderColdTripsTable();
+  } catch (error) {
+    if (actor !== session) return;
+    console.error("Lỗi tải danh sách chuyến xe lạnh:", error);
+    coldTrips = [];
+    renderColdTripsTable();
+  }
+}
+
+function renderColdTripsTable() {
+  const tbody = $("trips-table-body");
+  const emptyEl = $("trips-empty");
+  const btnCreate = $("btn-open-create-trip-modal");
+  if (!tbody) return;
+
+  if (btnCreate) {
+    btnCreate.hidden = !canCreateTrip();
+  }
+
+  if (!coldTrips.length) {
+    tbody.innerHTML = "";
+    if (emptyEl) emptyEl.hidden = false;
+    return;
+  }
+
+  if (emptyEl) emptyEl.hidden = true;
+
+  tbody.innerHTML = coldTrips.map(trip => {
+    const isTransiting = trip.status === "IN_TRANSIT";
+    const statusBadge = isTransiting
+      ? '<span class="badge badge--warning" style="background:#e0f2fe; color:#0369a1; border-color:#bae6fd;">Đang vận chuyển</span>'
+      : trip.status === "COMPLETED"
+      ? '<span class="badge badge--ok">Hoàn thành</span>'
+      : `<span class="badge">${escapeHtml(trip.status)}</span>`;
+
+    const canComplete = isTransiting && canCreateTrip() && (isSystemAdmin() || trip.transporter_org_id === session?.organization_id);
+
+    return `
+      <tr>
+        <td class="id-cell"><strong>${escapeHtml(trip.trip_code)}</strong></td>
+        <td><code>${escapeHtml(trip.container_code)}</code></td>
+        <td>
+          <div>${escapeHtml(trip.vehicle_plate || "—")}</div>
+          <small class="text-muted">${escapeHtml(trip.driver_name || "")}</small>
+        </td>
+        <td>
+          <div style="font-size:0.9em;">Từ: ${escapeHtml(trip.start_location || "—")}</div>
+          <div style="font-size:0.9em;">Đến: ${escapeHtml(trip.destination_location || "—")}</div>
+        </td>
+        <td class="is-center"><span class="badge">${trip.batch_count || 0}</span></td>
+        <td>${escapeHtml(formatDateTime(trip.start_time))}</td>
+        <td>${statusBadge}</td>
+        <td class="is-right">
+          <div class="table__actions" style="justify-content: flex-end; gap: 4px;">
+            <button class="btn btn--light btn--sm btn-view-trip" type="button" data-trip-id="${trip.id}">Xem</button>
+            ${canComplete ? `<button class="btn btn--success btn--sm btn-complete-trip" type="button" data-trip-id="${trip.id}">Xuống xe</button>` : ""}
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join("");
+}
+
+function openCreateTripModal() {
+  if (!canCreateTrip()) {
+    toast("Bạn không có quyền mở chuyến xe lạnh.", "error");
+    return;
+  }
+  const form = $("create-trip-form");
+  if (form) form.reset();
+
+  const containerEl = $("create-trip-batches-list");
+  if (!containerEl) return;
+
+  const eligibleBatches = batches.filter(b => {
+    const isOwner = isSystemAdmin() || b.current_org_id === session?.organization_id;
+    const isActive = b.status === "ACTIVE" || b.status === "SPLIT";
+    const hasQty = (b.remaining_quantity || b.quantity || 0) > 0;
+    const notPending = !b.pending_handover;
+    const notRecalled = !b.is_recalled;
+    return isOwner && isActive && hasQty && notPending && notRecalled;
+  });
+
+  if (!eligibleBatches.length) {
+    containerEl.innerHTML = `<p class="empty" style="padding: 12px;">Không có lô nông sản nào khả dụng để vận chuyển (cần thuộc tổ chức của bạn, trạng thái Hoạt động, chưa bàn giao).</p>`;
+  } else {
+    containerEl.innerHTML = eligibleBatches.map(b => `
+      <label class="trip-batch-item" style="display: flex; align-items: center; gap: 8px; padding: 6px 4px; border-bottom: 1px solid var(--color-border-light, #eee); cursor: pointer;">
+        <input type="checkbox" name="trip_batch_id" value="${b.id}" style="width: auto; margin: 0;" />
+        <div>
+          <strong>${escapeHtml(b.code)}</strong> · ${escapeHtml(b.product_name || "Sản phẩm")}
+          <span class="text-muted" style="margin-left: 6px; font-size: 0.85em;">(${formatNumber(b.remaining_quantity || b.quantity)} ${escapeHtml(b.unit || "kg")})</span>
+        </div>
+      </label>
+    `).join("");
+  }
+
+  $("modal-create-trip").hidden = false;
+}
+
+async function handleCreateTripSubmit(e) {
+  e.preventDefault();
+  if (!canCreateTrip()) {
+    toast("Bạn không có quyền mở chuyến xe lạnh.", "error");
+    return;
+  }
+
+  const containerCode = $("create-trip-container").value.trim();
+  const tripCode = $("create-trip-code").value.trim() || undefined;
+  const vehiclePlate = $("create-trip-plate").value.trim() || undefined;
+  const driverName = $("create-trip-driver").value.trim() || undefined;
+  const startLocation = $("create-trip-start").value.trim() || undefined;
+  const destinationLocation = $("create-trip-dest").value.trim() || undefined;
+  const notes = $("create-trip-notes").value.trim() || undefined;
+
+  const checkedBoxes = document.querySelectorAll("#create-trip-batches-list input[name='trip_batch_id']:checked");
+  const batchIds = Array.from(checkedBoxes).map(cb => Number(cb.value));
+
+  if (!containerCode) {
+    toast("Vui lòng nhập mã thùng lạnh.", "error");
+    $("create-trip-container").focus();
+    return;
+  }
+
+  if (batchIds.length === 0) {
+    toast("Vui lòng chọn ít nhất 1 lô nông sản để gắn vào chuyến xe.", "error");
+    return;
+  }
+
+  const payload = {
+    container_code: containerCode,
+    batch_ids: batchIds,
+  };
+  if (tripCode) payload.trip_code = tripCode;
+  if (vehiclePlate) payload.vehicle_plate = vehiclePlate;
+  if (driverName) payload.driver_name = driverName;
+  if (startLocation) payload.start_location = startLocation;
+  if (destinationLocation) payload.destination_location = destinationLocation;
+  if (notes) payload.notes = notes;
+
+  const submitBtn = $("btn-submit-create-trip");
+  setButtonLoading(submitBtn, true, "Đang xử lý…", "Bắt đầu chuyến xe (Ghi nhận Lên xe)");
+
+  try {
+    const res = await apiRequest("/trips", {
+      method: "POST",
+      body: payload,
+    });
+    toast(`Mở chuyến ${res.trip_code} thành công! Đã ghi nhận Lên xe cho ${res.batches ? res.batches.length : batchIds.length} lô.`, "success");
+    $("modal-create-trip").hidden = true;
+    await loadColdTrips();
+    await loadBatches();
+  } catch (error) {
+    toast(`Mở chuyến xe thất bại: ${error.message}`, "error");
+  } finally {
+    setButtonLoading(submitBtn, false, "Đang xử lý…", "Bắt đầu chuyến xe (Ghi nhận Lên xe)");
+  }
+}
+
+async function openTripDetailModal(tripId) {
+  try {
+    const trip = await apiRequest(`/trips/${tripId}`);
+    currentDetailTripId = trip.id;
+
+    const summaryEl = $("trip-detail-header");
+    if (summaryEl) {
+      summaryEl.innerHTML = `
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
+          <div><strong>Mã chuyến:</strong> ${escapeHtml(trip.trip_code)}</div>
+          <div><strong>Thùng lạnh:</strong> <code>${escapeHtml(trip.container_code)}</code></div>
+          <div><strong>Biển số:</strong> ${escapeHtml(trip.vehicle_plate || "—")}</div>
+          <div><strong>Tài xế:</strong> ${escapeHtml(trip.driver_name || "—")}</div>
+          <div><strong>Lộ trình:</strong> ${escapeHtml(trip.start_location || "—")} ➔ ${escapeHtml(trip.destination_location || "—")}</div>
+          <div><strong>Trạng thái:</strong> ${trip.status === "IN_TRANSIT" ? '<span class="badge badge--warning">Đang vận chuyển</span>' : trip.status === "COMPLETED" ? '<span class="badge badge--ok">Hoàn thành</span>' : escapeHtml(trip.status)}</div>
+          <div><strong>Khởi hành:</strong> ${escapeHtml(formatDateTime(trip.start_time))}</div>
+          <div><strong>Kết thúc:</strong> ${trip.end_time ? escapeHtml(formatDateTime(trip.end_time)) : "—"}</div>
+        </div>
+        ${trip.notes ? `<div style="margin-top: 8px; font-size: 0.9em;"><em>Ghi chú:</em> ${escapeHtml(trip.notes)}</div>` : ""}
+      `;
+    }
+
+    const tbody = $("trip-detail-batches-body");
+    if (tbody) {
+      tbody.innerHTML = (trip.batches || []).map(b => `
+        <tr>
+          <td class="id-cell"><strong>${escapeHtml(b.batch_code)}</strong></td>
+          <td>${escapeHtml(b.product_name || "—")}</td>
+          <td class="is-right">${formatNumber(b.remaining_quantity)} ${escapeHtml(b.unit || "kg")}</td>
+          <td>${escapeHtml(formatDateTime(b.attached_at))}</td>
+          <td>${b.detached_at ? escapeHtml(formatDateTime(b.detached_at)) : '<span class="badge badge--warning">Đang trên xe</span>'}</td>
+        </tr>
+      `).join("");
+    }
+
+    const btnComplete = $("btn-complete-trip-action");
+    if (btnComplete) {
+      const isOwner = isSystemAdmin() || trip.transporter_org_id === session?.organization_id;
+      btnComplete.hidden = !(trip.status === "IN_TRANSIT" && canCreateTrip() && isOwner);
+      btnComplete.dataset.tripId = String(trip.id);
+    }
+
+    $("modal-trip-detail").hidden = false;
+  } catch (error) {
+    toast(`Không tải được chi tiết chuyến xe: ${error.message}`, "error");
+  }
+}
+
+async function handleCompleteTrip(tripId) {
+  if (!await confirmAction("Bạn có chắc chắn muốn hoàn thành chuyến xe và ghi nhận Xuống xe (TRIP_DELIVER) cho toàn bộ các lô nông sản trên chuyến này?")) {
+    return;
+  }
+
+  try {
+    const res = await apiRequest(`/trips/${tripId}/complete`, {
+      method: "POST",
+      body: {},
+    });
+    toast(`Chuyến ${res.trip_code} đã hoàn thành! Đã ghi nhận Xuống xe cho ${res.batches ? res.batches.length : 0} lô.`, "success");
+    $("modal-trip-detail").hidden = true;
+    await loadColdTrips();
+    await loadBatches();
+  } catch (error) {
+    toast(`Không thể hoàn thành chuyến: ${error.message}`, "error");
+  }
+}
+
 /** Tải dữ liệu dùng chung cho giao diện sau khi đăng nhập (theo phân quyền). */
 async function loadAllData() {
   const actor = session;
@@ -5040,6 +5442,8 @@ async function loadAllData() {
   await loadBatches();
   if (actor !== session) return;
   await loadPendingHandovers();
+  if (actor !== session) return;
+  if (canOpenScreen("cold-trips-card")) await loadColdTrips();
   if (actor !== session) return;
   await window.phaseCUi?.load();
   if (actor !== session) return;
@@ -5096,6 +5500,7 @@ const appScreens = {
   "locations-card": ["Địa điểm phân phối", "Cửa hàng và phân bổ theo tổ chức đang giữ.", ["locations-card"]],
   "imports-card": ["Nhập CSV", "Nhập danh sách sản phẩm hoặc thửa đất từ tệp CSV.", ["imports-card"]],
   "recall-card": ["Thu hồi lô hàng", "Theo dõi sự cố và xác nhận xử lý của các tổ chức liên quan.", ["recall-card"]],
+  "cold-trips-card": ["Chuyến xe lạnh", "Khai báo và giám sát các chuyến vận chuyển chuỗi lạnh (S-40).", ["cold-trips-card"]],
 };
 let activeAppScreen = "overview";
 let screenDataVersion = 0;
@@ -5115,6 +5520,7 @@ function canOpenScreen(key) {
   if (key === "audit-card") return canViewAuditLogs();
   if (key === "recall-card") return isRecallEnabled();
   if (key === "pending-handovers-card") return canHandover();
+  if (key === "cold-trips-card") return ["transporter", "org_admin", "inspector", "system_admin"].includes(session?.role);
   return Object.hasOwn(appScreens, key);
 }
 
@@ -5190,7 +5596,22 @@ function setupAppScreens() {
     setHidden("events-timeline-alert-banner", true);
     $("events-timeline-list").replaceChildren();
   });
-  $("trace-screen-batch").addEventListener("change", () => setHidden("trace-lineage-body", true));
+  const btnTraceIntegrity = $("btn-traceability-verify-integrity");
+  if (btnTraceIntegrity) {
+    btnTraceIntegrity.addEventListener("click", () => {
+      const id = Number($("trace-screen-batch").value);
+      if (id && session) {
+        verifyTraceabilityIntegrity(id);
+      } else if (!id) {
+        toast("Vui lòng chọn lô cần kiểm tra tính toàn vẹn chuỗi truy xuất.", "error");
+      }
+    });
+  }
+  $("trace-screen-batch").addEventListener("change", () => {
+    setHidden("traceability-valid-banner", true);
+    setHidden("traceability-alert-banner", true);
+    setHidden("trace-lineage-body", true);
+  });
 }
 
 function renderAppScreen(scroll = true) {
@@ -5293,8 +5714,11 @@ function renderAppScreen(scroll = true) {
       desc = "Xem dòng thời gian sự kiện và xác thực tính toàn vẹn chuỗi mã băm của lô hàng sơ chế & đóng gói.";
     }
   }
-  const conciseDescriptions={overview:"Các số liệu trong phạm vi tài khoản; số liệu lô tính theo trang đang xem.","batch-card":"Theo dõi lượng còn lại, tổ chức đang giữ và tình trạng lô.","farm-card":"Tra cứu vùng trồng trong phạm vi tài khoản.","pending-handovers-card":"Kiểm tra lô và xác nhận hoặc từ chối bàn giao.",traceability:"Chọn lô để xem nguồn gốc và các lô liên quan.",events:"Chọn lô để xem lịch sử và kiểm tra tính toàn vẹn."};
+  const conciseDescriptions={overview:"Các số liệu trong phạm vi tài khoản; số liệu lô tính theo trang đang xem.","batch-card":"Theo dõi lượng còn lại, tổ chức đang giữ và tình trạng lô.","farm-card":"Tra cứu vùng trồng trong phạm vi tài khoản.","pending-handovers-card":"Kiểm tra lô và xác nhận hoặc từ chối bàn giao.",traceability:"Chọn lô để xem nguồn gốc và các lô liên quan.",events:"Chọn lô để xem lịch sử và kiểm tra tính toàn vẹn.","cold-trips-card":"Khai báo và giám sát các chuyến vận chuyển chuỗi lạnh (S-40)."};
   $("screen-description").textContent = conciseDescriptions[key] || appScreens[key][1];
+  if (key === "cold-trips-card") {
+    loadColdTrips();
+  }
   if (scroll) {
     document.querySelectorAll(".modal-backdrop:not([id^='recall'])").forEach((modal) => { modal.hidden = true; });
     window.scrollTo({ top: 0, behavior: "instant" });

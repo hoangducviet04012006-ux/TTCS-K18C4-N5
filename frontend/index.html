@@ -276,6 +276,10 @@
         <svg class="sidebar-nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
         <span class="sidebar-nav-text">Thu hồi lô hàng</span>
       </a>
+      <a id="nav-trips" href="#cold-trips-card" class="sidebar-nav-item">
+        <svg class="sidebar-nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="1" y="3" width="15" height="13" rx="1"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+        <span class="sidebar-nav-text">Chuyến xe lạnh</span>
+      </a>
     </div>
 
     <div class="sidebar-section sidebar-section--phase-c">
@@ -314,7 +318,8 @@
     <header class="screen-heading"><h2 id="screen-title" tabindex="-1">Tổng quan</h2><p id="screen-description"></p></header>
     <section id="recent-activity" class="card"><h3>Hoạt động gần đây</h3><p class="card__desc">Các sự kiện gần đây của tối đa 5 lô trên trang hiện tại.</p><div id="recent-activity-list" class="timeline"></div></section>
     <section id="traceability-card" class="card">
-      <form id="trace-screen-form" class="screen-toolbar"><label class="field"><span class="field__label">Lô cần truy xuất</span><select id="trace-screen-batch" required></select></label><button class="btn btn--primary" type="submit">Xem nguồn gốc</button></form>
+      <form id="trace-screen-form" class="screen-toolbar"><label class="field"><span class="field__label">Lô cần truy xuất</span><select id="trace-screen-batch" required></select></label><button class="btn btn--light" type="submit">Xem nguồn gốc</button><button id="btn-traceability-verify-integrity" class="btn btn--primary" type="button">Kiểm tra tính toàn vẹn</button></form>
+      <div id="traceability-valid-banner" class="integrity-valid-badge" hidden><span id="traceability-valid-text"></span></div><div id="traceability-alert-banner" class="integrity-alert-banner" hidden><span id="traceability-alert-text"></span></div>
       <p id="trace-lineage-loading" role="status" hidden></p><div id="trace-lineage-body" hidden><div class="root-origins-card"><h3>Nguồn gốc thu hoạch</h3><div id="trace-root-batches-list" class="root-batches-grid"></div></div><h3>Phả hệ theo tầng</h3><div id="trace-lineage-levels-container"></div></div>
     </section>
     <section id="events-card" class="card">
@@ -810,6 +815,43 @@
         <span id="batch-count-label" class="pagination__count-label" hidden></span>
       </div>
       <p id="batch-empty" class="empty" hidden>Chưa có lô nông sản nào được ghi nhận. Vui lòng tạo lô mới ở biểu mẫu phía trên.</p>
+    </section>
+
+    <!-- ==================== QUẢN LÝ CHUYẾN XE LẠNH (S-40) ==================== -->
+    <section id="cold-trips-card" class="card">
+      <header class="card__header">
+        <div class="card__header-flex">
+          <div>
+            <h2 class="card__title">Giám sát chuỗi lạnh · Chuyến vận chuyển (S-40)</h2>
+            <p class="card__desc">
+              Khai báo chuyến vận chuyển gắn nhiều lô và một thùng lạnh. Dữ liệu nhiệt độ hành trình được liên kết theo thời gian thực.
+            </p>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button id="btn-refresh-trips" class="btn btn--light btn--sm" type="button">Làm mới</button>
+            <button id="btn-open-create-trip-modal" class="btn btn--primary btn--sm" type="button">Mở chuyến mới</button>
+          </div>
+        </div>
+      </header>
+
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Mã chuyến</th>
+              <th>Thùng lạnh</th>
+              <th>Biển số xe / Tài xế</th>
+              <th>Lộ trình</th>
+              <th class="is-center">Số lô</th>
+              <th>Thời gian bắt đầu</th>
+              <th>Trạng thái</th>
+              <th class="is-right">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody id="trips-table-body"></tbody>
+        </table>
+      </div>
+      <p id="trips-empty" class="empty" hidden>Chưa có chuyến vận chuyển nào được ghi nhận.</p>
     </section>
 
     <!-- ==================== TÀI KHOẢN (chỉ admin) ==================== -->
@@ -1468,6 +1510,101 @@
       }
     });
   </script>
+  <!-- ==================== MODAL MỞ CHUYẾN XE LẠNH (S-40) ==================== -->
+  <div id="modal-create-trip" class="modal-backdrop" hidden>
+    <div class="modal modal--lg" role="dialog" aria-modal="true" aria-labelledby="modal-create-trip-title" style="max-width: 680px;">
+      <header class="modal__header">
+        <h3 id="modal-create-trip-title" class="modal__title">Mở chuyến vận chuyển chuỗi lạnh (S-40)</h3>
+        <button id="btn-close-create-trip" class="modal__close" type="button" aria-label="Đóng">&times;</button>
+      </header>
+      <div class="modal__body">
+        <form id="create-trip-form" class="form">
+          <div class="form__row">
+            <label class="field">
+              <span class="field__label">Mã thùng lạnh (Container) <em>*</em></span>
+              <input id="create-trip-container" type="text" required maxlength="50" placeholder="VD: CONT-COLD-01, BOX-01" />
+              <span class="field__hint">Định danh thùng lạnh gắn cảm biến IoT nhiệt độ</span>
+            </label>
+            <label class="field">
+              <span class="field__label">Mã chuyến xe (tùy chọn)</span>
+              <input id="create-trip-code" type="text" maxlength="50" placeholder="Để trống hệ thống tự sinh mã TRIP-YYYYMMDD-XXXX" />
+              <span class="field__hint">Mã định danh quản lý hành trình</span>
+            </label>
+          </div>
+          <div class="form__row">
+            <label class="field">
+              <span class="field__label">Biển số xe vận chuyển</span>
+              <input id="create-trip-plate" type="text" maxlength="30" placeholder="VD: 29B-123.45" />
+            </label>
+            <label class="field">
+              <span class="field__label">Họ tên tài xế</span>
+              <input id="create-trip-driver" type="text" maxlength="100" placeholder="VD: Nguyễn Văn Lái" />
+            </label>
+          </div>
+          <div class="form__row">
+            <label class="field">
+              <span class="field__label">Điểm xuất phát</span>
+              <input id="create-trip-start" type="text" maxlength="255" placeholder="VD: Kho Thái Nguyên" />
+            </label>
+            <label class="field">
+              <span class="field__label">Điểm đến</span>
+              <input id="create-trip-dest" type="text" maxlength="255" placeholder="VD: Kho Phân phối Hà Nội" />
+            </label>
+          </div>
+          <label class="field">
+            <span class="field__label">Ghi chú hành trình</span>
+            <input id="create-trip-notes" type="text" maxlength="500" placeholder="Yêu cầu bảo quản nhiệt độ, dải nhiệt khuyến nghị..." />
+          </label>
+
+          <div style="margin-top: 12px; margin-bottom: 6px;">
+            <span class="field__label" style="font-weight: 600;">Chọn các lô nông sản lên xe (tối thiểu 1 lô) <em>*</em></span>
+            <p class="field__hint" style="margin-top: 2px; margin-bottom: 8px;">Chỉ hiển thị các lô nông sản do tổ chức của bạn đang trực tiếp nắm giữ và sẵn sàng vận chuyển.</p>
+          </div>
+          <div id="create-trip-batches-list" class="trip-batches-selector" style="max-height: 220px; overflow-y: auto; border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: 8px;">
+            <p class="empty" style="padding: 12px;">Đang tải danh sách lô...</p>
+          </div>
+
+          <div class="modal__actions" style="margin-top: 18px;">
+            <button id="btn-cancel-create-trip" class="btn btn--ghost" type="button">Hủy bỏ</button>
+            <button id="btn-submit-create-trip" class="btn btn--primary" type="submit">Bắt đầu chuyến xe (Ghi nhận Lên xe)</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL CHI TIẾT CHUYẾN XE LẠNH ==================== -->
+  <div id="modal-trip-detail" class="modal-backdrop" hidden>
+    <div class="modal modal--lg" role="dialog" aria-modal="true" aria-labelledby="modal-trip-detail-title" style="max-width: 760px;">
+      <header class="modal__header">
+        <h3 id="modal-trip-detail-title" class="modal__title">Chi tiết chuyến xe lạnh</h3>
+        <button id="btn-close-trip-detail" class="modal__close" type="button" aria-label="Đóng">&times;</button>
+      </header>
+      <div class="modal__body">
+        <div id="trip-detail-header" class="trip-detail-summary" style="margin-bottom: 16px; padding: 12px; background: var(--color-surface-soft, rgba(0,0,0,0.03)); border-radius: 8px;"></div>
+        <h4 style="margin: 12px 0 8px;">Danh sách lô nông sản trên chuyến xe</h4>
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Mã lô</th>
+                <th>Sản phẩm</th>
+                <th class="is-right">Khối lượng</th>
+                <th>Thời điểm lên xe</th>
+                <th>Thời điểm xuống xe</th>
+              </tr>
+            </thead>
+            <tbody id="trip-detail-batches-body"></tbody>
+          </table>
+        </div>
+        <div class="modal__actions" style="margin-top: 20px; display: flex; justify-content: space-between;">
+          <button id="btn-complete-trip-action" class="btn btn--success" type="button" hidden>Hoàn thành chuyến (Xuống xe)</button>
+          <button id="btn-dismiss-trip-detail" class="btn btn--ghost" type="button">Đóng</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script src="js/lineage_graph.js?v=2"></script>
   <script src="js/app.js?v=28"></script>
   <script src="js/recall_graph.js?v=1"></script>

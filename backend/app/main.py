@@ -203,3 +203,12 @@ app.include_router(cold_chain.router)
 # Recall keeps the existing root-level API convention.
 from app.routers import recalls  # noqa: E402
 app.include_router(recalls.router)
+
+# Story S-50: Traceability Integrity verification
+from app.routers import trace_integrity  # noqa: E402
+app.include_router(trace_integrity.router)
+
+# Story S-40: Cold Trips management
+from app.routers import trips  # noqa: E402
+app.include_router(trips.router)
+app.include_router(trips.router, prefix="/api/v1")
