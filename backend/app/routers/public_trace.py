@@ -1,46 +1,49 @@
-"""Public read-only trace data for QR landing pages."""
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session, joinedload
+"""Router phục vụ Cổng Truy xuất Nguồn gốc Công khai (Story S-48).
+
+Tuân thủ nghiêm ngặt quy định bảo vệ dữ liệu công khai S-48:
+- Chỉ trả về các trường được đánh dấu trong danh mục công khai (whitelist tập trung).
+- Mọi trường nội bộ bị chặn mặc định và loại bỏ triệt để.
+- Khối lượng, giá cả và tên đối tác kinh doanh trung gian được bảo mật tuyệt đối.
+"""
+
+from fastapi import APIRouter, Depends, Path, status
+from sqlalchemy.orm import Session
+
 from app.database import get_db
-from app.models import Batch
-from app.services.traceability import trace_backwards
+from app.schemas_public import PublicBatchTraceResponse
+from app.services.public_trace import get_public_batch_trace
 
 router = APIRouter(tags=["Public Traceability"])
 
 
-@router.get("/public/trace/{batch_code}", summary="Thông tin truy xuất công khai theo mã lô")
-def public_trace_by_code(batch_code: str, db: Session = Depends(get_db)):
-    batch = (
-        db.query(Batch)
-        .options(joinedload(Batch.product), joinedload(Batch.plot), joinedload(Batch.farm))
-        .filter(Batch.code == batch_code)
-        .first()
-    )
-    if batch is None:
-        raise HTTPException(status_code=404, detail="Không tìm thấy lô nông sản.")
-    lineage = trace_backwards(db, batch.id)
-    roots = []
-    for nodes in lineage.get("ancestors_by_level", {}).values():
-        for node in nodes:
-            if not node.get("has_parents", False):
-                roots.append({
-                    "batch_code": node.get("code"),
-                    "product_name": node.get("product_name"),
-                    "harvest_date": node.get("harvest_date"),
-                    "location": node.get("location"),
-                    "farm_name": node.get("farm_name"),
-                    "plot_name": node.get("plot_name"),
-                })
-    plot, farm = batch.plot, batch.farm
-    return {
-        "batch_code": batch.code,
-        "product_name": batch.product_name or (batch.product.name if batch.product else "Nông sản"),
-        "harvest_date": str(batch.harvest_date) if batch.harvest_date else None,
-        "status": batch.status,
-        "origin": {
-            "location": (plot.location if plot else None) or (farm.location if farm else None),
-            "farm_name": (farm.name if farm else None) or (plot.name if plot else None),
-            "plot_name": plot.name if plot else None,
+@router.get(
+    "/public/trace/{batch_code}",
+    response_model=PublicBatchTraceResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Thông tin truy xuất nguồn gốc công khai theo mã lô (Story S-48)",
+    description=(
+        "Endpoint công khai dành cho người tiêu dùng và khách quét mã QR xem thông tin "
+        "truy xuất nguồn gốc nông sản. Không yêu cầu đăng nhập.\n\n"
+        "**Tuân thủ tiêu chuẩn bảo vệ dữ liệu S-48:**\n"
+        "- Chỉ trả về các trường thuộc danh mục cho phép (mã lô, nông sản, ngày thu hoạch, "
+        "xuất xứ vùng trồng, danh sách lô gốc, hành trình các khâu).\n"
+        "- Tuyệt đối không để lộ khối lượng, giá cả hay cấu trúc kinh doanh.\n"
+        "- Tên đối tác thương mại trung gian được ẩn danh theo loại đơn vị (Hợp tác xã, "
+        "Đơn vị vận chuyển, Nhà phân phối...). Vùng trồng gốc vẫn hiển thị minh bạch."
+    ),
+    responses={
+        status.HTTP_200_OK: {
+            "description": "Dữ liệu truy xuất nguồn gốc công khai hợp lệ.",
         },
-        "root_batches": roots,
-    }
+        status.HTTP_404_NOT_FOUND: {
+            "description": "Không tìm thấy lô nông sản với mã cung cấp.",
+        },
+    },
+)
+def public_trace_by_code(
+    batch_code: str = Path(..., min_length=1, max_length=100, description="Mã công khai của lô nông sản."),
+    db: Session = Depends(get_db),
+) -> PublicBatchTraceResponse:
+    """Truy vấn thông tin truy xuất nguồn gốc công khai cho người tiêu dùng."""
+    data = get_public_batch_trace(batch_code=batch_code, db=db)
+    return PublicBatchTraceResponse(**data)

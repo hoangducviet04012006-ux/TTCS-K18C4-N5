@@ -1,4 +1,4 @@
-/* S-46 public QR trace page. No login/session is required. */
+/* S-46 & S-48 public QR trace page. Only public fields returned, no login required. */
 "use strict";
 
 (function () {
@@ -59,6 +59,7 @@
 
   function renderRoots(items) {
     const list = document.getElementById("roots");
+    if (!list) return;
     list.replaceChildren();
     if (!Array.isArray(items) || items.length === 0) {
       const item = document.createElement("li");
@@ -72,6 +73,34 @@
         root.batch_code, root.product_name, root.harvest_date,
         root.location, root.farm_name, root.plot_name
       ].filter(Boolean).join(" · ");
+      list.appendChild(item);
+    });
+  }
+
+  function renderMilestones(items) {
+    const list = document.getElementById("milestones");
+    if (!list) return;
+    list.replaceChildren();
+    if (!Array.isArray(items) || items.length === 0) {
+      const item = document.createElement("li");
+      item.textContent = "Chưa có dữ liệu công đoạn bổ sung.";
+      list.appendChild(item);
+      return;
+    }
+    items.forEach((m) => {
+      const item = document.createElement("li");
+      item.className = "milestone-item";
+      const header = document.createElement("b");
+      header.textContent = "Bước " + m.step + ": " + m.stage;
+      const meta = document.createElement("div");
+      meta.className = "muted";
+      meta.textContent = [
+        "Đơn vị: " + m.organization_type,
+        m.timestamp ? "Thời gian: " + m.timestamp : null,
+        m.status ? "Trạng thái: " + m.status : null
+      ].filter(Boolean).join(" · ");
+      item.appendChild(header);
+      item.appendChild(meta);
       list.appendChild(item);
     });
   }
@@ -116,6 +145,7 @@
         data.origin && data.origin.plot_name
       ].filter(Boolean).join(" · "));
       renderRoots(data.root_batches);
+      renderMilestones(data.milestones);
       contentEl.hidden = false;
       statusEl.hidden = true;
     } catch (error) {
