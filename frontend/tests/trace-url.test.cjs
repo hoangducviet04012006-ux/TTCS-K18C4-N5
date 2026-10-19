@@ -22,5 +22,5 @@ test("falls back to a path code when batch_code is absent", () => {
 });
 
 test("returns empty code for trace page without a batch code", () => {
-  assert.equal(getBatchCode("https://shop.example/trace.html"), "trace.html");
+  assert.equal(getBatchCode("https://shop.example/trace.html"), "");
 });
