@@ -362,6 +362,39 @@ def migrate_sprint3_schema(target_engine=None) -> None:
                     pass
 
 
+def migrate_cold_chain_schema(target_engine=None) -> None:
+    """Migration nâng cấp schema cho Sprint Cold Chain (S-40, S-45):
+
+    - Cột cold_chain_status và has_temperature_violation cho bảng batches.
+    """
+    eng = target_engine if target_engine is not None else engine
+    with eng.begin() as connection:
+        tables = {
+            row[0]
+            for row in connection.exec_driver_sql(
+                "SELECT name FROM sqlite_master WHERE type = 'table'"
+            )
+        }
+        if "batches" in tables:
+            batch_cols = {
+                row[1] for row in connection.exec_driver_sql("PRAGMA table_info(batches)")
+            }
+            if "has_temperature_violation" not in batch_cols:
+                try:
+                    connection.exec_driver_sql(
+                        "ALTER TABLE batches ADD COLUMN has_temperature_violation BOOLEAN NOT NULL DEFAULT 0"
+                    )
+                except Exception:
+                    pass
+            if "cold_chain_status" not in batch_cols:
+                try:
+                    connection.exec_driver_sql(
+                        "ALTER TABLE batches ADD COLUMN cold_chain_status VARCHAR(30) NOT NULL DEFAULT 'NORMAL'"
+                    )
+                except Exception:
+                    pass
+
+
 def init_db() -> None:
     """Tạo bảng và chạy migration khi ứng dụng khởi động."""
     from app import models  # noqa: F401
@@ -389,6 +422,7 @@ def init_db() -> None:
     migrate_handover_and_batch_columns()
     migrate_sprint2_schema()
     migrate_sprint3_schema()
+    migrate_cold_chain_schema()
     create_event_immutability_triggers()
     seed_default_users()
     if os.getenv("TTCS_SEED_DEFAULTS") == "1":

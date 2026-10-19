@@ -115,6 +115,33 @@ EVENT_HANDOVER_PENDING: str = "HANDOVER_INIT"
 EVENT_HANDOVER_ACCEPTED: str = "HANDOVER_ACCEPT"
 EVENT_HANDOVER_REJECTED: str = "HANDOVER_REJECT"
 
+# Sự kiện chuỗi lạnh & vi phạm nhiệt độ (Sprint Epic E-07 / User Story S-45)
+EVENT_TEMPERATURE_VIOLATION: str = "TEMPERATURE_VIOLATION"
+EVENT_SHIPMENT_START: str = "SHIPMENT_START"
+EVENT_SHIPMENT_END: str = "SHIPMENT_END"
+
+# Trạng thái chuỗi lạnh của lô nông sản (S-45)
+COLD_CHAIN_NORMAL: str = "NORMAL"
+COLD_CHAIN_WARNING: str = "WARNING"
+COLD_CHAIN_VIOLATED: str = "VIOLATED"
+COLD_CHAIN_STATUSES: tuple[str, ...] = (
+    COLD_CHAIN_NORMAL,
+    COLD_CHAIN_WARNING,
+    COLD_CHAIN_VIOLATED,
+)
+
+# Trạng thái chuyến vận chuyển lạnh (S-40)
+SHIPMENT_STATUS_IN_TRANSIT: str = "IN_TRANSIT"
+SHIPMENT_STATUS_COMPLETED: str = "COMPLETED"
+SHIPMENT_STATUS_CANCELLED: str = "CANCELLED"
+SHIPMENT_STATUSES: tuple[str, ...] = (
+    SHIPMENT_STATUS_IN_TRANSIT,
+    SHIPMENT_STATUS_COMPLETED,
+    SHIPMENT_STATUS_CANCELLED,
+)
+
+ENTITY_SHIPMENT: str = "shipment"
+
 
 class ProductUnit(str, enum.Enum):
     """Đơn vị tính sản phẩm (T-16)."""
@@ -340,6 +367,14 @@ class Batch(Base):
     )
     status: Mapped[str] = mapped_column(String(30), nullable=False, default="ACTIVE", server_default="ACTIVE")
 
+    # Giám sát chuỗi lạnh và cảnh báo vi phạm nhiệt độ (Task S-45)
+    cold_chain_status: Mapped[str] = mapped_column(
+        String(30), nullable=False, default="NORMAL", server_default="NORMAL"
+    )
+    has_temperature_violation: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="0"
+    )
+
     # Thuộc tính nguồn gốc dữ liệu phục vụ kiến trúc hợp nhất thống nhất (Unified AgriTrace)
     origin_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     dataset_source: Mapped[str] = mapped_column(
@@ -379,6 +414,17 @@ class Batch(Base):
         foreign_keys="BatchRelation.parent_batch_id",
         back_populates="parent_batch",
         cascade="all, delete-orphan",
+    )
+    temperature_violations: Mapped[list["TemperatureViolation"]] = relationship(
+        "TemperatureViolation",
+        back_populates="batch",
+        cascade="all, delete-orphan",
+        order_by="TemperatureViolation.created_at.desc()",
+    )
+    shipments: Mapped[list["Shipment"]] = relationship(
+        "Shipment",
+        secondary="shipment_batches",
+        back_populates="batches",
     )
 
     @property
@@ -428,6 +474,11 @@ class Batch(Base):
         # Tự động gán product_id mặc định = 1 nếu chỉ có product_name (cho test cũ)
         if ("product_id" not in kwargs or kwargs["product_id"] is None) and "product_name" in kwargs:
             kwargs["product_id"] = 1
+
+        if "cold_chain_status" not in kwargs or not kwargs["cold_chain_status"]:
+            kwargs["cold_chain_status"] = "NORMAL"
+        if "has_temperature_violation" not in kwargs:
+            kwargs["has_temperature_violation"] = False
 
         super().__init__(**kwargs)
 
@@ -652,6 +703,13 @@ class Handover(Base):
     def to_org_name(self) -> str | None:
         return self.to_org.name if self.to_org else None
 
+    @property
+    def has_temperature_violation(self) -> bool:
+        """Cờ cảnh báo lô hàng từng có sự cố vi phạm nhiệt độ chuỗi lạnh (S-45)."""
+        if self.batch:
+            return bool(getattr(self.batch, "has_temperature_violation", False))
+        return False
+
     def __repr__(self) -> str:  # pragma: no cover
         return (
             f"<Handover id={self.id} batch_id={self.batch_id} "
@@ -846,6 +904,90 @@ class AuditLog(Base):
         )
 
 
+# ==============================================================================
+# 8. BẢNG SHIPMENTS, SHIPMENT_BATCHES & TEMPERATURE_VIOLATIONS (S-40, S-45)
+# ==============================================================================
+class Shipment(Base):
+    """Chuyến vận chuyển lạnh liên kết các lô hàng và thùng lạnh (S-40, S-45)."""
+
+    __tablename__ = "shipments"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    code: Mapped[str] = mapped_column(String(50), unique=True, index=True, nullable=False)
+    container_code: Mapped[str | None] = mapped_column(String(50), index=True, nullable=True)
+    transporter_org_id: Mapped[int] = mapped_column(ForeignKey("organizations.id"), nullable=False, index=True)
+    status: Mapped[str] = mapped_column(
+        String(30), nullable=False, default=SHIPMENT_STATUS_IN_TRANSIT, server_default=SHIPMENT_STATUS_IN_TRANSIT
+    )
+    started_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=_naive_utcnow)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    notes: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=_naive_utcnow)
+
+    transporter_org: Mapped["Organization"] = relationship(foreign_keys=[transporter_org_id])
+    batches: Mapped[list["Batch"]] = relationship("Batch", secondary="shipment_batches", back_populates="shipments")
+    violations: Mapped[list["TemperatureViolation"]] = relationship(
+        "TemperatureViolation", back_populates="shipment", cascade="all, delete-orphan"
+    )
+
+    def __repr__(self) -> str:  # pragma: no cover
+        return f"<Shipment id={self.id} code={self.code!r} status={self.status!r}>"
+
+
+class ShipmentBatch(Base):
+    """Bảng liên kết Nhiều - Nhiều giữa Shipment và Batch (S-40)."""
+
+    __tablename__ = "shipment_batches"
+    __table_args__ = (
+        UniqueConstraint("shipment_id", "batch_id", name="uq_shipment_batch"),
+        Index("idx_shipment_batches_shipment", "shipment_id"),
+        Index("idx_shipment_batches_batch", "batch_id"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    shipment_id: Mapped[int] = mapped_column(ForeignKey("shipments.id", ondelete="CASCADE"), nullable=False)
+    batch_id: Mapped[int] = mapped_column(ForeignKey("batches.id", ondelete="CASCADE"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=_naive_utcnow)
+
+
+class TemperatureViolation(Base):
+    """Bản ghi chi tiết sự cố vi phạm nhiệt độ chuỗi lạnh (S-43, S-45)."""
+
+    __tablename__ = "temperature_violations"
+    __table_args__ = (
+        Index("idx_temp_violations_batch", "batch_id"),
+        Index("idx_temp_violations_shipment", "shipment_id"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    batch_id: Mapped[int] = mapped_column(ForeignKey("batches.id", ondelete="CASCADE"), nullable=False, index=True)
+    shipment_id: Mapped[int | None] = mapped_column(
+        ForeignKey("shipments.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    recorded_temperature: Mapped[float] = mapped_column(Float, nullable=False)
+    min_threshold: Mapped[float | None] = mapped_column(Float, nullable=True)
+    max_threshold: Mapped[float | None] = mapped_column(Float, nullable=True)
+    peak_temperature: Mapped[float | None] = mapped_column(Float, nullable=True)
+    duration_minutes: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    start_time: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=_naive_utcnow)
+    end_time: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    severity: Mapped[str] = mapped_column(String(20), nullable=False, default="CRITICAL", server_default="CRITICAL")
+    warning_flag: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="1")
+    event_id: Mapped[int | None] = mapped_column(
+        ForeignKey("batch_events.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    resolved: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="0")
+    notes: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=_naive_utcnow)
+
+    batch: Mapped["Batch"] = relationship("Batch", back_populates="temperature_violations")
+    shipment: Mapped["Shipment | None"] = relationship("Shipment", back_populates="violations")
+    event: Mapped["BatchEvent | None"] = relationship("BatchEvent")
+
+    def __repr__(self) -> str:  # pragma: no cover
+        return f"<TemperatureViolation id={self.id} batch_id={self.batch_id} temp={self.recorded_temperature}>"
+
+
 __all__ = [
     "ACTION_CREATE",
     "ACTION_DELETE",
@@ -856,9 +998,14 @@ __all__ = [
     "Batch",
     "BatchEvent",
     "BatchRelation",
+    "COLD_CHAIN_NORMAL",
+    "COLD_CHAIN_STATUSES",
+    "COLD_CHAIN_VIOLATED",
+    "COLD_CHAIN_WARNING",
     "ENTITIES",
     "ENTITY_BATCH",
     "ENTITY_FARM",
+    "ENTITY_SHIPMENT",
     "EVENT_EXPORT_MERGE",
     "EVENT_GENESIS_SPLIT",
     "EVENT_HANDOVER_ACCEPT",
@@ -869,7 +1016,10 @@ __all__ = [
     "EVENT_HANDOVER_REJECTED",
     "EVENT_HARVEST",
     "EVENT_MERGE",
+    "EVENT_SHIPMENT_END",
+    "EVENT_SHIPMENT_START",
     "EVENT_SPLIT",
+    "EVENT_TEMPERATURE_VIOLATION",
     "RELATION_MERGE",
     "RELATION_SPLIT",
     "RELATION_TYPES",
@@ -886,6 +1036,9 @@ __all__ = [
     "ROLE_ADMIN",
     "ROLE_FARMER",
     "ROLES",
+    "Shipment",
+    "ShipmentBatch",
+    "TemperatureViolation",
     "User",
     "_naive_utcnow",
 ]

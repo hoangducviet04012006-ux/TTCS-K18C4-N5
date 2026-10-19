@@ -40,6 +40,7 @@ from app.routers import (
     audit,
     auth,
     batches,
+    cold_chain,
     events,
     farms,
     handovers,
@@ -197,6 +198,7 @@ app.include_router(handovers.router)
 app.include_router(products.router)
 app.include_router(locations.router)
 app.include_router(imports.router)
+app.include_router(cold_chain.router)
 
 # Recall keeps the existing root-level API convention.
 from app.routers import recalls  # noqa: E402

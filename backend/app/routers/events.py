@@ -81,16 +81,21 @@ def redact_event(event: BatchEventOut, user: User) -> BatchEventOut:
               "remaining_quantity", "from_org_id", "to_org_id", "parent_batch_id",
               "parent_batch_ids", "child_batch_ids", "child_codes", "merged_batch_id",
               "product_name", "total_quantity", "unit", "quantity_taken", "total_split_quantity",
-              "merged_batch_code", "parent_batch_code", "is_overdue"}
+              "merged_batch_code", "parent_batch_code", "is_overdue",
+              "recorded_temperature", "min_threshold", "max_threshold", "threshold_min",
+              "threshold_max", "peak_temperature", "duration_minutes", "start_time",
+              "end_time", "severity", "warning_flag", "has_temperature_violation",
+              "cold_chain_status", "container_code", "shipment_id", "description"}
     safe_payload = {k: v for k, v in event.payload.items() if k in public}
     if event.event_type == "MERGE":
         safe_payload["parent_batches"] = [
             {k: v for k, v in item.items() if k in {"id", "code", "quantity_taken"}}
             for item in event.payload.get("parent_batches", []) if isinstance(item, dict)
         ]
+    event_desc = event.event_data if event.event_type == "TEMPERATURE_VIOLATION" else "Thông tin truy xuất liên tổ chức"
     return event.model_copy(update={
         "payload": safe_payload,
-        "event_data": "Thông tin truy xuất liên tổ chức", "username": None,
+        "event_data": event_desc, "username": None,
         "created_by_user_id": None, "user_id": None, "notes": None,
     })
 

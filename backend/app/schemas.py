@@ -351,6 +351,14 @@ class BatchResponse(BaseModel):
         default=None,
         description="Thông tin bàn giao đang chờ (kèm cờ quá hạn 48h) để cả bên gửi và bên nhận cùng thấy (T-56, T-57).",
     )
+    has_temperature_violation: bool = Field(
+        default=False,
+        description="Cờ cảnh báo lô nông sản từng bị vi phạm nhiệt độ chuỗi lạnh (S-45).",
+    )
+    cold_chain_status: str = Field(
+        default="NORMAL",
+        description="Tình trạng chuỗi lạnh của lô (NORMAL, WARNING, VIOLATED) (S-45).",
+    )
 
     @field_validator("code", mode="before")
     @classmethod
@@ -480,6 +488,10 @@ class HandoverOut(BaseModel):
     note: str | None = None
     from_org_name: str | None = Field(default=None, description="Tên tổ chức gửi.")
     to_org_name: str | None = Field(default=None, description="Tên tổ chức nhận.")
+    has_temperature_violation: bool = Field(
+        default=False,
+        description="Cờ cảnh báo lô có vi phạm chuỗi lạnh trước khi nhận (S-45).",
+    )
 
 
 # ------------------------------------------------------------- Batch Events (T-23, T-31) ---
@@ -848,3 +860,138 @@ class BatchSummaryResponse(BaseModel):
     can_merge: bool = True
     can_handover: bool = True
     can_consume: bool = False
+
+
+# ------------------------------------------------------------- Sprint Cold Chain (S-40, S-43, S-45) ---
+class TemperatureViolationCreate(BaseModel):
+    """Payload yêu cầu ghi nhận sự cố vi phạm nhiệt độ chuỗi lạnh (S-45)."""
+
+    model_config = ConfigDict(allow_inf_nan=False)
+
+    batch_id: int | None = Field(default=None, gt=0, description="Mã ID lô hàng bị vi phạm (nếu ghi cho lô cụ thể).")
+    shipment_id: int | None = Field(
+        default=None, gt=0, description="Mã ID chuyến vận chuyển bị vi phạm (nếu ghi cho toàn bộ lô trên chuyến)."
+    )
+    recorded_temperature: float = Field(..., description="Nhiệt độ đo được gây vi phạm (°C).", examples=[25.5])
+    min_threshold: float | None = Field(default=None, description="Ngưỡng tối thiểu cho phép (°C).", examples=[2.0])
+    max_threshold: float | None = Field(default=None, description="Ngưỡng tối đa cho phép (°C).", examples=[8.0])
+    peak_temperature: float | None = Field(
+        default=None, description="Nhiệt độ đỉnh đạt được trong đợt vi phạm (°C).", examples=[28.0]
+    )
+    duration_minutes: int | None = Field(
+        default=None, ge=0, description="Thời lượng vi phạm liên tục (phút).", examples=[45]
+    )
+    start_time: datetime | None = Field(default=None, description="Thời điểm bắt đầu vi phạm (UTC).")
+    end_time: datetime | None = Field(default=None, description="Thời điểm kết thúc vi phạm (UTC).")
+    severity: str = Field(default="CRITICAL", description="Mức độ nghiêm trọng ('WARNING' hoặc 'CRITICAL').")
+    warning_flag: bool = Field(default=True, description="Gắn cờ cảnh báo sự cố vào lô và chuỗi khối.")
+    sensor_id: str | None = Field(default=None, max_length=100, description="Mã cảm biến ghi nhận.")
+    container_code: str | None = Field(default=None, max_length=100, description="Mã thùng lạnh/container.")
+    notes: str | None = Field(default=None, max_length=500, description="Ghi chú chi tiết nguyên nhân vi phạm.")
+
+
+class TemperatureViolationOut(BaseModel):
+    """Thông tin chi tiết một sự cố vi phạm nhiệt độ chuỗi lạnh (S-45)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int = Field(..., description="Mã định danh vi phạm.")
+    batch_id: int = Field(..., description="Mã ID lô hàng.")
+    batch_code: str | None = Field(default=None, description="Mã lô hàng.")
+    shipment_id: int | None = Field(default=None, description="Mã ID chuyến vận chuyển (nếu có).")
+    recorded_temperature: float = Field(..., description="Nhiệt độ vi phạm (°C).")
+    min_threshold: float | None = Field(default=None, description="Ngưỡng tối thiểu (°C).")
+    max_threshold: float | None = Field(default=None, description="Ngưỡng tối đa (°C).")
+    peak_temperature: float | None = Field(default=None, description="Nhiệt độ đỉnh (°C).")
+    duration_minutes: int | None = Field(default=None, description="Thời lượng vi phạm (phút).")
+    start_time: datetime = Field(..., description="Thời điểm bắt đầu vi phạm.")
+    end_time: datetime | None = Field(default=None, description="Thời điểm kết thúc vi phạm.")
+    severity: str = Field(..., description="Mức độ nghiêm trọng.")
+    warning_flag: bool = Field(..., description="Cờ cảnh báo.")
+    event_id: int | None = Field(default=None, description="ID sự kiện liên kết trong chuỗi hash chain.")
+    event_hash: str | None = Field(default=None, description="Mã băm SHA-256 của sự kiện vi phạm trong chuỗi khối.")
+    resolved: bool = Field(default=False, description="Trạng thái đã xử lý sự cố.")
+    notes: str | None = Field(default=None, description="Ghi chú.")
+    created_at: datetime = Field(..., description="Thời điểm ghi nhận.")
+
+
+class TemperatureViolationEventResponse(BaseModel):
+    """Kết quả ghi nhận sự kiện vi phạm nhiệt độ thành công vào chuỗi sự kiện của lô (S-45)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    violation: TemperatureViolationOut = Field(..., description="Bản ghi vi phạm nhiệt độ vừa tạo.")
+    event: BatchEventOut = Field(..., description="Sự kiện TEMPERATURE_VIOLATION vừa ghi vào Hash-Chain.")
+    batch_status: str = Field(default="ACTIVE", description="Trạng thái lô hàng.")
+    cold_chain_status: str = Field(default="VIOLATED", description="Trạng thái chuỗi lạnh của lô.")
+    warning_flag: bool = Field(default=True, description="Cờ cảnh báo sự cố vi phạm nhiệt độ.")
+    message: str = Field(..., description="Thông báo kết quả xử lý.")
+
+
+class TemperatureReadingItem(BaseModel):
+    """Một số đo cảm biến nhiệt độ theo mốc thời gian (S-41, S-42, S-43)."""
+
+    temperature: float = Field(..., description="Nhiệt độ đo được (°C).", examples=[12.5])
+    timestamp: datetime = Field(..., description="Thời điểm đo (UTC).")
+    sensor_id: str | None = Field(default=None, description="Mã cảm biến.")
+
+
+class TemperatureStreamProcessRequest(BaseModel):
+    """Yêu cầu bơm chuỗi số đo cảm biến để phát hiện vi phạm theo S-43 và ghi sự kiện S-45."""
+
+    batch_id: int | None = Field(default=None, gt=0, description="Mã ID lô hàng.")
+    shipment_id: int | None = Field(default=None, gt=0, description="Mã ID chuyến vận chuyển.")
+    min_threshold: float = Field(default=2.0, description="Ngưỡng tối thiểu (°C).")
+    max_threshold: float = Field(default=8.0, description="Ngưỡng tối đa (°C).")
+    latency_minutes: int = Field(default=30, ge=1, description="Độ trễ liên tục tối thiểu để tính là vi phạm (S-43).")
+    gap_tolerance_minutes: int = Field(default=5, ge=1, description="Khoảng cách giữa hai lần vượt để gộp lại (S-43).")
+    readings: list[TemperatureReadingItem] = Field(..., min_length=1, description="Danh sách các số đo theo thời gian.")
+    sensor_id: str | None = None
+    container_code: str | None = None
+
+
+class TemperatureStreamProcessResponse(BaseModel):
+    """Kết quả phân tích chuỗi số đo nhiệt độ theo thuật toán S-43 và ghi nhận sự kiện S-45."""
+
+    total_readings: int = Field(..., description="Tổng số số đo đã tiếp nhận.")
+    violations_detected: int = Field(..., description="Số lần vi phạm kéo dài > 30 phút phát hiện được.")
+    violations: list[TemperatureViolationOut] = Field(default_factory=list, description="Danh sách các vi phạm đã ghi nhận.")
+    message: str = Field(..., description="Thông điệp kết quả xử lý.")
+
+
+class BatchColdChainStatusResponse(BaseModel):
+    """Phản hồi kiểm tra trạng thái chuỗi lạnh và cảnh báo vi phạm của lô hàng (S-45)."""
+
+    batch_id: int = Field(..., description="Mã ID lô hàng.")
+    batch_code: str = Field(..., description="Mã code lô hàng.")
+    cold_chain_status: str = Field(..., description="Trạng thái chuỗi lạnh (NORMAL, WARNING, VIOLATED).")
+    has_temperature_violation: bool = Field(..., description="Cờ cảnh báo sự cố vi phạm nhiệt độ.")
+    total_violations: int = Field(..., description="Tổng số sự cố vi phạm đã ghi nhận.")
+    violations: list[TemperatureViolationOut] = Field(default_factory=list, description="Danh sách các vi phạm.")
+    warning_message: str | None = Field(default=None, description="Cảnh báo hiển thị trước khi nhận bàn giao.")
+
+
+class ShipmentCreate(BaseModel):
+    """Dữ liệu khai báo chuyến vận chuyển lạnh mới (S-40)."""
+
+    code: str = Field(..., min_length=3, max_length=50, description="Mã chuyến xe / chuyến vận chuyển.")
+    container_code: str | None = Field(default=None, max_length=50, description="Mã thùng lạnh / container.")
+    batch_ids: list[int] = Field(..., min_length=1, description="Danh sách các lô hàng chở trên chuyến.")
+    notes: str | None = Field(default=None, max_length=500, description="Ghi chú hành trình.")
+
+
+class ShipmentOut(BaseModel):
+    """Thông tin chuyến vận chuyển lạnh (S-40)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int = Field(..., description="Mã định danh chuyến.")
+    code: str = Field(..., description="Mã chuyến.")
+    container_code: str | None = Field(default=None, description="Mã thùng lạnh.")
+    transporter_org_id: int = Field(..., description="ID tổ chức vận chuyển.")
+    status: str = Field(..., description="Trạng thái chuyến (IN_TRANSIT, COMPLETED, CANCELLED).")
+    batch_ids: list[int] = Field(default_factory=list, description="Danh sách ID các lô hàng trên chuyến.")
+    started_at: datetime = Field(..., description="Thời điểm khởi hành.")
+    completed_at: datetime | None = Field(default=None, description="Thời điểm hoàn thành.")
+    notes: str | None = Field(default=None, description="Ghi chú.")
+    created_at: datetime = Field(..., description="Thời điểm tạo.")
