@@ -1,6 +1,7 @@
 """Kiểm thử API tạo/tải QR mã lô (S-46)."""
 
 import base64
+import os
 from datetime import date
 
 from app.models import Batch, Organization, Plot, Product
@@ -39,29 +40,33 @@ def _create_batch(client):
     return created.json()
 
 
-def test_qr_download_returns_png_for_real_batch_code(client):
+def test_qr_download_returns_png_for_real_batch_code(client, monkeypatch):
+    monkeypatch.setenv('PUBLIC_TRACE_BASE_URL', 'https://trace.example.test/trace')
     batch = _create_batch(client)
     response = client.get(f"/batches/{batch['id']}/qr", headers=_farmer_headers())
 
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("image/png")
-    assert response.headers["content-disposition"] == f'attachment; filename="QR-{batch["code"]}.png"'
+    assert response.headers["content-disposition"] == f'inline; filename="QR-{batch["code"]}.png"'
     assert response.content.startswith(b"\x89PNG\r\n\x1a\n")
     assert batch["code"] != str(batch["id"])
 
 
-def test_qr_download_requires_login(client):
+def test_qr_download_requires_login(client, monkeypatch):
+    monkeypatch.setenv('PUBLIC_TRACE_BASE_URL', 'https://trace.example.test/trace')
     batch = _create_batch(client)
     response = client.get(f"/batches/{batch['id']}/qr")
     assert response.status_code == 401
 
 
-def test_qr_download_returns_404_for_missing_batch(client):
+def test_qr_download_returns_404_for_missing_batch(client, monkeypatch):
+    monkeypatch.setenv('PUBLIC_TRACE_BASE_URL', 'https://trace.example.test/trace')
     response = client.get("/batches/999999/qr", headers=_farmer_headers())
     assert response.status_code == 404
 
 
-def test_qr_download_denies_user_without_batch_access(client, session_factory):
+def test_qr_download_denies_user_without_batch_access(client, session_factory, monkeypatch):
+    monkeypatch.setenv('PUBLIC_TRACE_BASE_URL', 'https://trace.example.test/trace')
     _create_batch(client)
     with session_factory() as db:
         other_org = Organization(name="Tổ chức QR khác", code="QR-OTHER")
