@@ -58,6 +58,7 @@ from app.schemas import (
     TraceBackResponse,
     TraceForwardResponse,
 )
+from app.schemas_trips import TemperatureViolationCreate
 from app.security import (
     get_current_user,
     require_admin,
@@ -1378,3 +1379,46 @@ def consume_batch(
         event=event,
         message="Ghi nhận lô nông sản đã tiêu thụ thành công.",
     )
+
+
+# ==============================================================================
+# S-45: TRA CỨU & GHI NHẬN VI PHẠM NHIỆT ĐỘ CỦA LÔ NÔNG SẢN
+# ==============================================================================
+@router.get(
+    "/{batch_id}/violations",
+    summary="Tra cứu vi phạm nhiệt độ chuỗi lạnh của lô nông sản (S-45)",
+    description=(
+        "Tra cứu tổng hợp và chi tiết các vi phạm nhiệt độ từng xảy ra với lô nông sản này.\n\n"
+        "Hỗ trợ nhà phân phối hoặc bên nhận hàng kiểm tra điều kiện bảo quản trước khi xác nhận bàn giao."
+    ),
+)
+def get_batch_temperature_violations(
+    batch_id: int = Path(..., ge=1, description="ID của lô nông sản."),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Tra cứu vi phạm nhiệt độ của lô hàng (S-45)."""
+    from app.services.cold_chain import get_batch_violation_summary
+    return get_batch_violation_summary(db, batch_id, user=current_user)
+
+
+@router.post(
+    "/{batch_id}/violations",
+    response_model=Any,
+    status_code=status.HTTP_201_CREATED,
+    summary="Ghi nhận vi phạm nhiệt độ trực tiếp cho lô nông sản (S-45)",
+    description="Ghi nhận sự cố vi phạm nhiệt độ tại kho hoặc trong quá trình lưu trữ của lô hàng.",
+)
+def create_batch_temperature_violation(
+    payload: TemperatureViolationCreate,
+    batch_id: int = Path(..., ge=1, description="ID của lô nông sản."),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Ghi nhận vi phạm nhiệt độ cho lô nông sản (S-45)."""
+    from app.schemas_trips import TemperatureViolationResponse
+    from app.services.cold_chain import record_temperature_violation_for_batch
+
+    violation = record_temperature_violation_for_batch(db, batch_id, payload, user=current_user)
+    return TemperatureViolationResponse.model_validate(violation)
+

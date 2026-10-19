@@ -14,12 +14,26 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import User
 from app.schemas_trips import (
+    BatchViolationSummary,
+    TemperatureLogCreate,
+    TemperatureLogResponse,
+    TemperatureViolationCreate,
+    TemperatureViolationResponse,
     TripCompleteRequest,
     TripCreate,
     TripDetailResponse,
     TripResponse,
 )
 from app.security import get_current_user
+from app.services.cold_chain import (
+    get_batch_violation_summary,
+    list_batch_violations,
+    list_trip_readings,
+    list_trip_violations,
+    record_temperature_reading,
+    record_temperature_violation_for_batch,
+    record_temperature_violation_for_trip,
+)
 from app.services.trips import (
     build_trip_detail_response,
     build_trip_response,
@@ -33,7 +47,7 @@ from app.services.trips import (
 
 router = APIRouter(
     prefix="/trips",
-    tags=["Cold Trips (S-40)"],
+    tags=["Cold Trips & Cold Chain (S-40, S-41, S-45)"],
 )
 
 
@@ -183,3 +197,142 @@ def cancel_trip(
     reason = payload.notes if payload else None
     trip = cancel_cold_trip(db, current_user, trip_id, reason)
     return build_trip_detail_response(trip, user=current_user, db=db)
+
+
+# ==============================================================================
+# QUẢN LÝ VI PHẠM NHIỆT ĐỘ & SỐ ĐO CẢM BIẾN (S-41, S-43, S-45)
+# ==============================================================================
+@router.post(
+    "/{trip_id}/violations",
+    response_model=TemperatureViolationResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Ghi nhận sự cố vi phạm nhiệt độ cho chuyến xe và các lô (S-45)",
+    description=(
+        "Khi hệ thống phát hiện cảm biến nhiệt độ ghi nhận giá trị vi phạm (vượt ngưỡng hoặc kéo dài trên 30 phút theo S-43):\n\n"
+        "- Tự động ghi nhận sự kiện `TEMPERATURE_VIOLATION` vào hash-chain bất biến của mọi lô đang chở trên chuyến.\n"
+        "- Cập nhật trạng thái và gắn cờ cảnh báo `has_temperature_violation = True` cho từng lô.\n"
+        "- Ghi nhật ký kiểm toán `AuditLog` cho chuyến xe và các lô liên quan.\n"
+        "- Đảm bảo tính nhất quán dữ liệu qua giao dịch nguyên tử (atomic transaction)."
+    ),
+)
+def create_trip_violation(
+    payload: TemperatureViolationCreate,
+    trip_id: int = Path(..., ge=1, description="ID của chuyến xe xảy ra vi phạm."),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> TemperatureViolationResponse:
+    """Ghi nhận sự cố vi phạm nhiệt độ chuỗi lạnh cho chuyến xe và toàn bộ các lô (S-45)."""
+    violation = record_temperature_violation_for_trip(db, trip_id, payload, user=current_user)
+    return TemperatureViolationResponse.model_validate(violation)
+
+
+@router.get(
+    "/{trip_id}/violations",
+    response_model=list[TemperatureViolationResponse],
+    status_code=status.HTTP_200_OK,
+    summary="Danh sách sự cố vi phạm nhiệt độ của chuyến xe (S-45)",
+    description="Lấy danh sách toàn bộ các đợt vi phạm nhiệt độ từng được ghi nhận trên chuyến xe này.",
+)
+def get_trip_violations(
+    trip_id: int = Path(..., ge=1, description="ID của chuyến xe."),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> list[TemperatureViolationResponse]:
+    """Danh sách vi phạm nhiệt độ của chuyến xe."""
+    violations = list_trip_violations(db, trip_id, user=current_user)
+    return [TemperatureViolationResponse.model_validate(v) for v in violations]
+
+
+@router.post(
+    "/{trip_id}/readings",
+    response_model=TemperatureLogResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Ghi nhận số đo cảm biến nhiệt độ theo thời gian (S-41)",
+    description="Endpoint nhận số đo kèm mốc thời gian, tự động bỏ qua số đo cũ hơn hoặc trùng thời gian theo S-41.",
+)
+def add_trip_reading(
+    payload: TemperatureLogCreate,
+    trip_id: int = Path(..., ge=1, description="ID của chuyến xe đang chạy."),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> TemperatureLogResponse:
+    """Ghi nhận số đo nhiệt độ cho chuyến xe."""
+    trip = get_cold_trip_detail(db, current_user, trip_id)
+    log = record_temperature_reading(db, trip.container_code, payload, user=current_user)
+    return TemperatureLogResponse.model_validate(log)
+
+
+@router.get(
+    "/{trip_id}/readings",
+    response_model=list[TemperatureLogResponse],
+    status_code=status.HTTP_200_OK,
+    summary="Lịch sử số đo cảm biến nhiệt độ của chuyến xe (S-41)",
+    description="Lấy chuỗi thời gian số đo nhiệt độ thùng lạnh trong suốt hành trình.",
+)
+def get_trip_readings(
+    trip_id: int = Path(..., ge=1, description="ID của chuyến xe."),
+    limit: int = Query(default=200, ge=1, le=1000, description="Số lượng bản ghi tối đa."),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> list[TemperatureLogResponse]:
+    """Lấy danh sách số đo nhiệt độ của chuyến xe."""
+    readings = list_trip_readings(db, trip_id, limit=limit, user=current_user)
+    return [TemperatureLogResponse.model_validate(r) for r in readings]
+
+
+@router.post(
+    "/active-container/{container_code}/readings",
+    response_model=TemperatureLogResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Cảm biến IoT gửi số đo nhiệt độ theo mã thùng lạnh (S-41)",
+    description="Cảm biến gắn trên thùng lạnh gửi dữ liệu nhiệt độ về theo mã thùng đang chạy hành trình.",
+)
+def add_container_reading(
+    payload: TemperatureLogCreate,
+    container_code: str = Path(..., description="Mã thùng lạnh."),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> TemperatureLogResponse:
+    """Ghi nhận số đo cảm biến nhiệt độ theo mã thùng lạnh."""
+    log = record_temperature_reading(db, container_code, payload, user=current_user)
+    return TemperatureLogResponse.model_validate(log)
+
+
+@router.get(
+    "/batches/{batch_id}/violations",
+    response_model=BatchViolationSummary,
+    status_code=status.HTTP_200_OK,
+    summary="Kiểm tra sự cố vi phạm nhiệt độ của lô nông sản (S-45)",
+    description=(
+        "Tra cứu tổng hợp tình trạng vi phạm chuỗi lạnh của lô nông sản:\n\n"
+        "- Trả về cờ cảnh báo `has_violation` và tổng số lần vi phạm `violation_count`.\n"
+        "- Trả về danh sách chi tiết các đợt vi phạm kèm thời lượng và nhiệt độ đỉnh (S-45).\n"
+        "- Phục vụ nhà phân phối / bên nhận kiểm tra trước khi xác nhận bàn giao."
+    ),
+)
+def get_batch_violations(
+    batch_id: int = Path(..., ge=1, description="ID lô nông sản cần tra cứu."),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> BatchViolationSummary:
+    """Tra cứu tình trạng vi phạm nhiệt độ của lô hàng (S-45)."""
+    return get_batch_violation_summary(db, batch_id, user=current_user)
+
+
+@router.post(
+    "/batches/{batch_id}/violations",
+    response_model=TemperatureViolationResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Ghi nhận sự cố vi phạm nhiệt độ trực tiếp cho lô nông sản (S-45)",
+    description="Ghi nhận sự cố vi phạm nhiệt độ kho bãi hoặc kiểm tra chất lượng trực tiếp cho một lô hàng.",
+)
+def create_batch_violation(
+    payload: TemperatureViolationCreate,
+    batch_id: int = Path(..., ge=1, description="ID lô nông sản."),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> TemperatureViolationResponse:
+    """Ghi nhận vi phạm nhiệt độ trực tiếp cho một lô nông sản."""
+    violation = record_temperature_violation_for_batch(db, batch_id, payload, user=current_user)
+    return TemperatureViolationResponse.model_validate(violation)
+

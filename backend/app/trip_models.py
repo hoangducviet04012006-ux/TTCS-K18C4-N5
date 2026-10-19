@@ -8,10 +8,13 @@ Gồm 2 bảng:
 from datetime import datetime, timezone
 
 from sqlalchemy import (
+    Boolean,
     DateTime,
+    Float,
     ForeignKey,
     Index,
     Integer,
+    JSON,
     String,
     Text,
     UniqueConstraint,
@@ -37,9 +40,10 @@ TRIP_STATUSES: tuple[str, ...] = (
     TRIP_STATUS_CANCELLED,
 )
 
-# Loại sự kiện vòng đời chuyến xe trên hash-chain của lô
+# Loại sự kiện vòng đời chuyến xe và giám sát nhiệt độ trên hash-chain của lô
 EVENT_TRIP_DISPATCH: str = "TRIP_DISPATCH"
 EVENT_TRIP_DELIVER: str = "TRIP_DELIVER"
+EVENT_TEMPERATURE_VIOLATION: str = "TEMPERATURE_VIOLATION"
 
 
 class ColdTrip(Base):
@@ -112,10 +116,24 @@ class ColdTrip(Base):
         cascade="all, delete-orphan",
         order_by="ColdTripBatch.attached_at.asc()",
     )
+    temperature_logs: Mapped[list["TemperatureLog"]] = relationship(
+        back_populates="trip",
+        cascade="all, delete-orphan",
+        order_by="TemperatureLog.recorded_at.asc()",
+    )
+    violations: Mapped[list["TemperatureViolation"]] = relationship(
+        back_populates="trip",
+        cascade="all, delete-orphan",
+        order_by="TemperatureViolation.start_time.asc()",
+    )
 
     @property
     def batch_count(self) -> int:
         return len(self.trip_batches)
+
+    @property
+    def violation_count(self) -> int:
+        return len(self.violations)
 
     def __repr__(self) -> str:  # pragma: no cover
         return f"<ColdTrip id={self.id} code={self.trip_code!r} container={self.container_code!r} status={self.status}>"
@@ -162,3 +180,107 @@ class ColdTripBatch(Base):
 
     def __repr__(self) -> str:  # pragma: no cover
         return f"<ColdTripBatch id={self.id} trip_id={self.trip_id} batch_id={self.batch_id}>"
+
+
+class TemperatureLog(Base):
+    """Bảng lưu trữ số đo cảm biến nhiệt độ theo thời gian của chuyến xe - ``temperature_logs`` (S-41)."""
+
+    __tablename__ = "temperature_logs"
+    __table_args__ = (
+        Index("idx_temperature_logs_trip_recorded", "trip_id", "recorded_at"),
+        Index("idx_temperature_logs_container_recorded", "container_code", "recorded_at"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    trip_id: Mapped[int] = mapped_column(
+        ForeignKey("cold_trips.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    container_code: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    temperature: Mapped[float] = mapped_column(Float, nullable=False)
+    recorded_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        default=_naive_utcnow,
+    )
+
+    # Relationships
+    trip: Mapped["ColdTrip"] = relationship(back_populates="temperature_logs")
+
+    def __repr__(self) -> str:  # pragma: no cover
+        return f"<TemperatureLog id={self.id} trip_id={self.trip_id} temp={self.temperature}°C at={self.recorded_at}>"
+
+
+class TemperatureViolation(Base):
+    """Bảng ghi nhận sự cố vi phạm nhiệt độ chuỗi lạnh - ``temperature_violations`` (S-43, S-45)."""
+
+    __tablename__ = "temperature_violations"
+    __table_args__ = (
+        Index("idx_temp_violations_trip", "trip_id"),
+        Index("idx_temp_violations_container", "container_code"),
+        Index("idx_temp_violations_start_time", "start_time"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    trip_id: Mapped[int | None] = mapped_column(
+        ForeignKey("cold_trips.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
+    batch_id: Mapped[int | None] = mapped_column(
+        ForeignKey("batches.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
+    container_code: Mapped[str | None] = mapped_column(String(50), nullable=True, index=True)
+    start_time: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    end_time: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    duration_minutes: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    peak_temperature: Mapped[float] = mapped_column(Float, nullable=False)
+    threshold_temperature: Mapped[float] = mapped_column(Float, nullable=False)
+    min_threshold: Mapped[float | None] = mapped_column(Float, nullable=True)
+    max_threshold: Mapped[float | None] = mapped_column(Float, nullable=True)
+    violation_type: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+        default="TEMPERATURE_EXCEEDED",
+    )
+    severity: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        default="WARNING",
+    )
+    status: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        default="RESOLVED",
+    )
+    affected_batch_ids: Mapped[list[int]] = mapped_column(
+        JSON,
+        nullable=False,
+        default=list,
+    )
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        default=_naive_utcnow,
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        default=_naive_utcnow,
+        onupdate=_naive_utcnow,
+    )
+
+    # Relationships
+    trip: Mapped["ColdTrip | None"] = relationship(back_populates="violations")
+    batch: Mapped["Batch | None"] = relationship(foreign_keys=[batch_id])  # noqa: F821
+
+    def __repr__(self) -> str:  # pragma: no cover
+        return (
+            f"<TemperatureViolation id={self.id} trip_id={self.trip_id} peak={self.peak_temperature}°C "
+            f"duration={self.duration_minutes}m status={self.status}>"
+        )

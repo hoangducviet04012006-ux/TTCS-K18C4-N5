@@ -81,7 +81,12 @@ def redact_event(event: BatchEventOut, user: User) -> BatchEventOut:
               "remaining_quantity", "from_org_id", "to_org_id", "parent_batch_id",
               "parent_batch_ids", "child_batch_ids", "child_codes", "merged_batch_id",
               "product_name", "total_quantity", "unit", "quantity_taken", "total_split_quantity",
-              "merged_batch_code", "parent_batch_code", "is_overdue"}
+              "merged_batch_code", "parent_batch_code", "is_overdue",
+              # S-45: Thông tin vi phạm nhiệt độ chuỗi lạnh
+              "violation_id", "trip_id", "trip_code", "container_code",
+              "start_time", "end_time", "duration_minutes", "peak_temperature",
+              "threshold_temperature", "min_threshold", "max_threshold",
+              "violation_type", "severity", "description"}
     safe_payload = {k: v for k, v in event.payload.items() if k in public}
     if event.event_type == "MERGE":
         safe_payload["parent_batches"] = [
@@ -141,7 +146,7 @@ def create_batch_event(
     reserved = {"HARVEST", "HANDOVER_INIT", "HANDOVER_ACCEPT", "HANDOVER_REJECT",
                 "SPLIT", "GENESIS_SPLIT", "MERGE", "EXPORT_MERGE", "BATCH_UPDATED", "CONSUMED",
                 "RECALL_INIT", "RECALL_AFFECTED", "RECALL_ACKNOWLEDGED", "RECALL_COMPLETED",
-                "TRIP_DISPATCH", "TRIP_DELIVER"}
+                "TRIP_DISPATCH", "TRIP_DELIVER", "TEMPERATURE_VIOLATION"}
     if not payload.event_type.strip():
         raise HTTPException(400, "Loại sự kiện không được để trống.")
     if payload.event_type.strip().upper() in reserved:

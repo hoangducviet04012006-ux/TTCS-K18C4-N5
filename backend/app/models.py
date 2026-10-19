@@ -93,9 +93,10 @@ EVENT_MERGE: str = "MERGE"
 EVENT_EXPORT_MERGE: str = "EXPORT_MERGE"
 EVENT_CONSUMED: str = "CONSUMED"
 
-# Các loại sự kiện vòng đời chuyến xe lạnh (Sprint 4 - S-40)
+# Các loại sự kiện vòng đời chuyến xe lạnh (Sprint 4 - S-40 & S-45)
 EVENT_TRIP_DISPATCH: str = "TRIP_DISPATCH"
 EVENT_TRIP_DELIVER: str = "TRIP_DELIVER"
+EVENT_TEMPERATURE_VIOLATION: str = "TEMPERATURE_VIOLATION"
 
 # Các loại quan hệ phả hệ lô (Sprint 3 - T-39)
 RELATION_SPLIT: str = "SPLIT"
@@ -344,6 +345,14 @@ class Batch(Base):
     )
     status: Mapped[str] = mapped_column(String(30), nullable=False, default="ACTIVE", server_default="ACTIVE")
 
+    # Cờ cảnh báo sự cố vi phạm nhiệt độ chuỗi lạnh (S-45)
+    has_temperature_violation: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="0"
+    )
+    temperature_violation_count: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
+
     # Thuộc tính nguồn gốc dữ liệu phục vụ kiến trúc hợp nhất thống nhất (Unified AgriTrace)
     origin_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     dataset_source: Mapped[str] = mapped_column(
@@ -480,6 +489,16 @@ class Batch(Base):
         (xem trong danh sách lô) lẫn bên nhận (xem trong danh sách chờ duyệt).
         """
         return self.pending_handover is not None
+
+    @property
+    def has_cold_chain_violation(self) -> bool:
+        """Kiểm tra lô có cờ vi phạm hoặc có sự kiện TEMPERATURE_VIOLATION trong hash-chain (S-45)."""
+        if getattr(self, "has_temperature_violation", False):
+            return True
+        for e in getattr(self, "events", []):
+            if e.event_type == EVENT_TEMPERATURE_VIOLATION:
+                return True
+        return False
 
     def __repr__(self) -> str:  # pragma: no cover
         return f"<Batch id={self.id} code={self.code!r} plot_id={self.plot_id} status={self.status}>"
@@ -655,6 +674,20 @@ class Handover(Base):
     @property
     def to_org_name(self) -> str | None:
         return self.to_org.name if self.to_org else None
+
+    @property
+    def has_temperature_violation(self) -> bool:
+        """Cảnh báo cho bên nhận: Lô từng gặp sự cố vi phạm nhiệt độ chuỗi lạnh (S-45)."""
+        if self.batch:
+            return bool(getattr(self.batch, "has_temperature_violation", False) or self.batch.has_cold_chain_violation)
+        return False
+
+    @property
+    def temperature_violation_count(self) -> int:
+        """Số lần vi phạm nhiệt độ được ghi nhận trên lô này (S-45)."""
+        if self.batch:
+            return int(getattr(self.batch, "temperature_violation_count", 0))
+        return 0
 
     def __repr__(self) -> str:  # pragma: no cover
         return (

@@ -147,6 +147,20 @@ def migrate_handover_and_batch_columns() -> None:
                 connection.exec_driver_sql(
                     "ALTER TABLE batches ADD COLUMN current_org_id INTEGER REFERENCES organizations(id)"
                 )
+            if "has_temperature_violation" not in existing_batches:
+                try:
+                    connection.exec_driver_sql(
+                        "ALTER TABLE batches ADD COLUMN has_temperature_violation BOOLEAN NOT NULL DEFAULT 0"
+                    )
+                except Exception:
+                    pass
+            if "temperature_violation_count" not in existing_batches:
+                try:
+                    connection.exec_driver_sql(
+                        "ALTER TABLE batches ADD COLUMN temperature_violation_count INTEGER NOT NULL DEFAULT 0"
+                    )
+                except Exception:
+                    pass
             try:
                 connection.exec_driver_sql(
                     "UPDATE batches SET current_org_id = ("
