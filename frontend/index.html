@@ -1269,15 +1269,53 @@
 
 
   <!-- Modal xem mã QR truy xuất nguồn gốc (S-46) -->
+  <style>
+    .batch-qr-modal { max-width: 560px; width: calc(100% - 24px); overflow: hidden; border: 1px solid #dbe7df; box-shadow: 0 24px 80px rgba(15, 45, 28, .24); }
+    .batch-qr-modal .modal__header { background: linear-gradient(120deg, #14532d, #16a34a); color: #fff; border: 0; padding: 18px 22px; }
+    .batch-qr-modal .modal__title { color: #fff; font-size: 1.08rem; display: flex; align-items: center; gap: 10px; }
+    .batch-qr-modal .modal__close { color: #fff; background: rgba(255,255,255,.14); border-radius: 10px; width: 36px; height: 36px; }
+    .batch-qr-modal .modal__body { padding: 22px; }
+    .batch-qr-hero { display: grid; justify-items: center; text-align: center; gap: 7px; }
+    .batch-qr-eyebrow { font-size: .75rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #15803d; }
+    .batch-qr-product { font-size: 1.25rem; line-height: 1.35; color: #163b27; font-weight: 750; overflow-wrap: anywhere; }
+    .batch-qr-code { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 999px; background: #ecfdf3; border: 1px solid #bbf7d0; color: #166534; font: 600 .88rem/1.4 ui-monospace, SFMono-Regular, Consolas, monospace; }
+    .batch-qr-image-frame { margin: 18px auto; width: min(100%, 300px); padding: 16px; border-radius: 18px; background: linear-gradient(145deg, #f0fdf4, #fff); border: 1px solid #d8eade; box-shadow: 0 8px 28px rgba(22, 101, 52, .1); }
+    .batch-qr-image-frame img { display: block; width: 100%; height: auto; image-rendering: pixelated; border-radius: 8px; background: #fff; }
+    .batch-qr-status { margin: 16px 0; padding: 12px 14px; border-radius: 10px; background: #f8faf9; color: #52665a; text-align: center; overflow-wrap: anywhere; }
+    .batch-qr-url-card { margin-top: 16px; padding: 14px; border: 1px solid #dce8df; border-radius: 12px; background: #f8fbf9; }
+    .batch-qr-url-card label { display: block; margin-bottom: 7px; font-size: .78rem; font-weight: 750; color: #52665a; text-transform: uppercase; letter-spacing: .04em; }
+    .batch-qr-url { display: block; color: #166534; font-size: .88rem; line-height: 1.5; overflow-wrap: anywhere; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+    .batch-qr-note { margin-top: 10px; font-size: .78rem; color: #6b7e71; text-align: center; }
+    .batch-qr-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
+    .batch-qr-download { background: #166534; color: #fff; border-color: #166534; }
+    .batch-qr-download:hover:not(:disabled) { background: #14532d; }
+    @media (max-width: 480px) { .batch-qr-modal .modal__body { padding: 16px; } .batch-qr-image-frame { width: min(100%, 260px); padding: 12px; } .batch-qr-actions { display: grid; grid-template-columns: 1fr 1fr; } .batch-qr-actions .btn { padding-inline: 10px; } }
+  </style>
   <div id="modal-batch-qr" class="modal-backdrop" hidden>
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="batch-qr-title" style="max-width:520px;width:calc(100% - 24px);">
-      <header class="modal__header"><h3 id="batch-qr-title" class="modal__title">Mã QR truy xuất nguồn gốc</h3><button id="btn-close-batch-qr" class="modal__close" type="button" aria-label="Đóng">&times;</button></header>
-      <div class="modal__body" style="text-align:center;">
-        <p id="batch-qr-product" style="font-weight:600;margin:0 0 6px;"></p><p id="batch-qr-code" style="margin:0 0 14px;"></p>
-        <p id="batch-qr-status" role="status" aria-live="polite">Đang tải mã QR...</p>
-        <img id="batch-qr-image" alt="Mã QR truy xuất nguồn gốc của lô" hidden style="display:block;width:min(100%,320px);height:auto;image-rendering:pixelated;margin:12px auto;background:white;padding:12px;border:1px solid var(--color-border);border-radius:8px;" />
-        <p style="text-align:left;margin:12px 0 4px;"><strong>Đường dẫn truy xuất nguồn gốc</strong></p><a id="batch-qr-url" href="#" target="_blank" rel="noopener noreferrer" style="display:block;overflow-wrap:anywhere;text-align:left;"></a>
-        <div class="modal__actions" style="justify-content:flex-end;margin-top:18px;"><button id="btn-download-batch-qr" class="btn btn--light" type="button" disabled>Tải PNG</button><button id="btn-close-batch-qr-footer" class="btn btn--primary" type="button">Đóng</button></div>
+    <div class="modal batch-qr-modal" role="dialog" aria-modal="true" aria-labelledby="batch-qr-title">
+      <header class="modal__header">
+        <h3 id="batch-qr-title" class="modal__title"><span aria-hidden="true">▦</span> Mã QR truy xuất nguồn gốc</h3>
+        <button id="btn-close-batch-qr" class="modal__close" type="button" aria-label="Đóng">&times;</button>
+      </header>
+      <div class="modal__body">
+        <div class="batch-qr-hero">
+          <span class="batch-qr-eyebrow">AgriTrace · Truy xuất minh bạch</span>
+          <p id="batch-qr-product" class="batch-qr-product">Thông tin sản phẩm</p>
+          <p id="batch-qr-code" class="batch-qr-code"></p>
+        </div>
+        <p id="batch-qr-status" class="batch-qr-status" role="status" aria-live="polite">Đang tải mã QR...</p>
+        <div id="batch-qr-image-frame" class="batch-qr-image-frame" hidden>
+          <img id="batch-qr-image" alt="Mã QR truy xuất nguồn gốc của lô" />
+        </div>
+        <div class="batch-qr-url-card">
+          <label for="batch-qr-url">Đường dẫn truy xuất</label>
+          <a id="batch-qr-url" class="batch-qr-url" href="#" target="_blank" rel="noopener noreferrer"></a>
+        </div>
+        <p class="batch-qr-note">Quét mã bằng camera điện thoại để xem thông tin nguồn gốc lô hàng.</p>
+        <div class="batch-qr-actions">
+          <button id="btn-close-batch-qr-footer" class="btn btn--light" type="button">Đóng</button>
+          <button id="btn-download-batch-qr" class="btn batch-qr-download" type="button" disabled>↓ Tải ảnh PNG</button>
+        </div>
       </div>
     </div>
   </div>
