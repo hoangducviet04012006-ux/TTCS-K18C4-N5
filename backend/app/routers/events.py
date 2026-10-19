@@ -140,7 +140,8 @@ def create_batch_event(
     # Chuẩn bị payload có cấu trúc (T-23)
     reserved = {"HARVEST", "HANDOVER_INIT", "HANDOVER_ACCEPT", "HANDOVER_REJECT",
                 "SPLIT", "GENESIS_SPLIT", "MERGE", "EXPORT_MERGE", "BATCH_UPDATED", "CONSUMED",
-                "RECALL_INIT", "RECALL_AFFECTED", "RECALL_ACKNOWLEDGED", "RECALL_COMPLETED"}
+                "RECALL_INIT", "RECALL_AFFECTED", "RECALL_ACKNOWLEDGED", "RECALL_COMPLETED",
+                "TRIP_DISPATCH", "TRIP_DELIVER"}
     if not payload.event_type.strip():
         raise HTTPException(400, "Loại sự kiện không được để trống.")
     if payload.event_type.strip().upper() in reserved:
