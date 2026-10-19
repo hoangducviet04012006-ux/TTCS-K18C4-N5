@@ -101,3 +101,27 @@ def test_qr_download_denies_user_without_batch_access(client, session_factory, m
 
     response = client.get(f"/batches/{foreign_id}/qr", headers=_farmer_headers())
     assert response.status_code == 403
+
+
+def test_qr_info_returns_clear_error_when_public_url_is_not_configured(client, monkeypatch):
+    monkeypatch.delenv("PUBLIC_TRACE_BASE_URL", raising=False)
+    batch = _create_batch(client)
+    response = client.get(f"/batches/{batch['id']}/qr-info", headers=_farmer_headers())
+    assert response.status_code == 503
+    assert "PUBLIC_TRACE_BASE_URL" in response.json()["detail"]
+
+
+def test_public_trace_is_available_without_login(client):
+    batch = _create_batch(client)
+    response = client.get(f"/public/trace/{batch['code']}")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["batch_code"] == batch["code"]
+    assert data["product_name"] == "Xoài kiểm thử QR S-46"
+    assert "origin" in data
+    assert "root_batches" in data
+
+
+def test_public_trace_returns_404_for_unknown_batch(client):
+    response = client.get("/public/trace/NO-SUCH-BATCH-S46")
+    assert response.status_code == 404
