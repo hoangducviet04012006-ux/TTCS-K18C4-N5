@@ -314,7 +314,8 @@
     <header class="screen-heading"><h2 id="screen-title" tabindex="-1">Tổng quan</h2><p id="screen-description"></p></header>
     <section id="recent-activity" class="card"><h3>Hoạt động gần đây</h3><p class="card__desc">Các sự kiện gần đây của tối đa 5 lô trên trang hiện tại.</p><div id="recent-activity-list" class="timeline"></div></section>
     <section id="traceability-card" class="card">
-      <form id="trace-screen-form" class="screen-toolbar"><label class="field"><span class="field__label">Lô cần truy xuất</span><select id="trace-screen-batch" required></select></label><button class="btn btn--primary" type="submit">Xem nguồn gốc</button></form>
+      <form id="trace-screen-form" class="screen-toolbar"><label class="field"><span class="field__label">Lô cần truy xuất</span><select id="trace-screen-batch" required></select></label><button class="btn btn--light" type="submit">Xem nguồn gốc</button><button id="btn-traceability-verify-integrity" class="btn btn--primary" type="button">Kiểm tra tính toàn vẹn</button></form>
+      <div id="traceability-valid-banner" class="integrity-valid-badge" hidden><span id="traceability-valid-text"></span></div><div id="traceability-alert-banner" class="integrity-alert-banner" hidden><span id="traceability-alert-text"></span></div>
       <p id="trace-lineage-loading" role="status" hidden></p><div id="trace-lineage-body" hidden><div class="root-origins-card"><h3>Nguồn gốc thu hoạch</h3><div id="trace-root-batches-list" class="root-batches-grid"></div></div><h3>Phả hệ theo tầng</h3><div id="trace-lineage-levels-container"></div></div>
     </section>
     <section id="events-card" class="card">
