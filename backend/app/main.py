@@ -48,6 +48,8 @@ from app.routers import (
     imports,
     products,
     users,
+    qr,
+    public_trace,
 )
 from app.schemas import HealthResponse
 
@@ -190,6 +192,9 @@ app.include_router(auth.router)
 app.include_router(farms.router)
 app.include_router(batches.router)
 app.include_router(batches.router, prefix="/api/v1")
+app.include_router(qr.router)
+app.include_router(qr.router, prefix="/api/v1")
+app.include_router(public_trace.router)
 app.include_router(events.router)
 app.include_router(users.router)
 app.include_router(audit.router)

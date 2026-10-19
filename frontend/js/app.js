@@ -3578,9 +3578,69 @@ function openTimelineModal(batchId) {
   switchDetailTab("timeline");
 }
 
+/** Hiển thị modal QR truy xuất; không tự tải ảnh xuống. */
+let currentBatchQrObjectUrl = null;
+async function showBatchQrModal() {
+  const batchId = currentDetailBatchId;
+  if (!batchId || !session) { toast("Vui lòng đăng nhập và mở chi tiết một lô trước.", "error"); return; }
+  const modal = $("modal-batch-qr");
+  const image = $("batch-qr-image");
+  const imageFrame = $("batch-qr-image-frame");
+  const statusEl = $("batch-qr-status");
+  const urlEl = $("batch-qr-url");
+  const download = $("btn-download-batch-qr");
+  modal.hidden = false;
+  imageFrame.hidden = true; statusEl.hidden = false; statusEl.textContent = "Đang tải mã QR...";
+  urlEl.textContent = ""; urlEl.removeAttribute("href"); download.disabled = true;
+  $("batch-qr-product").textContent = ""; $("batch-qr-code").textContent = "";
+  try {
+    const infoResponse = await fetch(`${API_BASE_URL}/batches/${encodeURIComponent(batchId)}/qr-info`, {credentials:"include", headers:{"X-Requested-With":"XMLHttpRequest"}});
+    if (!infoResponse.ok) {
+      let message = "Không thể tải thông tin QR.";
+      try { const data = await infoResponse.json(); if (typeof data.detail === "string") message = data.detail; } catch (_) {}
+      throw new Error(message);
+    }
+    const info = await infoResponse.json();
+    const qrResponse = await fetch(`${API_BASE_URL}/batches/${encodeURIComponent(batchId)}/qr`, {credentials:"include", headers:{"X-Requested-With":"XMLHttpRequest"}});
+    if (!qrResponse.ok) {
+      let message = "Không thể tạo mã QR.";
+      try { const data = await qrResponse.json(); if (typeof data.detail === "string") message = data.detail; } catch (_) {}
+      throw new Error(message);
+    }
+    const blob = await qrResponse.blob();
+    if (!blob.type.includes("image/png")) throw new Error("API không trả về ảnh PNG hợp lệ.");
+    if (currentBatchQrObjectUrl) URL.revokeObjectURL(currentBatchQrObjectUrl);
+    currentBatchQrObjectUrl = URL.createObjectURL(blob);
+    image.src = currentBatchQrObjectUrl; imageFrame.hidden = false;
+    $("batch-qr-product").textContent = info.product_name || "Nông sản";
+    $("batch-qr-code").textContent = `Mã lô: ${info.batch_code}`;
+    urlEl.href = info.trace_url; urlEl.textContent = info.trace_url;
+    statusEl.hidden = true; download.disabled = false;
+    download.onclick = () => {
+      const a = document.createElement("a"); a.href = currentBatchQrObjectUrl;
+      a.download = `QR-${String(info.batch_code).replace(/[^a-zA-Z0-9_-]/g, "_")}.png`;
+      document.body.appendChild(a); a.click(); a.remove();
+    };
+  } catch (error) {
+    statusEl.textContent = error.message || "Đã xảy ra lỗi khi tải mã QR.";
+    statusEl.hidden = false; toast(`Không thể hiển thị QR: ${statusEl.textContent}`, "error");
+  }
+}
+function closeBatchQrModal() {
+  const modal = $("modal-batch-qr"); if (modal) modal.hidden = true;
+  const image = $("batch-qr-image"); if (image) image.removeAttribute("src");
+  const imageFrame = $("batch-qr-image-frame"); if (imageFrame) imageFrame.hidden = true;
+  if (currentBatchQrObjectUrl) { URL.revokeObjectURL(currentBatchQrObjectUrl); currentBatchQrObjectUrl = null; }
+}
+
 /** Mở modal chi tiết lô trung tâm 3 Tab (S-25: T-58, T-59) */
 async function openBatchDetailsModal(batchId) {
   currentDetailBatchId = batchId;
+  const qrButton = $("btn-detail-qr-download");
+  if (qrButton && !qrButton.dataset.qrBound) {
+    qrButton.dataset.qrBound = "true";
+    qrButton.addEventListener("click", showBatchQrModal);
+  }
   const modal = $("modal-batch-details");
   if (!modal) return;
   modal.hidden = false;
@@ -5804,6 +5864,9 @@ async function init() {
     apiEl.textContent = API_BASE_URL;
   }
   setupAppScreens();
+  $("btn-close-batch-qr")?.addEventListener("click", closeBatchQrModal);
+  $("btn-close-batch-qr-footer")?.addEventListener("click", closeBatchQrModal);
+  $("modal-batch-qr")?.addEventListener("click", event => { if (event.target.id === "modal-batch-qr") closeBatchQrModal(); });
   bindEvents();
   bindAccountControls();
   const handleBatchPageNav = (delta) => {
