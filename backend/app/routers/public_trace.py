@@ -41,7 +41,6 @@ def public_trace_by_code(batch_code: str, db: Session = Depends(get_db)):
             "location": (plot.location if plot else None) or (farm.location if farm else None),
             "farm_name": (farm.name if farm else None) or (plot.name if plot else None),
             "plot_name": plot.name if plot else None,
-            "plot_area": float(plot.area) if plot and plot.area is not None else None,
         },
         "root_batches": roots,
     }
