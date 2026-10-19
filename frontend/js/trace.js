@@ -18,6 +18,7 @@
     if (queryCode && queryCode.trim()) return queryCode.trim();
     const path = parsed.pathname.replace(/\/+$/, "");
     const last = path.split("/").pop() || "";
+    if (!last || /\\.html?$/i.test(last)) return "";
     try {
       return decodeURIComponent(last).trim();
     } catch (_error) {
