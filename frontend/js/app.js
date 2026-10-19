@@ -3585,11 +3585,12 @@ async function showBatchQrModal() {
   if (!batchId || !session) { toast("Vui lòng đăng nhập và mở chi tiết một lô trước.", "error"); return; }
   const modal = $("modal-batch-qr");
   const image = $("batch-qr-image");
+  const imageFrame = $("batch-qr-image-frame");
   const statusEl = $("batch-qr-status");
   const urlEl = $("batch-qr-url");
   const download = $("btn-download-batch-qr");
   modal.hidden = false;
-  image.hidden = true; statusEl.hidden = false; statusEl.textContent = "Đang tải mã QR...";
+  imageFrame.hidden = true; statusEl.hidden = false; statusEl.textContent = "Đang tải mã QR...";
   urlEl.textContent = ""; urlEl.removeAttribute("href"); download.disabled = true;
   $("batch-qr-product").textContent = ""; $("batch-qr-code").textContent = "";
   try {
@@ -3610,7 +3611,7 @@ async function showBatchQrModal() {
     if (!blob.type.includes("image/png")) throw new Error("API không trả về ảnh PNG hợp lệ.");
     if (currentBatchQrObjectUrl) URL.revokeObjectURL(currentBatchQrObjectUrl);
     currentBatchQrObjectUrl = URL.createObjectURL(blob);
-    image.src = currentBatchQrObjectUrl; image.hidden = false;
+    image.src = currentBatchQrObjectUrl; imageFrame.hidden = false;
     $("batch-qr-product").textContent = info.product_name || "Nông sản";
     $("batch-qr-code").textContent = `Mã lô: ${info.batch_code}`;
     urlEl.href = info.trace_url; urlEl.textContent = info.trace_url;
@@ -3627,6 +3628,8 @@ async function showBatchQrModal() {
 }
 function closeBatchQrModal() {
   const modal = $("modal-batch-qr"); if (modal) modal.hidden = true;
+  const image = $("batch-qr-image"); if (image) image.removeAttribute("src");
+  const imageFrame = $("batch-qr-image-frame"); if (imageFrame) imageFrame.hidden = true;
   if (currentBatchQrObjectUrl) { URL.revokeObjectURL(currentBatchQrObjectUrl); currentBatchQrObjectUrl = null; }
 }
 
