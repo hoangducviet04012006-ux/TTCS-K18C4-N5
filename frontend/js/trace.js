@@ -78,7 +78,9 @@
 
   async function loadPublicTrace() {
     // Never leave the initial loading message indefinitely.
+    const controller = new AbortController();
     const timeout = window.setTimeout(() => {
+      controller.abort();
       showError("Hết thời gian chờ khi tải dữ liệu. Vui lòng thử lại sau.");
     }, 15000);
     try {
@@ -94,7 +96,8 @@
       );
       const response = await fetch(apiUrl.href, {
         cache: "no-store",
-        headers: { Accept: "application/json" }
+        headers: { Accept: "application/json" },
+        signal: controller.signal
       });
       let data = {};
       try { data = await response.json(); } catch (_error) { /* handled below */ }
@@ -116,7 +119,11 @@
       contentEl.hidden = false;
       statusEl.hidden = true;
     } catch (error) {
-      showError(error && error.message ? error.message : "Không thể tải thông tin truy xuất.");
+      if (error && error.name === "AbortError") {
+        showError("Hết thời gian chờ khi tải dữ liệu. Vui lòng thử lại sau.");
+      } else {
+        showError(error && error.message ? error.message : "Không thể tải thông tin truy xuất.");
+      }
     } finally {
       window.clearTimeout(timeout);
     }
