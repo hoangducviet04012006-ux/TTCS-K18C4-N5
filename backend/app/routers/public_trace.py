@@ -7,6 +7,7 @@ from app.services.traceability import trace_backwards
 
 router = APIRouter(tags=["Public Traceability"])
 
+
 @router.get("/public/trace/{batch_code}", summary="Thông tin truy xuất công khai theo mã lô")
 def public_trace_by_code(batch_code: str, db: Session = Depends(get_db)):
     batch = (
