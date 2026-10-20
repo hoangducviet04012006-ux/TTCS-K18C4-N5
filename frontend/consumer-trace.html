@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#155e3b">
+  <meta name="description" content="Tra cứu nguồn gốc nông sản AgriTrace: vùng trồng, ngày thu hoạch và hành trình sản phẩm.">
+  <title>Truy xuất nguồn gốc nông sản | AgriTrace</title>
+  <link rel="stylesheet" href="css/consumer-trace.css">
+  <script defer src="js/consumer-trace.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="index.html" aria-label="AgriTrace - trang chủ">
+      <span class="brand-mark" aria-hidden="true">A</span>
+      <span><strong>AgriTrace</strong><small>Minh bạch từ vùng trồng</small></span>
+    </a>
+    <span class="public-label"><span aria-hidden="true">●</span> Tra cứu công khai</span>
+  </header>
+
+  <main class="page">
+    <section class="hero">
+      <p class="eyebrow">TỪ NÔNG TRẠI ĐẾN BÀN ĂN</p>
+      <h1>Hành trình của nông sản</h1>
+      <p class="intro">Nhập mã lô hoặc mở liên kết QR để xem vùng trồng, ngày thu hoạch và các mốc hành trình đã ghi nhận.</p>
+      <form id="trace-form" class="search-form">
+        <label for="batch-code">Mã lô nông sản</label>
+        <div class="search-row">
+          <input id="batch-code" name="code" type="text" maxlength="100" autocomplete="off" placeholder="Ví dụ: AGRI-2026-001" required>
+          <button type="submit" id="search-button">Tra cứu</button>
+        </div>
+      </form>
+    </section>
+
+    <section id="notice" class="notice" role="status" aria-live="polite" hidden></section>
+    <section id="trace-result" hidden aria-labelledby="result-title">
+      <div class="result-heading">
+        <div>
+          <p class="eyebrow">THÔNG TIN LÔ HÀNG</p>
+          <h2 id="result-title">Chi tiết truy xuất</h2>
+        </div>
+        <span id="batch-status" class="status-chip">Đang tải</span>
+      </div>
+
+      <article class="product-card">
+        <div class="product-symbol" aria-hidden="true">🌱</div>
+        <div class="product-info">
+          <p class="field-label">Nông sản</p>
+          <h3 id="product-name">—</h3>
+          <p class="batch-code">Mã lô: <strong id="result-code">—</strong></p>
+        </div>
+      </article>
+
+      <div class="info-grid">
+        <article class="info-card">
+          <span class="info-icon" aria-hidden="true">📍</span>
+          <div><p class="field-label">Vùng trồng / xuất xứ</p><h3 id="origin-name">Chưa có dữ liệu</h3><p id="origin-location" class="muted">—</p><p id="plot-name" class="muted"></p></div>
+        </article>
+        <article class="info-card">
+          <span class="info-icon" aria-hidden="true">🗓️</span>
+          <div><p class="field-label">Ngày thu hoạch</p><h3 id="harvest-date">Chưa có dữ liệu</h3><p class="muted">Theo hồ sơ truy xuất công khai</p></div>
+        </article>
+      </div>
+
+      <section class="journey-section" aria-labelledby="journey-title">
+        <div class="section-heading"><div><p class="eyebrow">CÁC BƯỚC ĐÃ GHI NHẬN</p><h2 id="journey-title">Hành trình sản phẩm</h2></div></div>
+        <ol id="milestone-list" class="timeline"></ol>
+        <p id="empty-milestones" class="empty-state" hidden>Chưa có mốc hành trình bổ sung cho lô này.</p>
+      </section>
+
+      <section id="roots-section" class="roots-section" hidden aria-labelledby="roots-title">
+        <p class="eyebrow">TRUY XUẤT NGUỒN GỐC</p>
+        <h2 id="roots-title">Lô thu hoạch gốc</h2>
+        <ul id="root-list" class="root-list"></ul>
+      </section>
+      <p class="privacy-note">Trang chỉ hiển thị thông tin truy xuất được phép công khai; không hiển thị giá cả, khối lượng hay tên riêng đối tác thương mại.</p>
+    </section>
+
+    <footer class="page-footer">AgriTrace · Thông tin dựa trên dữ liệu truy xuất được hệ thống ghi nhận.</footer>
+  </main>
+</body>
+</html>
