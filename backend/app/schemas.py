@@ -347,6 +347,14 @@ class BatchResponse(BaseModel):
     )
     is_simulation: bool = Field(default=False, description="Cờ đánh dấu dữ liệu mô phỏng thực hành.")
     is_pending: bool = Field(default=False, description="Lô đang có yêu cầu bàn giao chờ xác nhận (T-56, T-57).")
+    has_temperature_violation: bool = Field(
+        default=False,
+        description="Cờ cảnh báo lô từng bị vi phạm nhiệt độ bảo quản lạnh (S-45).",
+    )
+    temperature_violation_count: int = Field(
+        default=0,
+        description="Số lần xảy ra sự cố vi phạm nhiệt độ bảo quản lạnh (S-45).",
+    )
     pending_handover: PendingHandoverBrief | None = Field(
         default=None,
         description="Thông tin bàn giao đang chờ (kèm cờ quá hạn 48h) để cả bên gửi và bên nhận cùng thấy (T-56, T-57).",
@@ -477,6 +485,14 @@ class HandoverOut(BaseModel):
     batch_product_name: str | None = Field(default=None, description="Tên sản phẩm của lô.")
     batch_quantity: float | None = Field(default=None, description="Khối lượng của lô (kg).")
     batch_unit: str = "kg"
+    has_temperature_violation: bool = Field(
+        default=False,
+        description="Cờ cảnh báo lô từng gặp sự cố vi phạm nhiệt độ chuỗi lạnh (S-45).",
+    )
+    temperature_violation_count: int = Field(
+        default=0,
+        description="Số lần phát hiện vi phạm nhiệt độ trên lô này (S-45).",
+    )
     note: str | None = None
     from_org_name: str | None = Field(default=None, description="Tên tổ chức gửi.")
     to_org_name: str | None = Field(default=None, description="Tên tổ chức nhận.")

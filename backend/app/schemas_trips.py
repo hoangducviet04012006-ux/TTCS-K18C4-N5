@@ -127,6 +127,7 @@ class TripResponse(BaseModel):
     end_time: datetime | None = None
     notes: str | None = None
     batch_count: int = 0
+    violation_count: int = 0
     created_at: datetime
 
 
@@ -134,3 +135,94 @@ class TripDetailResponse(TripResponse):
     """Chi tiết đầy đủ chuyến vận chuyển chuỗi lạnh kèm danh sách các lô."""
 
     batches: list[TripBatchItemResponse] = Field(default_factory=list)
+
+
+# ==============================================================================
+# SCHEMAS GIÁM SÁT NHIỆT ĐỘ & VI PHẠM CHUỖI LẠNH (S-41, S-43, S-45)
+# ==============================================================================
+class TemperatureLogCreate(BaseModel):
+    """Dữ liệu cảm biến nhiệt độ gửi lên từ thiết bị IoT (S-41)."""
+
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    temperature: float = Field(..., description="Nhiệt độ đo được (°C).")
+    recorded_at: datetime | None = Field(
+        default=None,
+        description="Mốc thời gian đo được (UTC). Nếu để trống, hệ thống dùng thời điểm hiện tại.",
+    )
+
+
+class TemperatureLogResponse(BaseModel):
+    """Dữ liệu lịch sử số đo nhiệt độ trả về API."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    trip_id: int
+    container_code: str
+    temperature: float
+    recorded_at: datetime
+    created_at: datetime
+
+
+class TemperatureViolationCreate(BaseModel):
+    """Dữ liệu yêu cầu ghi nhận sự cố vi phạm nhiệt độ (S-45)."""
+
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    start_time: datetime = Field(..., description="Thời điểm bắt đầu vượt ngưỡng vi phạm.")
+    end_time: datetime | None = Field(
+        default=None,
+        description="Thời điểm kết thúc vi phạm (nếu đã kết thúc).",
+    )
+    duration_minutes: float = Field(
+        ...,
+        ge=0,
+        description="Thời lượng vi phạm tính bằng phút (S-43: >= 30 phút là vi phạm chuẩn).",
+    )
+    peak_temperature: float = Field(..., description="Nhiệt độ đỉnh cao nhất trong đợt vi phạm (°C).")
+    threshold_temperature: float = Field(..., description="Ngưỡng nhiệt độ bị vi phạm (°C).")
+    min_threshold: float | None = Field(default=None, description="Ngưỡng dưới cho phép (°C).")
+    max_threshold: float | None = Field(default=None, description="Ngưỡng trên cho phép (°C).")
+    violation_type: str = Field(
+        default="TEMPERATURE_EXCEEDED",
+        description="Phân loại vi phạm: TEMPERATURE_EXCEEDED, PROLONGED_HEAT, FREEZING_RISK.",
+    )
+    notes: str | None = Field(default=None, max_length=1000, description="Ghi chú nguyên nhân hoặc biện pháp xử lý.")
+
+
+class TemperatureViolationResponse(BaseModel):
+    """Chi tiết sự cố vi phạm nhiệt độ trả về API (S-45)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    trip_id: int | None = None
+    batch_id: int | None = None
+    container_code: str | None = None
+    start_time: datetime
+    end_time: datetime | None = None
+    duration_minutes: float
+    peak_temperature: float
+    threshold_temperature: float
+    min_threshold: float | None = None
+    max_threshold: float | None = None
+    violation_type: str
+    severity: str
+    status: str
+    affected_batch_ids: list[int] = Field(default_factory=list)
+    notes: str | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class BatchViolationSummary(BaseModel):
+    """Tóm tắt tình trạng vi phạm nhiệt độ của một lô nông sản (S-45)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    batch_id: int
+    batch_code: str
+    has_violation: bool
+    violation_count: int
+    violations: list[TemperatureViolationResponse] = Field(default_factory=list)
