@@ -48,6 +48,7 @@ from app.services.cold_chain import (
 )
 from app.trip_models import (
     EVENT_TEMPERATURE_VIOLATION,
+    TemperatureViolation,
     EVENT_TRIP_DISPATCH,
     TRIP_STATUS_IN_TRANSIT,
     ColdTrip,
@@ -760,3 +761,119 @@ def test_tc_s45_10_batch_direct_violation_and_summary_api(
     assert summary["has_violation"] is True
     assert summary["violation_count"] >= 1
     assert len(summary["violations"]) >= 1
+
+
+def test_tc_s45_11_violation_idempotency_and_duplicate_request_suppression(
+    client: TestClient,
+    session_factory: sessionmaker[Session],
+    setup_s45_data: dict[str, Any],
+) -> None:
+    """TC-S45-11: Ch?ng ghi nh?n tr?ng l?p vi ph?m khi h? th?ng nh?n l?i request ho?c x? l? l?i d? li?u (S-45):
+
+    - G?i request vi ph?m chuy?n xe l?n 1 -> Th?nh c?ng (201 Created), t?o b?n ghi vi ph?m.
+    - G?i l?i ch?nh x?c request l?n 2 (retry) -> B? qua, tr? v? b?n ghi vi ph?m c? m? kh?ng ghi ??p.
+    - X?c minh: Kh?ng t?ng ??p c? temperature_violation_count tr?n l?, kh?ng th?m s? ki?n tr?ng trong hash-chain.
+    - T??ng t? v?i endpoint ghi nh?n vi ph?m tr?c ti?p cho l? n?ng s?n.
+    """
+    trip_id = setup_s45_data["trip_id"]
+    batch_1_id = setup_s45_data["batch_1_id"]
+    batch_farm_id = setup_s45_data["batch_farm_id"]
+    headers_trans = _auth_header("trans_s45")
+    headers_insp = _auth_header("inspector_s45")
+
+    start_time = datetime(2026, 10, 20, 8, 30, 0, tzinfo=timezone.utc).isoformat()
+    end_time = datetime(2026, 10, 20, 9, 15, 0, tzinfo=timezone.utc).isoformat()
+
+    trip_payload = {
+        "start_time": start_time,
+        "end_time": end_time,
+        "duration_minutes": 45.0,
+        "peak_temperature": 15.5,
+        "threshold_temperature": 8.0,
+        "min_threshold": 2.0,
+        "max_threshold": 8.0,
+        "violation_type": "PROLONGED_HEAT",
+        "notes": "M?t ngu?n ?i?n ?i?u h?a th?ng xe",
+    }
+
+    # 1. G?i l?n 1: T?o m?i vi ph?m chuy?n xe
+    res1 = client.post(f"/trips/{trip_id}/violations", json=trip_payload, headers=headers_trans)
+    assert res1.status_code == 201
+    v1_id = res1.json()["id"]
+
+    with session_factory() as session:
+        b1 = session.get(Batch, batch_1_id)
+        assert b1.has_temperature_violation is True
+        assert b1.temperature_violation_count == 1
+        ev_count1 = len(
+            list(
+                session.scalars(
+                    select(BatchEvent).where(
+                        BatchEvent.batch_id == batch_1_id,
+                        BatchEvent.event_type == EVENT_TEMPERATURE_VIOLATION,
+                    )
+                ).all()
+            )
+        )
+        assert ev_count1 == 1
+
+    # 2. G?i l?i l?n 2 (c?ng payload): Ph?i c? t?nh Idempotency, kh?ng t?o th?m b?n ghi m?i
+    res2 = client.post(f"/trips/{trip_id}/violations", json=trip_payload, headers=headers_trans)
+    assert res2.status_code in (200, 201)
+    v2_id = res2.json()["id"]
+    assert v2_id == v1_id  # Kh?p ID b?n ghi ?? t?n t?i
+
+    # X?c minh trong database: S? l??ng b?n ghi, s? ki?n v? b? ??m vi ph?m KH?NG B? T?NG ??P
+    with session_factory() as session:
+        b1 = session.get(Batch, batch_1_id)
+        assert b1.temperature_violation_count == 1  # Kh?ng b? t?ng l?n 2
+
+        trip_violations = list(
+            session.scalars(
+                select(TemperatureViolation).where(TemperatureViolation.trip_id == trip_id)
+            ).all()
+        )
+        assert len(trip_violations) == 1  # Ch? c? 1 b?n ghi duy nh?t
+
+        ev_count2 = len(
+            list(
+                session.scalars(
+                    select(BatchEvent).where(
+                        BatchEvent.batch_id == batch_1_id,
+                        BatchEvent.event_type == EVENT_TEMPERATURE_VIOLATION,
+                    )
+                ).all()
+            )
+        )
+        assert ev_count2 == 1  # Hash-chain kh?ng b? ghi ??p s? ki?n
+
+    # 3. Ki?m tra t?nh Idempotency ??i v?i vi ph?m tr?c ti?p c?a l? n?ng s?n (POST /batches/{id}/violations)
+    batch_payload = {
+        "start_time": start_time,
+        "end_time": end_time,
+        "duration_minutes": 45.0,
+        "peak_temperature": 22.0,
+        "threshold_temperature": 15.0,
+        "violation_type": "WAREHOUSE_OVERHEAT",
+    }
+
+    res_b1 = client.post(f"/batches/{batch_farm_id}/violations", json=batch_payload, headers=headers_insp)
+    assert res_b1.status_code == 201
+    bv1_id = res_b1.json()["id"]
+
+    res_b2 = client.post(f"/batches/{batch_farm_id}/violations", json=batch_payload, headers=headers_insp)
+    assert res_b2.status_code in (200, 201)
+    bv2_id = res_b2.json()["id"]
+    assert bv2_id == bv1_id
+
+    with session_factory() as session:
+        bf = session.get(Batch, batch_farm_id)
+        assert bf.temperature_violation_count == 1
+        batch_viol_count = len(
+            list(
+                session.scalars(
+                    select(TemperatureViolation).where(TemperatureViolation.batch_id == batch_farm_id)
+                ).all()
+            )
+        )
+        assert batch_viol_count == 1

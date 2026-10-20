@@ -10,7 +10,7 @@ Chức năng chính:
 3. S-43: Thuật toán cửa sổ trượt phát hiện vi phạm kéo dài >= 30 phút, gộp 2 lần vượt cách nhau < 5 phút.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import HTTPException, status
@@ -105,6 +105,24 @@ def record_temperature_violation_for_trip(
     if user is not None:
         _check_violation_recording_permission(user, trip)
 
+    start_dt = payload.start_time
+    if start_dt.tzinfo is not None:
+        start_dt = start_dt.astimezone(timezone.utc).replace(tzinfo=None)
+
+    # Chống tạo bản ghi vi phạm trùng lặp khi nhận lại request hoặc xử lý lại dữ liệu (S-45 Idempotency)
+    existing_violation = db.scalar(
+        select(TemperatureViolation).where(
+            TemperatureViolation.trip_id == trip.id,
+            TemperatureViolation.start_time == start_dt,
+        )
+    )
+    if existing_violation is not None:
+        return existing_violation
+
+    end_dt = payload.end_time
+    if end_dt is not None and end_dt.tzinfo is not None:
+        end_dt = end_dt.astimezone(timezone.utc).replace(tzinfo=None)
+
     # Lấy danh sách các lô nông sản trên chuyến
     # Ưu tiên các lô đang trong hành trình (chưa dỡ). Nếu chuyến đã dỡ thì lấy toàn bộ lô trên chuyến.
     active_batches: list[Batch] = [
@@ -123,8 +141,8 @@ def record_temperature_violation_for_trip(
     violation = TemperatureViolation(
         trip_id=trip.id,
         container_code=trip.container_code,
-        start_time=payload.start_time,
-        end_time=payload.end_time,
+        start_time=start_dt,
+        end_time=end_dt,
         duration_minutes=float(payload.duration_minutes),
         peak_temperature=float(payload.peak_temperature),
         threshold_temperature=float(payload.threshold_temperature),
@@ -236,6 +254,24 @@ def record_temperature_violation_for_batch(
                     detail="Bạn không có quyền ghi nhận vi phạm cho lô nông sản thuộc tổ chức khác.",
                 )
 
+    start_dt = payload.start_time
+    if start_dt.tzinfo is not None:
+        start_dt = start_dt.astimezone(timezone.utc).replace(tzinfo=None)
+
+    # Chống tạo bản ghi trùng lặp cho lô hàng khi nhận lại request (S-45 Idempotency)
+    existing_violation = db.scalar(
+        select(TemperatureViolation).where(
+            TemperatureViolation.batch_id == batch.id,
+            TemperatureViolation.start_time == start_dt,
+        )
+    )
+    if existing_violation is not None:
+        return existing_violation
+
+    end_dt = payload.end_time
+    if end_dt is not None and end_dt.tzinfo is not None:
+        end_dt = end_dt.astimezone(timezone.utc).replace(tzinfo=None)
+
     severity = "CRITICAL" if payload.duration_minutes >= 30.0 else "WARNING"
     status_str = "RESOLVED" if payload.end_time else "ACTIVE"
     now = _naive_utcnow()
@@ -244,8 +280,8 @@ def record_temperature_violation_for_batch(
         trip_id=None,
         batch_id=batch.id,
         container_code=None,
-        start_time=payload.start_time,
-        end_time=payload.end_time,
+        start_time=start_dt,
+        end_time=end_dt,
         duration_minutes=float(payload.duration_minutes),
         peak_temperature=float(payload.peak_temperature),
         threshold_temperature=float(payload.threshold_temperature),
@@ -342,6 +378,8 @@ def record_temperature_reading(
         _check_violation_recording_permission(user, trip)
 
     rec_time = payload.recorded_at or _naive_utcnow()
+    if rec_time.tzinfo is not None:
+        rec_time = rec_time.astimezone(timezone.utc).replace(tzinfo=None)
 
     # Kiểm tra số đo cũ hơn hoặc trùng thời gian (S-41)
     latest_reading = db.scalar(
