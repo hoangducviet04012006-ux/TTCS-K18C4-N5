@@ -136,6 +136,46 @@ def migrate_user_security_columns() -> None:
                     connection.exec_driver_sql(f"ALTER TABLE farms ADD COLUMN {col_name} {col_type}")
 
 
+def _migrate_temperature_violation_indexes(connection) -> None:
+    """T?o Partial Unique Index cho temperature_violations n?u kh?ng c? d? li?u tr?ng (S-45).
+
+    Tuy?t ??i kh?ng x?a d? li?u ?? ?p migration th?nh c?ng.
+    """
+    existing_violations = {
+        row[1] for row in connection.exec_driver_sql("PRAGMA table_info(temperature_violations)")
+    }
+    if not existing_violations:
+        return
+
+    try:
+        trip_dups = connection.exec_driver_sql(
+            "SELECT trip_id, start_time, COUNT(*) as cnt FROM temperature_violations "
+            "WHERE trip_id IS NOT NULL "
+            "GROUP BY trip_id, start_time HAVING cnt > 1"
+        ).fetchall()
+        if not trip_dups:
+            connection.exec_driver_sql(
+                "CREATE UNIQUE INDEX IF NOT EXISTS uq_temp_violations_trip_start "
+                "ON temperature_violations (trip_id, start_time) WHERE trip_id IS NOT NULL"
+            )
+    except Exception:
+        pass
+
+    try:
+        batch_dups = connection.exec_driver_sql(
+            "SELECT batch_id, start_time, COUNT(*) as cnt FROM temperature_violations "
+            "WHERE batch_id IS NOT NULL "
+            "GROUP BY batch_id, start_time HAVING cnt > 1"
+        ).fetchall()
+        if not batch_dups:
+            connection.exec_driver_sql(
+                "CREATE UNIQUE INDEX IF NOT EXISTS uq_temp_violations_batch_start "
+                "ON temperature_violations (batch_id, start_time) WHERE batch_id IS NOT NULL"
+            )
+    except Exception:
+        pass
+
+
 def migrate_handover_and_batch_columns() -> None:
     """Thêm cột current_org_id cho bảng batches và tạo index unique cho handovers nếu thiếu."""
     with engine.begin() as connection:
@@ -181,6 +221,8 @@ def migrate_handover_and_batch_columns() -> None:
                 )
             except Exception:
                 pass
+
+        _migrate_temperature_violation_indexes(connection)
 
 
 def migrate_sprint2_schema(target_engine=None) -> None:  # noqa: C901

@@ -220,6 +220,22 @@ class TemperatureViolation(Base):
         Index("idx_temp_violations_trip", "trip_id"),
         Index("idx_temp_violations_container", "container_code"),
         Index("idx_temp_violations_start_time", "start_time"),
+        Index(
+            "uq_temp_violations_trip_start",
+            "trip_id",
+            "start_time",
+            unique=True,
+            sqlite_where=text("trip_id IS NOT NULL"),
+            postgresql_where=text("trip_id IS NOT NULL"),
+        ),
+        Index(
+            "uq_temp_violations_batch_start",
+            "batch_id",
+            "start_time",
+            unique=True,
+            sqlite_where=text("batch_id IS NOT NULL"),
+            postgresql_where=text("batch_id IS NOT NULL"),
+        ),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)

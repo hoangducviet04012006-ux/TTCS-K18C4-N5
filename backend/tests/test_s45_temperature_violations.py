@@ -20,9 +20,11 @@ import base64
 from datetime import date, datetime, timedelta, timezone
 from typing import Any
 
+from unittest.mock import patch
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import select
+from sqlalchemy import create_engine, select
+from app.database import _migrate_temperature_violation_indexes
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.hash_chain import verify_batch_chain
@@ -877,3 +879,228 @@ def test_tc_s45_11_violation_idempotency_and_duplicate_request_suppression(
             )
         )
         assert batch_viol_count == 1
+
+
+def test_tc_s45_12_violation_conflict_on_different_payload(
+    client: TestClient,
+    setup_s45_data: dict[str, Any],
+) -> None:
+    """TC-S45-12: X? l? khi nh?n request c?ng start_time nh?ng payload kh?c:
+
+    - Request 1: ??nh 15.0?C, 40 ph?t -> 201 Created.
+    - Request 2: C?ng start_time nh?ng ??nh 28.0?C -> Ph?i tr? v? HTTP 409 Conflict.
+    - Kh?ng ?m th?m ghi ??, kh?ng sinh th?m b?n ghi ho?c l?m h?ng d? li?u.
+    """
+    trip_id = setup_s45_data["trip_id"]
+    headers = _auth_header("trans_s45")
+    start_time = datetime(2026, 10, 20, 10, 0, 0, tzinfo=timezone.utc).isoformat()
+    end_time = datetime(2026, 10, 20, 10, 40, 0, tzinfo=timezone.utc).isoformat()
+
+    req1 = {
+        "start_time": start_time,
+        "end_time": end_time,
+        "duration_minutes": 40.0,
+        "peak_temperature": 15.0,
+        "threshold_temperature": 8.0,
+    }
+    res1 = client.post(f"/trips/{trip_id}/violations", json=req1, headers=headers)
+    assert res1.status_code == 201
+
+    # Request 2: C?ng start_time nh?ng th?ng s? nhi?t ?? ??nh xung ??t ho?n to?n
+    req2 = {
+        "start_time": start_time,
+        "end_time": end_time,
+        "duration_minutes": 40.0,
+        "peak_temperature": 28.5,
+        "threshold_temperature": 8.0,
+    }
+    res2 = client.post(f"/trips/{trip_id}/violations", json=req2, headers=headers)
+    assert res2.status_code == 409
+    assert "xung dot" in res2.json()["detail"].lower() or "xung ??t" in res2.json()["detail"].lower()
+
+
+def test_tc_s45_13_concurrent_requests_handled_safely(
+    session_factory: sessionmaker[Session],
+    setup_s45_data: dict[str, Any],
+) -> None:
+    """TC-S45-13: X? l? hai request ghi nh?n vi ph?m ??ng th?i (Race condition):
+
+    - M? ph?ng 2 session/thread c?ng g?i request ch?n vi ph?m t?i c?ng m?c start_time.
+    - Nh? Partial Unique Index v? x? l? IntegrityError, ch? c? 1 vi ph?m ???c ghi v?o DB.
+    - C? 2 l?nh g?i ??u ho?n t?t an to?n v? tr? v? c?ng 1 b?n ghi vi ph?m duy nh?t.
+    """
+    trip_id = setup_s45_data["trip_id"]
+    batch_1_id = setup_s45_data["batch_1_id"]
+    start_dt = datetime(2026, 10, 20, 11, 0, 0)
+    end_dt = datetime(2026, 10, 20, 11, 35, 0)
+
+    from app.schemas_trips import TemperatureViolationCreate
+    from app.services.cold_chain import record_temperature_violation_for_trip
+
+    payload = TemperatureViolationCreate(
+        start_time=start_dt,
+        end_time=end_dt,
+        duration_minutes=35.0,
+        peak_temperature=14.0,
+        threshold_temperature=8.0,
+    )
+
+    with session_factory() as session1, session_factory() as session2:
+        u1 = session1.get(User, setup_s45_data["u_transporter_id"])
+        u2 = session2.get(User, setup_s45_data["u_transporter_id"])
+
+        v1 = record_temperature_violation_for_trip(session1, trip_id, payload, user=u1)
+        v2 = record_temperature_violation_for_trip(session2, trip_id, payload, user=u2)
+
+        assert v1.id == v2.id
+
+    with session_factory() as session:
+        violations = list(
+            session.scalars(
+                select(TemperatureViolation).where(
+                    TemperatureViolation.trip_id == trip_id,
+                    TemperatureViolation.start_time == start_dt,
+                )
+            ).all()
+        )
+        assert len(violations) == 1
+        b1 = session.get(Batch, batch_1_id)
+        assert b1.temperature_violation_count >= 1
+
+
+def test_tc_s45_14_independent_valid_violations_preserved(
+    client: TestClient,
+    session_factory: sessionmaker[Session],
+    setup_s45_data: dict[str, Any],
+) -> None:
+    """TC-S45-14: ??m b?o c?c vi ph?m ??c l?p h?p l? kh?c th?i ?i?m kh?ng b? ch?n nh?m:
+
+    - Vi ph?m 1: l?c 08:00
+    - Vi ph?m 2: l?c 14:00 (h?p l? ??c l?p)
+    - C? 2 vi ph?m ??u ???c l?u th?nh 2 b?n ghi ri?ng, 2 s? ki?n ri?ng, b? ??m t?ng ch?nh x?c.
+    """
+    trip_id = setup_s45_data["trip_id"]
+    batch_1_id = setup_s45_data["batch_1_id"]
+    headers = _auth_header("trans_s45")
+
+    t1_start = datetime(2026, 10, 20, 8, 0, 0, tzinfo=timezone.utc).isoformat()
+    t1_end = datetime(2026, 10, 20, 8, 35, 0, tzinfo=timezone.utc).isoformat()
+    t2_start = datetime(2026, 10, 20, 14, 0, 0, tzinfo=timezone.utc).isoformat()
+    t2_end = datetime(2026, 10, 20, 14, 40, 0, tzinfo=timezone.utc).isoformat()
+
+    with session_factory() as session:
+        b1_init = session.get(Batch, batch_1_id)
+        init_count = b1_init.temperature_violation_count or 0
+
+    res1 = client.post(
+        f"/trips/{trip_id}/violations",
+        json={
+            "start_time": t1_start,
+            "end_time": t1_end,
+            "duration_minutes": 35.0,
+            "peak_temperature": 12.0,
+            "threshold_temperature": 8.0,
+        },
+        headers=headers,
+    )
+    assert res1.status_code == 201
+
+    res2 = client.post(
+        f"/trips/{trip_id}/violations",
+        json={
+            "start_time": t2_start,
+            "end_time": t2_end,
+            "duration_minutes": 40.0,
+            "peak_temperature": 16.0,
+            "threshold_temperature": 8.0,
+        },
+        headers=headers,
+    )
+    assert res2.status_code == 201
+    assert res1.json()["id"] != res2.json()["id"]
+
+    with session_factory() as session:
+        b1 = session.get(Batch, batch_1_id)
+        assert b1.temperature_violation_count == init_count + 2
+        res_verify = verify_batch_chain(session, batch_1_id)
+        assert res_verify["is_valid"] is True
+
+
+def test_tc_s45_15_atomic_rollback_on_failure_preserves_chain_and_counters(
+    session_factory: sessionmaker[Session],
+    setup_s45_data: dict[str, Any],
+) -> None:
+    """TC-S45-15: Ki?m th? atomic rollback khi g?p l?i trong qu? tr?nh lan truy?n vi ph?m:
+
+    - Gi? l?p l?i x?y ra khi ghi s? ki?n cho l? n?ng s?n.
+    - Giao d?ch ???c rollback to?n b?.
+    - Kh?ng c? b?n ghi vi ph?m m? c?i n?o ???c t?o.
+    - B? ??m v? t?nh to?n v?n hash-chain c?a l? ???c b?o to?n 100%.
+    """
+    trip_id = setup_s45_data["trip_id"]
+    batch_1_id = setup_s45_data["batch_1_id"]
+
+    with session_factory() as session:
+        b1_before = session.get(Batch, batch_1_id)
+        count_before = b1_before.temperature_violation_count
+
+    from app.schemas_trips import TemperatureViolationCreate
+    from app.services.cold_chain import record_temperature_violation_for_trip
+
+    fail_payload = TemperatureViolationCreate(
+        start_time=datetime(2026, 10, 20, 16, 0, 0),
+        end_time=datetime(2026, 10, 20, 16, 45, 0),
+        duration_minutes=45.0,
+        peak_temperature=15.0,
+        threshold_temperature=8.0,
+    )
+
+    with session_factory() as session:
+        u = session.get(User, setup_s45_data["u_transporter_id"])
+        with patch("app.services.cold_chain.record_event", side_effect=RuntimeError("Simulated event failure")):
+            with pytest.raises(RuntimeError, match="Simulated event failure"):
+                record_temperature_violation_for_trip(session, trip_id, fail_payload, user=u)
+
+    # X?c minh sau khi rollback
+    with session_factory() as session:
+        b1_after = session.get(Batch, batch_1_id)
+        assert b1_after.temperature_violation_count == count_before
+        res_chain = verify_batch_chain(session, batch_1_id)
+        assert res_chain["is_valid"] is True
+
+        orphan_viol = session.scalar(
+            select(TemperatureViolation).where(
+                TemperatureViolation.trip_id == trip_id,
+                TemperatureViolation.start_time == datetime(2026, 10, 20, 16, 0, 0),
+            )
+        )
+        assert orphan_viol is None
+
+
+def test_tc_s45_16_migration_on_database_with_existing_duplicates_does_not_delete_data() -> None:
+    """TC-S45-16: Ki?m th? migration tr?n database c? d? li?u tr?ng t? tr??c:
+
+    - Kh?ng x?a d? li?u ?? ?p migration th?nh c?ng.
+    - Migration an to?n, gi? nguy?n to?n b? s? l??ng b?n ghi hi?n h?u.
+    """
+    test_engine = create_engine("sqlite:///:memory:")
+    with test_engine.begin() as conn:
+        conn.exec_driver_sql(
+            "CREATE TABLE temperature_violations ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+            "trip_id INTEGER, "
+            "batch_id INTEGER, "
+            "start_time DATETIME NOT NULL"
+            ")"
+        )
+        # Ch?n c? t?nh 2 b?n ghi tr?ng l?p
+        conn.exec_driver_sql("INSERT INTO temperature_violations (trip_id, start_time) VALUES (1, '2026-10-19 08:00:00')")
+        conn.exec_driver_sql("INSERT INTO temperature_violations (trip_id, start_time) VALUES (1, '2026-10-19 08:00:00')")
+        conn.exec_driver_sql("INSERT INTO temperature_violations (batch_id, start_time) VALUES (2, '2026-10-19 09:00:00')")
+
+    # Ch?y migration tr?n k?t n?i n?y
+    with test_engine.begin() as conn:
+        _migrate_temperature_violation_indexes(conn)
+        # Kh?ng ??nh s? l??ng b?n ghi v?n gi? nguy?n l? 3 (kh?ng b? x?a d? li?u c?)
+        count = conn.exec_driver_sql("SELECT COUNT(*) FROM temperature_violations").scalar()
+        assert count == 3

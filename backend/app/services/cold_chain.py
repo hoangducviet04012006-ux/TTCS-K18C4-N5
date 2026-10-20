@@ -15,6 +15,7 @@ from typing import Any
 
 from fastapi import HTTPException, status
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
 from app.audit import record_action
@@ -70,6 +71,82 @@ def _check_violation_recording_permission(user: User, trip: ColdTrip) -> None:
     )
 
 
+def _is_payload_consistent(
+    payload: TemperatureViolationCreate,
+    existing: TemperatureViolation,
+) -> bool:
+    """Check payload consistency for idempotent conflict detection."""
+    if abs(float(payload.peak_temperature) - float(existing.peak_temperature)) > 0.05:
+        return False
+    if abs(float(payload.threshold_temperature) - float(existing.threshold_temperature)) > 0.05:
+        return False
+    if abs(float(payload.duration_minutes) - float(existing.duration_minutes)) > 0.5:
+        return False
+    p_type = (payload.violation_type or "TEMPERATURE_EXCEEDED").strip().upper()
+    e_type = (existing.violation_type or "TEMPERATURE_EXCEEDED").strip().upper()
+    if p_type != e_type:
+        return False
+    return True
+
+
+def _propagate_violation_to_batches(
+    db: Session,
+    violation: TemperatureViolation,
+    trip: ColdTrip,
+    active_batches: list[Batch],
+    user: User | None = None,
+) -> None:
+    """Lan truyen su kien vi pham vao Hash-Chain va co canh bao cua tung lo tren chuyen."""
+    for batch in active_batches:
+        event_payload = {
+            "violation_id": violation.id,
+            "trip_id": trip.id,
+            "trip_code": trip.trip_code,
+            "container_code": trip.container_code,
+            "start_time": violation.start_time.isoformat(),
+            "end_time": violation.end_time.isoformat() if violation.end_time else None,
+            "duration_minutes": round(violation.duration_minutes, 2),
+            "peak_temperature": round(violation.peak_temperature, 2),
+            "threshold_temperature": round(violation.threshold_temperature, 2),
+            "min_threshold": violation.min_threshold,
+            "max_threshold": violation.max_threshold,
+            "violation_type": violation.violation_type,
+            "severity": violation.severity,
+            "status": violation.status,
+            "action": EVENT_TEMPERATURE_VIOLATION,
+            "description": (
+                f"C\u1ea3nh b\xe1o vi ph\u1ea1m nhi\u1ec7t \u0111\u1ed9: \u0110\u1ec9nh {violation.peak_temperature}\u00b0C "
+                f"(ng\u01b0\u1ee1ng {violation.threshold_temperature}\u00b0C), "
+                f"k\xe9o d\xe0i {round(violation.duration_minutes, 1)} ph\xfat "
+                f"tr\xean chuy\u1ebfn {trip.trip_code} (th\xf9ng: {trip.container_code})"
+            ),
+        }
+
+        record_event(
+            db=db,
+            batch_id=batch.id,
+            event_type=EVENT_TEMPERATURE_VIOLATION,
+            payload=event_payload,
+            org_id=batch.current_org_id,
+            user_id=user.id if user else (trip.created_by_user_id or 1),
+            event_data=event_payload["description"],
+        )
+
+        batch.has_temperature_violation = True
+        batch.temperature_violation_count = (batch.temperature_violation_count or 0) + 1
+
+        if user is not None:
+            record_action(
+                db,
+                user,
+                ACTION_UPDATE,
+                "batch",
+                batch.id,
+                operation="TEMPERATURE_VIOLATION",
+                batch_ids=[batch.id],
+            )
+
+
 def record_temperature_violation_for_trip(
     db: Session,
     trip_id: int,
@@ -117,6 +194,15 @@ def record_temperature_violation_for_trip(
         )
     )
     if existing_violation is not None:
+        if not _is_payload_consistent(payload, existing_violation):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    f"Xung dot du lieu vi pham: Chuyen xe '{trip.trip_code}' da ton tai vi pham "
+                    f"tai moc thoi gian {start_dt.isoformat()} voi thong so khac "
+                    f"(Dinh cu: {existing_violation.peak_temperature}C, Dinh moi: {payload.peak_temperature}C)."
+                ),
+            )
         return existing_violation
 
     end_dt = payload.end_time
@@ -157,75 +243,45 @@ def record_temperature_violation_for_trip(
         updated_at=now,
     )
     db.add(violation)
-    db.flush()
+    try:
+        db.flush()
 
-    # Lan truyền sự kiện vi phạm vào Hash-Chain và cờ cảnh báo của TỪNG LÔ
-    for batch in active_batches:
-        event_payload = {
-            "violation_id": violation.id,
-            "trip_id": trip.id,
-            "trip_code": trip.trip_code,
-            "container_code": trip.container_code,
-            "start_time": violation.start_time.isoformat(),
-            "end_time": violation.end_time.isoformat() if violation.end_time else None,
-            "duration_minutes": round(violation.duration_minutes, 2),
-            "peak_temperature": round(violation.peak_temperature, 2),
-            "threshold_temperature": round(violation.threshold_temperature, 2),
-            "min_threshold": violation.min_threshold,
-            "max_threshold": violation.max_threshold,
-            "violation_type": violation.violation_type,
-            "severity": violation.severity,
-            "status": violation.status,
-            "action": EVENT_TEMPERATURE_VIOLATION,
-            "description": (
-                f"Cảnh báo vi phạm nhiệt độ: Đỉnh {violation.peak_temperature}°C "
-                f"(ngưỡng {violation.threshold_temperature}°C), kéo dài {round(violation.duration_minutes, 1)} phút "
-                f"trên chuyến {trip.trip_code} (thùng: {trip.container_code})"
-            ),
-        }
+        # Lan truyền sự kiện vi phạm vào Hash-Chain và cờ cảnh báo của TỪNG LÔ
+        _propagate_violation_to_batches(db, violation, trip, active_batches, user=user)
 
-        # 1. Ghi vào Cryptographic Hash-Chain bất biến
-        record_event(
-            db=db,
-            batch_id=batch.id,
-            event_type=EVENT_TEMPERATURE_VIOLATION,
-            payload=event_payload,
-            org_id=batch.current_org_id,
-            user_id=user.id if user else (trip.created_by_user_id or 1),
-            event_data=event_payload["description"],
-        )
-
-        # 2. Cập nhật cờ cảnh báo và bộ đếm trên model Batch
-        batch.has_temperature_violation = True
-        batch.temperature_violation_count = (batch.temperature_violation_count or 0) + 1
-
-        # 3. Ghi AuditLog lịch sử thao tác cho lô
         if user is not None:
             record_action(
                 db,
                 user,
                 ACTION_UPDATE,
-                "batch",
-                batch.id,
+                "cold_trip",
+                trip.id,
                 operation="TEMPERATURE_VIOLATION",
-                batch_ids=[batch.id],
+                batch_ids=affected_batch_ids,
             )
 
-    # 4. Ghi AuditLog lịch sử thao tác cho chuyến xe
-    if user is not None:
-        record_action(
-            db,
-            user,
-            ACTION_UPDATE,
-            "cold_trip",
-            trip.id,
-            operation="TEMPERATURE_VIOLATION",
-            batch_ids=affected_batch_ids,
+        db.commit()
+        db.refresh(violation)
+        return violation
+    except IntegrityError:
+        db.rollback()
+        existing = db.scalar(
+            select(TemperatureViolation).where(
+                TemperatureViolation.trip_id == trip.id,
+                TemperatureViolation.start_time == start_dt,
+            )
         )
-
-    db.commit()
-    db.refresh(violation)
-    return violation
+        if existing is not None:
+            if not _is_payload_consistent(payload, existing):
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="Xung dot du lieu vi pham: Da ton tai ban ghi vi pham tai moc thoi gian nay voi thong so khac.",
+                )
+            return existing
+        raise
+    except Exception:
+        db.rollback()
+        raise
 
 
 def record_temperature_violation_for_batch(
@@ -266,6 +322,14 @@ def record_temperature_violation_for_batch(
         )
     )
     if existing_violation is not None:
+        if not _is_payload_consistent(payload, existing_violation):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    f"Xung dot du lieu vi pham: Lo #{batch.code} da ton tai ban ghi vi pham "
+                    f"tai moc thoi gian {start_dt.isoformat()} voi thong so khac."
+                ),
+            )
         return existing_violation
 
     end_dt = payload.end_time
@@ -296,57 +360,77 @@ def record_temperature_violation_for_batch(
         updated_at=now,
     )
     db.add(violation)
-    db.flush()
+    try:
+        db.flush()
 
-    # Ghi nhận vào hash chain của lô
-    event_payload = {
-        "violation_id": violation.id,
-        "batch_id": batch.id,
-        "batch_code": batch.code,
-        "start_time": violation.start_time.isoformat(),
-        "end_time": violation.end_time.isoformat() if violation.end_time else None,
-        "duration_minutes": round(violation.duration_minutes, 2),
-        "peak_temperature": round(violation.peak_temperature, 2),
-        "threshold_temperature": round(violation.threshold_temperature, 2),
-        "min_threshold": violation.min_threshold,
-        "max_threshold": violation.max_threshold,
-        "violation_type": violation.violation_type,
-        "severity": violation.severity,
-        "status": violation.status,
-        "action": EVENT_TEMPERATURE_VIOLATION,
-        "description": (
-            f"Cảnh báo vi phạm nhiệt độ bảo quản lô #{batch.code}: Đỉnh {violation.peak_temperature}°C "
-            f"(ngưỡng {violation.threshold_temperature}°C), kéo dài {round(violation.duration_minutes, 1)} phút."
-        ),
-    }
+        # Ghi nhận vào hash chain của lô
+        event_payload = {
+            "violation_id": violation.id,
+            "batch_id": batch.id,
+            "batch_code": batch.code,
+            "start_time": violation.start_time.isoformat(),
+            "end_time": violation.end_time.isoformat() if violation.end_time else None,
+            "duration_minutes": round(violation.duration_minutes, 2),
+            "peak_temperature": round(violation.peak_temperature, 2),
+            "threshold_temperature": round(violation.threshold_temperature, 2),
+            "min_threshold": violation.min_threshold,
+            "max_threshold": violation.max_threshold,
+            "violation_type": violation.violation_type,
+            "severity": violation.severity,
+            "status": violation.status,
+            "action": EVENT_TEMPERATURE_VIOLATION,
+            "description": (
+                f"Cảnh báo vi phạm nhiệt độ bảo quản lô #{batch.code}: Đỉnh {violation.peak_temperature}°C "
+                f"(ngưỡng {violation.threshold_temperature}°C), kéo dài {round(violation.duration_minutes, 1)} phút."
+            ),
+        }
 
-    record_event(
-        db=db,
-        batch_id=batch.id,
-        event_type=EVENT_TEMPERATURE_VIOLATION,
-        payload=event_payload,
-        org_id=batch.current_org_id,
-        user_id=user.id if user else 1,
-        event_data=event_payload["description"],
-    )
-
-    batch.has_temperature_violation = True
-    batch.temperature_violation_count = (batch.temperature_violation_count or 0) + 1
-
-    if user is not None:
-        record_action(
-            db,
-            user,
-            ACTION_UPDATE,
-            "batch",
-            batch.id,
-            operation="TEMPERATURE_VIOLATION",
-            batch_ids=[batch.id],
+        record_event(
+            db=db,
+            batch_id=batch.id,
+            event_type=EVENT_TEMPERATURE_VIOLATION,
+            payload=event_payload,
+            org_id=batch.current_org_id,
+            user_id=user.id if user else 1,
+            event_data=event_payload["description"],
         )
 
-    db.commit()
-    db.refresh(violation)
-    return violation
+        batch.has_temperature_violation = True
+        batch.temperature_violation_count = (batch.temperature_violation_count or 0) + 1
+
+        if user is not None:
+            record_action(
+                db,
+                user,
+                ACTION_UPDATE,
+                "batch",
+                batch.id,
+                operation="TEMPERATURE_VIOLATION",
+                batch_ids=[batch.id],
+            )
+
+        db.commit()
+        db.refresh(violation)
+        return violation
+    except IntegrityError:
+        db.rollback()
+        existing = db.scalar(
+            select(TemperatureViolation).where(
+                TemperatureViolation.batch_id == batch.id,
+                TemperatureViolation.start_time == start_dt,
+            )
+        )
+        if existing is not None:
+            if not _is_payload_consistent(payload, existing):
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="Xung dot du lieu vi pham: Da ton tai ban ghi vi pham tai moc thoi gian nay voi thong so khac.",
+                )
+            return existing
+        raise
+    except Exception:
+        db.rollback()
+        raise
 
 
 def record_temperature_reading(
