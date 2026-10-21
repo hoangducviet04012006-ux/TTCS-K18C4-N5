@@ -61,14 +61,19 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     Startup only validates schema. Explicit upgrades of isolated copies are
     available through scripts.run_agritrace; no legacy migration or seed runs.
+    Khi chạy trong CI/Staging với TTCS_BOOTSTRAP_STAGING=1, cho phép khởi tạo schema
+    trên file SQLite độc lập được chỉ định.
     """
-    from app.services.sprint4_schema import ensure_sprint4_schema
+    from app.services.sprint4_schema import ensure_sprint4_schema, bootstrap_staging_database
     # Honor the same dependency override used by requests (including isolated
     # integration-test sessions), without bootstrapping a second global DB.
     provider = app.dependency_overrides.get(get_db, get_db)()
     try:
         db = next(provider)
-        ensure_sprint4_schema(db.get_bind())
+        bind = db.get_bind()
+        if os.getenv("TTCS_BOOTSTRAP_STAGING") == "1":
+            bootstrap_staging_database(bind)
+        ensure_sprint4_schema(bind)
     finally:
         provider.close()
     yield
