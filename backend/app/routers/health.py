@@ -1,6 +1,6 @@
 """Router kiểm tra trạng thái hệ thống và kết nối cơ sở dữ liệu."""
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, HTTPException
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -31,3 +31,12 @@ def health_check(db: Session = Depends(get_db)) -> HealthResponse:
     except Exception:
         db_status = "disconnected"
     return HealthResponse(status="ok", database=db_status)
+
+
+@router.get("/ready")
+def readiness(db: Session = Depends(get_db)):
+    from app.services.sprint4_schema import schema_status
+    result = schema_status(db.get_bind())
+    if not result["ready"]:
+        raise HTTPException(503, result)
+    return result

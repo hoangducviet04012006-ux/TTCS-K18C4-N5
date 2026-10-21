@@ -13,7 +13,7 @@ from typing import Any
 
 from fastapi import HTTPException, status
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.models import Batch, BatchRelation
 
@@ -251,13 +251,53 @@ def trace_backwards(  # noqa: C901
     return result
 
 
+def _detect_directed_cycle_3state(adj: dict[int, list[int]], root_id: int) -> int | None:
+    """Thuật toán DFS 3 trạng thái (White-Gray-Black) phát hiện chu trình có hướng (Directed Cycle).
+
+    Trạng thái:
+      0: WHITE (chưa thăm)
+      1: GRAY (đang trên đường đi khám phá hiện tại - in recursion stack)
+      2: BLACK (đã thăm xong toàn bộ nhánh con mà không có chu trình)
+
+    Nếu gặp một cạnh u -> v mà v đang ở trạng thái GRAY:
+      v chính là tổ tiên trên đường đi hiện tại dẫn tới u.
+      Do đó u -> v hoàn thành chu trình có hướng v ~> u -> v!
+      Trả về v (ID của nút chu trình).
+    """
+    WHITE, GRAY, BLACK = 0, 1, 2
+    color: dict[int, int] = {}
+
+    # Explicit DFS frames preserve the gray/black semantics without Python's
+    # recursion limit. A shared merge child is black, not a back edge.
+    for start in (root_id, *adj):
+        if color.get(start, WHITE) != WHITE:
+            continue
+        color[start] = GRAY
+        stack = [(start, iter(adj.get(start, [])))]
+        while stack:
+            node, children = stack[-1]
+            child = next(children, None)
+            if child is None:
+                color[node] = BLACK
+                stack.pop()
+                continue
+            state = color.get(child, WHITE)
+            if state == GRAY:
+                return child
+            if state == WHITE:
+                color[child] = GRAY
+                stack.append((child, iter(adj.get(child, []))))
+
+    return None
+
+
 def trace_forward(  # noqa: C901
     db: Session,
     batch_id: int,
     use_cache: bool = True,
     max_nodes: int = 1000,
 ) -> dict[str, Any]:
-    """Truy xuôi phả hệ hậu duệ theo chiều cha -> con bằng thuật toán BFS lặp (S-26, S-27).
+    """Truy xuôi phả hệ hậu duệ theo chiều cha -> con bằng thuật toán Level-by-Level Bulk BFS (S-26, S-27).
 
     Args:
         db: SQLAlchemy Session.
@@ -282,14 +322,23 @@ def trace_forward(  # noqa: C901
         if now < expires_at:
             return cached_data
 
-    target = db.get(Batch, batch_id)
+    target = db.scalars(
+        select(Batch)
+        .options(
+            joinedload(Batch.plot),
+            joinedload(Batch.farm),
+            joinedload(Batch.product),
+        )
+        .where(Batch.id == batch_id)
+    ).first()
+
     if target is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Không tìm thấy lô nông sản có id={batch_id}.",
         )
 
-    # Pre-load thông tin target_batch
+    # Pre-load thông tin target_batch (giữ tương thích 100% schema hiện tại)
     target_info = {
         "id": target.id,
         "code": target.code,
@@ -302,110 +351,191 @@ def trace_forward(  # noqa: C901
         "current_org_id": target.current_org_id,
         "current_org_name": target.current_org_name,
         "status": target.status,
+        "is_truncated": False,
     }
 
-    # Queue lưu: (current_batch_id, current_level, path_tuple)
-    queue: deque[tuple[int, int, tuple[int, ...]]] = deque()
-    queue.append((batch_id, 0, (batch_id,)))
-
     descendants_by_level: dict[int, list[dict[str, Any]]] = {}
-    visited_expanded: set[int] = set()
     all_descendant_ids: set[int] = set()
+    batch_cache: dict[int, Batch] = {target.id: target}
+    is_truncated = False
 
-    while queue:
-        curr_id, curr_level, path = queue.popleft()
+    # Đồ thị kề phục vụ phát hiện chu trình có hướng chuẩn xác bằng DFS 3 trạng thái
+    graph_adj: dict[int, list[int]] = {}
 
-        if len(all_descendant_ids) >= max_nodes:
-            break
+    current_level_parents: list[int] = [batch_id]
+    curr_level = 0
+    visited_expanded: set[int] = set()
 
-        if curr_id in visited_expanded:
-            continue
-        visited_expanded.add(curr_id)
+    while current_level_parents and len(all_descendant_ids) < max_nodes:
+        curr_level += 1
 
-        # Tìm các quan hệ mà curr_id là cha (curr_id -> child_batch)
-        child_relations = list(
+        for p_id in current_level_parents:
+            visited_expanded.add(p_id)
+
+        # 1. Gom 1 câu truy vấn lấy toàn bộ quan hệ con của tất cả cha trong tầng hiện tại
+        relations = list(
             db.scalars(
                 select(BatchRelation)
-                .where(BatchRelation.parent_batch_id == curr_id)
+                .where(BatchRelation.parent_batch_id.in_(current_level_parents))
                 .order_by(BatchRelation.child_batch_id.asc())
             ).all()
         )
+        if not relations:
+            break
 
-        next_level = curr_level + 1
-
-        for rel in child_relations:
+        # 2. Xây dựng đồ thị kề & thu thập lô cần nạp chi tiết
+        needed_batch_ids: list[int] = []
+        for rel in relations:
             child_id = rel.child_batch_id
+            parent_id = rel.parent_batch_id
 
-            # PHÁT HIỆN CHU TRÌNH (Cycle detection - S-26 AC 2):
-            if child_id in path:
-                child_batch = db.get(Batch, child_id)
+            # Kiểm tra nhanh: tự trỏ hoặc trỏ lại trực tiếp vào root
+            if child_id == parent_id or child_id == batch_id:
+                child_batch = batch_cache.get(child_id) or db.get(Batch, child_id)
                 code_str = child_batch.code if child_batch else str(child_id)
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=f"Phát hiện chu trình phả hệ bất thường (Cycle detected) tại lô {code_str}",
                 )
 
-            all_descendant_ids.add(child_id)
-            new_path = path + (child_id,)
+            graph_adj.setdefault(parent_id, []).append(child_id)
 
-            child_batch = db.get(Batch, child_id)
+            if child_id not in batch_cache and child_id not in needed_batch_ids:
+                needed_batch_ids.append(child_id)
+
+        # PHÁT HIỆN CHU TRÌNH CÓ HƯỚNG BẰNG DFS 3 TRẠNG THÁI (White-Gray-Black):
+        # Đảm bảo 100% phát hiện mọi chu trình trong đồ thị nhiều cha, đa tầng và cạnh nối chéo
+        cycle_node_id = _detect_directed_cycle_3state(graph_adj, batch_id)
+        if cycle_node_id is not None:
+            child_batch = batch_cache.get(cycle_node_id) or db.get(Batch, cycle_node_id)
+            code_str = child_batch.code if child_batch else str(cycle_node_id)
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Phát hiện chu trình phả hệ bất thường (Cycle detected) tại lô {code_str}",
+            )
+
+        # 3. Gom 1 câu truy vấn eager-loading (joinedload) cho tất cả lô con mới của tầng
+        if needed_batch_ids:
+            fetched_batches = list(
+                db.scalars(
+                    select(Batch)
+                    .options(
+                        joinedload(Batch.plot),
+                        joinedload(Batch.farm),
+                        joinedload(Batch.product),
+                    )
+                    .where(Batch.id.in_(needed_batch_ids))
+                ).all()
+            )
+            for b in fetched_batches:
+                batch_cache[b.id] = b
+
+        # 4. Xây dựng node cho tầng và chuẩn bị ứng viên cho tầng kế tiếp
+        next_level_nodes: list[dict[str, Any]] = []
+        seen_in_this_level: set[int] = set()
+        next_level_candidates: list[int] = []
+
+        for rel in relations:
+            child_id = rel.child_batch_id
+            curr_id = rel.parent_batch_id
+
+            # Giới hạn max_nodes: nếu đã chạm ngưỡng và chưa từng ghi nhận child_id
+            if len(all_descendant_ids) >= max_nodes and child_id not in all_descendant_ids:
+                is_truncated = True
+                continue
+
+            all_descendant_ids.add(child_id)
+
+            child_batch = batch_cache.get(child_id)
             if child_batch is None:
                 continue
 
             p_name = child_batch.plot.name if child_batch.plot else None
             f_name = child_batch.farm.name if child_batch.farm else p_name
-            loc = child_batch.plot.location if child_batch.plot else (child_batch.farm.location if child_batch.farm else None)
-            own = child_batch.plot.owner if child_batch.plot else (child_batch.farm.owner if child_batch.farm else None)
+            loc = (
+                child_batch.plot.location
+                if child_batch.plot
+                else (child_batch.farm.location if child_batch.farm else None)
+            )
+            own = (
+                child_batch.plot.owner
+                if child_batch.plot
+                else (child_batch.farm.owner if child_batch.farm else None)
+            )
             prod_name = child_batch.product_name or (child_batch.product.name if child_batch.product else None)
 
             status_val = child_batch.status or "ACTIVE"
             is_consumed = (status_val == "CONSUMED")
-            # S-27 AC 2: Nếu đã bán hết (S-29) -> trạng thái Đã tiêu thụ, khối lượng còn lại = 0
             rem_qty = (
-                0.0 if is_consumed
+                0.0
+                if is_consumed
                 else (float(child_batch.remaining_quantity) if child_batch.remaining_quantity is not None else 0.0)
             )
 
-            node_dict = {
-                "batch_id": child_batch.id,
-                "code": child_batch.code,
-                "parent_batch_id": curr_id,
-                "relation_type": rel.relation_type,
-                "transferred_quantity": float(rel.transferred_quantity),
-                "level": next_level,
-                "current_org_id": child_batch.current_org_id,
-                "current_org_name": child_batch.current_org_name,
-                "location": loc,
-                "owner": own,
-                "plot_id": child_batch.plot_id,
-                "plot_name": p_name,
-                "farm_name": f_name,
-                "initial_quantity": float(child_batch.initial_quantity) if child_batch.initial_quantity is not None else None,
-                "remaining_quantity": rem_qty,
-                "status": status_val,
-                "is_consumed": is_consumed,
-                "harvest_date": str(child_batch.harvest_date),
-                "product_id": child_batch.product_id,
-                "product_name": prod_name,
-                "unit": child_batch.unit,
-                "is_masked": False,
-            }
+            # Xử lý quan hệ hình thoi: trong cùng 1 tầng, mỗi child_id chỉ xuất hiện đúng 1 lần
+            if child_id not in seen_in_this_level:
+                seen_in_this_level.add(child_id)
+                node_dict = {
+                    "batch_id": child_batch.id,
+                    "code": child_batch.code,
+                    "parent_batch_id": curr_id,
+                    "relation_type": rel.relation_type,
+                    "transferred_quantity": float(rel.transferred_quantity),
+                    "level": curr_level,
+                    "current_org_id": child_batch.current_org_id,
+                    "current_org_name": child_batch.current_org_name,
+                    "location": loc,
+                    "owner": own,
+                    "plot_id": child_batch.plot_id,
+                    "plot_name": p_name,
+                    "farm_name": f_name,
+                    "initial_quantity": (
+                        float(child_batch.initial_quantity)
+                        if child_batch.initial_quantity is not None
+                        else None
+                    ),
+                    "remaining_quantity": rem_qty,
+                    "status": status_val,
+                    "is_consumed": is_consumed,
+                    "harvest_date": str(child_batch.harvest_date),
+                    "product_id": child_batch.product_id,
+                    "product_name": prod_name,
+                    "unit": child_batch.unit,
+                    "is_masked": False,
+                }
+                next_level_nodes.append(node_dict)
 
-            if next_level not in descendants_by_level:
-                descendants_by_level[next_level] = []
+                # Chỉ tiếp tục mở rộng con nếu lô chưa bị tiêu thụ (CONSUMED) và chưa từng được mở rộng
+                if not is_consumed and child_id not in visited_expanded:
+                    next_level_candidates.append(child_id)
 
-            # Tránh lặp node trong cùng một tầng (Quan hệ hình thoi)
-            if not any(n["batch_id"] == child_id for n in descendants_by_level[next_level]):
-                descendants_by_level[next_level].append(node_dict)
+        if next_level_nodes:
+            descendants_by_level[curr_level] = next_level_nodes
 
-            # Tiếp tục duyệt xuống con của child này nếu child chưa bị tiêu thụ
-            if not is_consumed:
-                queue.append((child_id, next_level, new_path))
+        unexplored_next = [
+            cid for cid in dict.fromkeys(next_level_candidates) if cid not in visited_expanded
+        ]
 
-    # Tìm các terminal_batches: Lô lá cuối chuỗi hoặc đã CONSUMED (S-27, S-29)
+        # Kiểm tra xem có thực sự bị cắt ngang khi dừng ở max_nodes hay không
+        if len(all_descendant_ids) >= max_nodes and unexplored_next:
+            has_more = db.scalar(
+                select(BatchRelation.id)
+                .where(BatchRelation.parent_batch_id.in_(unexplored_next))
+                .limit(1)
+            ) is not None
+            if has_more:
+                is_truncated = True
+            current_level_parents = []
+            break
+
+        current_level_parents = unexplored_next
+
+    target_info["is_truncated"] = is_truncated
+    target_info["max_nodes_reached"] = (len(all_descendant_ids) >= max_nodes)
+
+    # 5. Xác định terminal_batches: Lô lá cuối chuỗi hoặc đã CONSUMED
     terminal_batches: list[dict[str, Any]] = []
     if not all_descendant_ids:
-        # Nếu lô đích chính là lô không có con nào
         has_children = db.scalar(
             select(BatchRelation.id)
             .where(BatchRelation.parent_batch_id == target.id)
@@ -424,7 +554,8 @@ def trace_forward(  # noqa: C901
                 "location": loc,
                 "initial_quantity": float(target.initial_quantity) if target.initial_quantity is not None else None,
                 "remaining_quantity": (
-                    0.0 if is_c
+                    0.0
+                    if is_c
                     else (float(target.remaining_quantity) if target.remaining_quantity is not None else 0.0)
                 ),
                 "status": target.status,
@@ -432,15 +563,36 @@ def trace_forward(  # noqa: C901
                 "harvest_date": str(target.harvest_date),
             })
     else:
+        # Gom 1 câu truy vấn xác định tất cả parent_batch_id có con trong tập all_descendant_ids
+        parents_with_children = set(
+            db.scalars(
+                select(BatchRelation.parent_batch_id)
+                .where(BatchRelation.parent_batch_id.in_(all_descendant_ids))
+                .distinct()
+            ).all()
+        )
+
+        missing_ids = [d_id for d_id in all_descendant_ids if d_id not in batch_cache]
+        if missing_ids:
+            missing_batches = list(
+                db.scalars(
+                    select(Batch)
+                    .options(
+                        joinedload(Batch.plot),
+                        joinedload(Batch.farm),
+                        joinedload(Batch.product),
+                    )
+                    .where(Batch.id.in_(missing_ids))
+                ).all()
+            )
+            for mb in missing_batches:
+                batch_cache[mb.id] = mb
+
         for desc_id in sorted(all_descendant_ids):
-            b = db.get(Batch, desc_id)
+            b = batch_cache.get(desc_id)
             if not b:
                 continue
-            has_children = db.scalar(
-                select(BatchRelation.id)
-                .where(BatchRelation.parent_batch_id == desc_id)
-                .limit(1)
-            ) is not None
+            has_children = (desc_id in parents_with_children)
             is_c = (b.status == "CONSUMED")
             if not has_children or is_c:
                 loc = b.plot.location if b.plot else (b.farm.location if b.farm else None)
@@ -454,7 +606,8 @@ def trace_forward(  # noqa: C901
                     "location": loc,
                     "initial_quantity": float(b.initial_quantity) if b.initial_quantity is not None else None,
                     "remaining_quantity": (
-                        0.0 if is_c
+                        0.0
+                        if is_c
                         else (float(b.remaining_quantity) if b.remaining_quantity is not None else 0.0)
                     ),
                     "status": b.status,
@@ -462,14 +615,33 @@ def trace_forward(  # noqa: C901
                     "harvest_date": str(b.harvest_date),
                 })
 
+    # Fetch real relations only between represented nodes; never add ancestors
+    # outside the forward result to complete a merge.
+    represented_ids = {batch_id, *all_descendant_ids}
+    edges = [
+        {"parent_batch_id": rel.parent_batch_id,
+         "child_batch_id": rel.child_batch_id,
+         "relation_type": rel.relation_type,
+         "transferred_quantity": float(rel.transferred_quantity)}
+        for rel in db.scalars(
+            select(BatchRelation)
+            .where(BatchRelation.parent_batch_id.in_(represented_ids),
+                   BatchRelation.child_batch_id.in_(represented_ids))
+            .order_by(BatchRelation.parent_batch_id, BatchRelation.child_batch_id)
+        ).all()
+    ]
+
     result = {
+        "edges": edges,
         "target_batch": target_info,
         "descendants_by_level": descendants_by_level,
         "terminal_batches": terminal_batches,
         "total_descendants": len(all_descendant_ids),
     }
 
-    # Lưu cache 60s
+    from app.services.locations import attach_forward_locations
+    attach_forward_locations(db, result)
+
     if use_cache:
         _FORWARD_CACHE[batch_id] = (now + CACHE_TTL_SECONDS, result)
 

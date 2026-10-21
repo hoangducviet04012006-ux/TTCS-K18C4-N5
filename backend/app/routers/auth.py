@@ -200,6 +200,19 @@ ALLOWED_DEMO_ACCOUNTS = {
 }
 
 
+def _is_loopback_client(request: Request) -> bool:
+    client_host = request.client.host if request.client else ""
+    if client_host not in ("127.0.0.1", "::1", "localhost", "testclient"):
+        return False
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded and forwarded.split(",")[0].strip() not in ("127.0.0.1", "::1", "localhost", "testclient"):
+        return False
+    real_ip = request.headers.get("x-real-ip")
+    if real_ip and real_ip.strip() not in ("127.0.0.1", "::1", "localhost", "testclient"):
+        return False
+    return True
+
+
 @router.post(
     "/demo-login",
     response_model=LoginResponse,
@@ -225,15 +238,7 @@ def demo_login(
 ) -> LoginResponse:
     """Đăng nhập nhanh một trong 8 tài khoản demo Sprint 1–3 mà không cần mật khẩu từ client."""
     # 1. Kiểm tra môi trường localhost
-    client_host = request.client.host if request.client else ""
-    is_loopback = client_host in ("127.0.0.1", "::1", "localhost", "testclient")
-    forwarded = request.headers.get("x-forwarded-for")
-    if forwarded:
-        first_ip = forwarded.split(",")[0].strip()
-        if first_ip not in ("127.0.0.1", "::1", "localhost", "testclient"):
-            is_loopback = False
-
-    if not is_loopback:
+    if not _is_loopback_client(request):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Chức năng đăng nhập nhanh Demo chỉ được phép truy cập từ localhost.",

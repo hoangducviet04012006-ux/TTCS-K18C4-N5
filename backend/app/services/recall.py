@@ -46,7 +46,7 @@ def affected_evidence_ids(db, recall):
     return ids
 
 
-def detail(db, recall, user, graph=None):
+def detail(db, recall, user, graph=None, filters=None):
     graph = graph or graph_snapshot(db, recall.root_batch_id)
     if not related(db, recall, user, graph):
         raise HTTPException(403, "Recall does not involve your organization")
@@ -107,10 +107,15 @@ def detail(db, recall, user, graph=None):
             "acknowledged_at": ack.acknowledged_at.isoformat() if ack and ack.acknowledged_at else None,
             "notes": ack.notes if ack else None,
         })
-    return {
+    root_batch = next((b for b in batches if b.id == recall.root_batch_id), batches[0] if batches else None)
+    from app.services.recall_views import enrich
+    return enrich(db, {
         "id": recall.id, "recall_code": recall.recall_code, "root_batch_id": recall.root_batch_id,
+        "batch_code": root_batch.code if root_batch else None,
         "reason": recall.reason, "status": recall.status,
+        "incident_status": "Có sự cố",
         "created_at": recall.created_at.isoformat(),
+        "created_by_user_id": recall.created_by_user_id,
         "completed_at": recall.completed_at.isoformat() if recall.completed_at else None,
         "policy": "ONE_RECALL_PER_ROOT_LIFETIME_PENDING_MENTOR",
         "affected_batches": nodes, "visible_batch_count": len(nodes),
@@ -131,7 +136,7 @@ def detail(db, recall, user, graph=None):
             "quarantine_continues": True,
         } if anomaly else None,
         "quarantined": True,
-    }
+    }, user, filters)
 
 
 def get_recall(db, recall_id):
@@ -261,7 +266,8 @@ def create_recall(db, user, root_batch_id, reason, key):
             event(db, recall, batch, "RECALL_AFFECTED", user)
         for org_id in sorted({b.current_org_id for b in graph["batches"]}):
             db.add(RecallAcknowledgment(recall_id=recall.id, organization_id=org_id))
-        record_action(db, user, "CREATE", "recall", recall.id)
+        record_action(db, user, "CREATE", "recall", recall.id,
+                      operation="recall", batch_ids=[root_batch_id])
         db.flush()
         return detail(db, recall, user, graph)
     return command(db, user, "recall.create", key, {"root_batch_id": root_batch_id, "reason": reason}, execute)
@@ -292,7 +298,8 @@ def acknowledge(db, user, recall_id, notes, key):
         ack.notes = notes
         root = graph["batches"][0]
         event(db, recall, root, "RECALL_ACKNOWLEDGED", user, organization_id=user.organization_id, notes=notes)
-        record_action(db, user, "UPDATE", "recall", recall.id)
+        record_action(db, user, "UPDATE", "recall", recall.id,
+                      operation="confirm", batch_ids=[recall.root_batch_id])
         db.flush()
         pending = db.scalar(select(RecallAcknowledgment.id).where(
             RecallAcknowledgment.recall_id == recall.id, RecallAcknowledgment.status == "PENDING"
@@ -301,7 +308,8 @@ def acknowledge(db, user, recall_id, notes, key):
             recall.status = "COMPLETED"
             recall.completed_at = event_now()
             event(db, recall, root, "RECALL_COMPLETED", user)
-            record_action(db, user, "COMPLETE", "recall", recall.id)
+            record_action(db, user, "COMPLETE", "recall", recall.id,
+                          operation="recall_complete", batch_ids=[recall.root_batch_id])
             db.flush()
         return detail(db, recall, user, graph)
     return command(db, user, f"recall.ack:{recall_id}", key, {"notes": notes}, execute)

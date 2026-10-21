@@ -21,7 +21,7 @@ Ví dụ dùng trong router::
     db.commit()
 """
 
-from sqlalchemy import or_, select
+from sqlalchemy import or_, select, text
 from sqlalchemy.orm import Session, joinedload
 
 from app.models import AuditLog, Batch, Farm, User
@@ -40,6 +40,10 @@ def record_action(
     action: str,
     entity: str,
     entity_id: int,
+    *,
+    operation: str | None = None,
+    batch_ids: list[int] | None = None,
+    location: dict | None = None,
 ) -> AuditLog:
     """Thêm 1 bản ghi lịch sử vào session hiện tại (**chưa** commit).
 
@@ -68,6 +72,9 @@ def record_action(
         created_at=event_now(),
     )
     db.add(log)
+    from app.services.audit_metadata import save
+    ids = batch_ids if batch_ids is not None else ([entity_id] if entity == "batch" else [])
+    save(db, log, user, operation or action.lower(), ids, location)
     return log
 
 
@@ -77,6 +84,8 @@ def fetch_audit_logs(
     user_id: int | None = None,
     limit: int = DEFAULT_AUDIT_LOG_LIMIT,
     organization_id: int | None = None,
+    batch_id: int | None = None,
+    offset: int = 0,
 ) -> list[AuditLog]:
     """Đọc bảng ``audit_logs`` cho API ``GET /audit-logs`` (chỉ admin gọi được).
 
@@ -97,6 +106,7 @@ def fetch_audit_logs(
         .options(joinedload(AuditLog.user))
         .order_by(AuditLog.id.desc())
         .limit(limit)
+        .offset(offset)
     )
 
     if entity is not None:
@@ -106,7 +116,7 @@ def fetch_audit_logs(
     if organization_id is not None:
         # No historic organization snapshot exists in this schema. Fail closed:
         # both the actor and the current target must belong to this organization.
-        statement = statement.where(
+        legacy_scope = (
             AuditLog.user.has(User.organization_id == organization_id),
             or_(
                 (AuditLog.entity == "farm") & AuditLog.entity_id.in_(
@@ -117,8 +127,29 @@ def fetch_audit_logs(
                     select(User.id).where(User.organization_id == organization_id)),
             ),
         )
+        from sqlalchemy import and_
+        from app.services.audit_metadata import ready
+        legacy = and_(*legacy_scope)
+        if ready(db):
+            statement = statement.where(or_(
+                text("audit_logs.organization_id = :audit_org"),
+                and_(text("audit_logs.organization_id IS NULL AND audit_logs.operation IS NULL"), legacy),
+            )).params(audit_org=organization_id)
+        else:
+            statement = statement.where(legacy)
 
-    return list(db.scalars(statement).all())
+    if batch_id is not None:
+        legacy_lot = (AuditLog.entity == "batch") & (AuditLog.entity_id == batch_id)
+        from app.services.audit_metadata import ready
+        if ready(db):
+            statement = statement.where(or_(legacy_lot, text(
+                "EXISTS (SELECT 1 FROM json_each(audit_logs.batch_ids) WHERE value=:audit_batch)"
+            ))).params(audit_batch=batch_id)
+        else:
+            statement = statement.where(legacy_lot)
+
+    from app.services.audit_metadata import hydrate
+    return hydrate(db, list(db.scalars(statement).all()))
 
 
 __all__ = [

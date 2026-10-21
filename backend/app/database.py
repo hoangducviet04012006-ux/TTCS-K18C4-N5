@@ -8,13 +8,19 @@ import os
 from collections.abc import Generator
 from pathlib import Path
 
-from sqlalchemy import create_engine, select
+from sqlalchemy import create_engine, select, event
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 # ---------------------------------------------------------------- Cấu hình ---
 BASE_DIR: Path = Path(__file__).resolve().parent.parent
+DATA_DIR: Path = BASE_DIR.parent / "data"
+AGRITRACE_DB: Path = DATA_DIR / "agritrace.db"
+# DATABASE_FILE biểu thị file ttcs.db gốc để phục vụ cơ chế bảo vệ chống ghi đè/demo-login
 DATABASE_FILE: Path = BASE_DIR / "ttcs.db"
-DATABASE_URL: str = os.getenv("DATABASE_URL", f"sqlite:///{DATABASE_FILE.as_posix()}")
+DATABASE_URL: str = os.getenv(
+    "DATABASE_URL",
+    f"sqlite:///{AGRITRACE_DB.as_posix()}" if AGRITRACE_DB.exists() else f"sqlite:///{DATABASE_FILE.as_posix()}"
+)
 
 # Đảm bảo thư mục chứa file SQLite tồn tại (hỗ trợ mount volume Docker)
 if DATABASE_URL.startswith("sqlite:///"):
@@ -29,6 +35,14 @@ engine = create_engine(
     echo=False,
 )
 
+
+@event.listens_for(engine, "connect")
+def enable_foreign_keys(connection, _record):
+    cursor = connection.cursor()
+    cursor.execute("PRAGMA foreign_keys=ON")
+    cursor.close()
+
+
 SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
 
 
@@ -40,6 +54,9 @@ def get_db() -> Generator[Session, None, None]:
     """Dependency cung cấp Session cho mỗi request và tự đóng khi xong."""
     db: Session = SessionLocal()
     try:
+        if not hasattr(db.get_bind(), "_phase_c_ready"):
+            from app.services.locations import probe_schema
+            probe_schema(db)
         yield db
     finally:
         db.close()
@@ -127,6 +144,46 @@ def migrate_user_security_columns() -> None:
                     connection.exec_driver_sql(f"ALTER TABLE farms ADD COLUMN {col_name} {col_type}")
 
 
+def _migrate_temperature_violation_indexes(connection) -> None:
+    """T?o Partial Unique Index cho temperature_violations n?u kh?ng c? d? li?u tr?ng (S-45).
+
+    Tuy?t ??i kh?ng x?a d? li?u ?? ?p migration th?nh c?ng.
+    """
+    existing_violations = {
+        row[1] for row in connection.exec_driver_sql("PRAGMA table_info(temperature_violations)")
+    }
+    if not existing_violations:
+        return
+
+    try:
+        trip_dups = connection.exec_driver_sql(
+            "SELECT trip_id, start_time, COUNT(*) as cnt FROM temperature_violations "
+            "WHERE trip_id IS NOT NULL "
+            "GROUP BY trip_id, start_time HAVING cnt > 1"
+        ).fetchall()
+        if not trip_dups:
+            connection.exec_driver_sql(
+                "CREATE UNIQUE INDEX IF NOT EXISTS uq_temp_violations_trip_start "
+                "ON temperature_violations (trip_id, start_time) WHERE trip_id IS NOT NULL"
+            )
+    except Exception:
+        pass
+
+    try:
+        batch_dups = connection.exec_driver_sql(
+            "SELECT batch_id, start_time, COUNT(*) as cnt FROM temperature_violations "
+            "WHERE batch_id IS NOT NULL "
+            "GROUP BY batch_id, start_time HAVING cnt > 1"
+        ).fetchall()
+        if not batch_dups:
+            connection.exec_driver_sql(
+                "CREATE UNIQUE INDEX IF NOT EXISTS uq_temp_violations_batch_start "
+                "ON temperature_violations (batch_id, start_time) WHERE batch_id IS NOT NULL"
+            )
+    except Exception:
+        pass
+
+
 def migrate_handover_and_batch_columns() -> None:
     """Thêm cột current_org_id cho bảng batches và tạo index unique cho handovers nếu thiếu."""
     with engine.begin() as connection:
@@ -138,6 +195,20 @@ def migrate_handover_and_batch_columns() -> None:
                 connection.exec_driver_sql(
                     "ALTER TABLE batches ADD COLUMN current_org_id INTEGER REFERENCES organizations(id)"
                 )
+            if "has_temperature_violation" not in existing_batches:
+                try:
+                    connection.exec_driver_sql(
+                        "ALTER TABLE batches ADD COLUMN has_temperature_violation BOOLEAN NOT NULL DEFAULT 0"
+                    )
+                except Exception:
+                    pass
+            if "temperature_violation_count" not in existing_batches:
+                try:
+                    connection.exec_driver_sql(
+                        "ALTER TABLE batches ADD COLUMN temperature_violation_count INTEGER NOT NULL DEFAULT 0"
+                    )
+                except Exception:
+                    pass
             try:
                 connection.exec_driver_sql(
                     "UPDATE batches SET current_org_id = ("
@@ -158,6 +229,8 @@ def migrate_handover_and_batch_columns() -> None:
                 )
             except Exception:
                 pass
+
+        _migrate_temperature_violation_indexes(connection)
 
 
 def migrate_sprint2_schema(target_engine=None) -> None:  # noqa: C901
@@ -361,9 +434,20 @@ def init_db() -> None:
     # Stage 3B.2A: original database must never be bootstrapped/migrated/seeded.
     if is_protected_engine(engine):
         return
+
+    # Bảo vệ cơ sở dữ liệu đã hợp nhất/hoàn thiện (tránh tự động seed, reset hoặc migration khi khởi động)
+    try:
+        with engine.connect() as conn:
+            marker = conn.exec_driver_sql(
+                "SELECT value FROM sprint_demo_marker WHERE name='scope'"
+            ).scalar()
+            if marker == "sprint123":
+                return
+    except Exception:
+        pass
     Base.metadata.create_all(
         bind=engine,
-        tables=[t for t in Base.metadata.sorted_tables if not t.info.get("recall_trial")],
+        tables=[t for t in Base.metadata.sorted_tables if not t.info.get("recall_trial") and not t.info.get("phase_c")],
     )
     migrate_user_security_columns()
     migrate_handover_and_batch_columns()

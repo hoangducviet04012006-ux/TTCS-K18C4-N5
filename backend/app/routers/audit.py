@@ -1,4 +1,4 @@
-"""Router lịch sử thao tác (``GET /audit-logs``) - Sprint 7, **chỉ admin**.
+"""S-31: audit query API; SystemAdmin/Inspector global, OrgAdmin organization scope.
 
 Mục đích: trả lời câu hỏi "ai đã làm gì trong hệ thống". Dữ liệu được ghi tự
 động bởi các endpoint tạo/sửa/xoá vùng trồng & lô nông sản (xem ``app/audit.py``).
@@ -44,7 +44,7 @@ router = APIRouter(
         "(`entity`/`entity_id`) vào lúc nào (`created_at`, UTC).\n\n"
         "Log được sinh tự động khi tạo/sửa/xoá vùng trồng hoặc lô nông sản - "
         "không có endpoint nào cho phép client tự thêm/sửa/xoá log.\n\n"
-        "**Bộ lọc (tuỳ chọn):** `entity` (`farm`/`batch`), `user_id`, `limit` "
+        "**Bộ lọc:** `entity`, `user_id`, `batch_id`, `offset`, `limit` "
         f"(mặc định {DEFAULT_AUDIT_LOG_LIMIT}, tối đa {MAX_AUDIT_LOG_LIMIT}). "
         "Giá trị `entity` không hợp lệ → `422 Unprocessable Entity`.\n\n"
         "**Phân quyền:** system_admin/inspector đọc toàn hệ thống; org_admin chỉ đọc phạm vi tổ chức. "
@@ -62,9 +62,11 @@ router = APIRouter(
 def list_audit_logs(
     # `Literal` (chuỗi cụ thể) để FastAPI validate: giá trị lạ -> 422.
     # Hai giá trị hợp lệ trùng với ENTITY_FARM / ENTITY_BATCH ở `app/models.py`.
-    entity: Literal["farm", "batch", "user"] | None = Query(
+    entity: Literal[
+        "farm", "batch", "user", "recall", "handover", "location", "product", "organization", "batch_event"
+    ] | None = Query(
         default=None,
-        description="Lọc theo loại dữ liệu bị tác động: `farm` hoặc `batch`.",
+        description="Lọc loại đối tượng: farm, batch, user, recall, handover, location, product, organization, batch_event.",
         examples=["farm"],
     ),
     user_id: int | None = Query(
@@ -83,6 +85,8 @@ def list_audit_logs(
         ),
         examples=[100],
     ),
+    batch_id: int | None = Query(default=None, ge=1, description="Lọc theo lô tác động, kể cả cha của thao tác gộp."),
+    offset: int = Query(default=0, ge=0, le=100000),
     current_user: User = Depends(require_audit_reader),
     db: Session = Depends(get_db),
 ) -> list[AuditLogResponse]:
@@ -111,5 +115,7 @@ def list_audit_logs(
         if user_id is not None:
             actor = db.get(User, user_id)
             if actor is None or actor.organization_id != organization_id:
-                raise HTTPException(403, "Không có quyền xem nhật ký của tổ chức khác.")
-    return fetch_audit_logs(db, entity=entity, user_id=user_id, limit=limit, organization_id=organization_id)
+                if not fetch_audit_logs(db, user_id=user_id, limit=1, organization_id=organization_id):
+                    raise HTTPException(403, "Không có quyền xem nhật ký của tổ chức khác.")
+    return fetch_audit_logs(db, entity=entity, user_id=user_id, limit=limit,
+                            organization_id=organization_id, batch_id=batch_id, offset=offset)

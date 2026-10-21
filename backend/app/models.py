@@ -93,6 +93,11 @@ EVENT_MERGE: str = "MERGE"
 EVENT_EXPORT_MERGE: str = "EXPORT_MERGE"
 EVENT_CONSUMED: str = "CONSUMED"
 
+# Các loại sự kiện vòng đời chuyến xe lạnh (Sprint 4 - S-40 & S-45)
+EVENT_TRIP_DISPATCH: str = "TRIP_DISPATCH"
+EVENT_TRIP_DELIVER: str = "TRIP_DELIVER"
+EVENT_TEMPERATURE_VIOLATION: str = "TEMPERATURE_VIOLATION"
+
 # Các loại quan hệ phả hệ lô (Sprint 3 - T-39)
 RELATION_SPLIT: str = "SPLIT"
 RELATION_MERGE: str = "MERGE"
@@ -340,6 +345,21 @@ class Batch(Base):
     )
     status: Mapped[str] = mapped_column(String(30), nullable=False, default="ACTIVE", server_default="ACTIVE")
 
+    # Cờ cảnh báo sự cố vi phạm nhiệt độ chuỗi lạnh (S-45)
+    has_temperature_violation: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="0"
+    )
+    temperature_violation_count: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
+
+    # Thuộc tính nguồn gốc dữ liệu phục vụ kiến trúc hợp nhất thống nhất (Unified AgriTrace)
+    origin_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    dataset_source: Mapped[str] = mapped_column(
+        String(50), nullable=False, default="operational", server_default="operational"
+    )
+    is_simulation: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="0")
+
     # Các cột hỗ trợ tương thích ngược Sprint 1
     farm_id: Mapped[int | None] = mapped_column(ForeignKey("farms.id"), nullable=True, index=True)
     product_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
@@ -373,6 +393,18 @@ class Batch(Base):
         back_populates="parent_batch",
         cascade="all, delete-orphan",
     )
+
+    @property
+    def location_id(self):
+        return getattr(self, "_phase_c_location", {}).get("id")
+
+    @property
+    def current_location(self):
+        return getattr(self, "_phase_c_location", {}).get("address")
+
+    @property
+    def current_location_name(self):
+        return getattr(self, "_phase_c_location", {}).get("name")
 
     def __init__(self, **kwargs: Any) -> None:
         """Hỗ trợ tự động điền các trường mặc định và tương thích Sprint 1."""
@@ -457,6 +489,16 @@ class Batch(Base):
         (xem trong danh sách lô) lẫn bên nhận (xem trong danh sách chờ duyệt).
         """
         return self.pending_handover is not None
+
+    @property
+    def has_cold_chain_violation(self) -> bool:
+        """Kiểm tra lô có cờ vi phạm hoặc có sự kiện TEMPERATURE_VIOLATION trong hash-chain (S-45)."""
+        if getattr(self, "has_temperature_violation", False):
+            return True
+        for e in getattr(self, "events", []):
+            if e.event_type == EVENT_TEMPERATURE_VIOLATION:
+                return True
+        return False
 
     def __repr__(self) -> str:  # pragma: no cover
         return f"<Batch id={self.id} code={self.code!r} plot_id={self.plot_id} status={self.status}>"
@@ -633,6 +675,20 @@ class Handover(Base):
     def to_org_name(self) -> str | None:
         return self.to_org.name if self.to_org else None
 
+    @property
+    def has_temperature_violation(self) -> bool:
+        """Cảnh báo cho bên nhận: Lô từng gặp sự cố vi phạm nhiệt độ chuỗi lạnh (S-45)."""
+        if self.batch:
+            return bool(getattr(self.batch, "has_temperature_violation", False) or self.batch.has_cold_chain_violation)
+        return False
+
+    @property
+    def temperature_violation_count(self) -> int:
+        """Số lần vi phạm nhiệt độ được ghi nhận trên lô này (S-45)."""
+        if self.batch:
+            return int(getattr(self.batch, "temperature_violation_count", 0))
+        return 0
+
     def __repr__(self) -> str:  # pragma: no cover
         return (
             f"<Handover id={self.id} batch_id={self.batch_id} "
@@ -699,6 +755,7 @@ class BatchEvent(Base):
     event_data: Mapped[str | None] = mapped_column(String(2000), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=_naive_utcnow)
     record_hash: Mapped[str] = mapped_column(String(64), nullable=False, default="", server_default="")
+    origin_batch_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     # Relationships
     batch: Mapped["Batch"] = relationship(back_populates="events")
@@ -790,6 +847,34 @@ class AuditLog(Base):
     def username(self) -> str:
         return self.user.username if self.user is not None else ""
 
+    @property
+    def source_ip(self):
+        return getattr(self, "_audit_details", {}).get("source_ip", None)
+
+    @property
+    def operation(self):
+        return getattr(self, "_audit_details", {}).get("operation", None)
+
+    @property
+    def organization_id(self):
+        return getattr(self, "_audit_details", {}).get("organization_id", None)
+
+    @property
+    def batch_ids(self):
+        return getattr(self, "_audit_details", {}).get("batch_ids", [])
+
+    @property
+    def location_id(self):
+        return getattr(self, "_audit_details", {}).get("location_id", None)
+
+    @property
+    def location_name(self):
+        return getattr(self, "_audit_details", {}).get("location_name", None)
+
+    @property
+    def location_address(self):
+        return getattr(self, "_audit_details", {}).get("location_address", None)
+
     def __repr__(self) -> str:  # pragma: no cover
         return (
             f"<AuditLog id={self.id} user_id={self.user_id} "
@@ -825,6 +910,8 @@ __all__ = [
     "RELATION_MERGE",
     "RELATION_SPLIT",
     "RELATION_TYPES",
+    "EVENT_TRIP_DELIVER",
+    "EVENT_TRIP_DISPATCH",
     "Farm",
     "HANDOVER_ACCEPTED",
     "HANDOVER_PENDING",
@@ -846,3 +933,6 @@ __all__ = [
 from app.recall_models import Recall, RecallAcknowledgment, IdempotencyRecord  # noqa: E402,F401
 from app.recall_models import register_event_evidence_index  # noqa: E402
 register_event_evidence_index(BatchEvent.__table__)
+
+# Register ColdTrip and ColdTripBatch tables in Base metadata for S-40
+from app.trip_models import ColdTrip, ColdTripBatch  # noqa: E402,F401

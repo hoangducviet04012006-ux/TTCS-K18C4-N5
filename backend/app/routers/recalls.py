@@ -1,10 +1,12 @@
 """Recall APIs on a separately migrated SQLite test database."""
-from fastapi import APIRouter, Depends, Header
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from typing import Literal
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import User
+from app.models import Batch, User
 from app.security import get_current_user
 from app.services import recall
 from app.services.recall_database import begin_read_snapshot, require_recall_database
@@ -20,13 +22,25 @@ router = APIRouter(prefix="/recalls", tags=["Recalls"], dependencies=[Depends(tr
 
 class RecallCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    root_batch_id: int = Field(ge=1)
+    root_batch_id: int | None = Field(default=None, ge=1)
+    batch_code: str | None = Field(default=None, max_length=50)
     reason: str = Field(min_length=20, max_length=5000)
 
     @field_validator("reason", mode="before")
     @classmethod
     def trim_reason(cls, value):
         return value.strip() if isinstance(value, str) else value
+
+    @field_validator("batch_code", mode="before")
+    @classmethod
+    def trim_batch_code(cls, value):
+        return value.strip() if isinstance(value, str) else value
+
+    @model_validator(mode="after")
+    def validate_batch_identity(self):
+        if self.root_batch_id is None and not self.batch_code:
+            raise ValueError("Cần cung cấp mã lô (batch_code) hoặc ID lô (root_batch_id)")
+        return self
 
 
 class RecallAck(BaseModel):
@@ -49,7 +63,13 @@ def idempotency_key(key: str = Header(alias="Idempotency-Key", min_length=1, max
 @router.post("", status_code=201)
 def create(payload: RecallCreate, key: str = Depends(idempotency_key),
            user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    return recall.create_recall(db, user, payload.root_batch_id, payload.reason, key)
+    root_batch_id = payload.root_batch_id
+    if root_batch_id is None and payload.batch_code:
+        batch = db.scalar(select(Batch).where(Batch.code == payload.batch_code))
+        if batch is None:
+            raise HTTPException(404, f"Mã lô không tồn tại: {payload.batch_code}")
+        root_batch_id = batch.id
+    return recall.create_recall(db, user, root_batch_id, payload.reason, key)
 
 
 @router.get("")
@@ -64,10 +84,17 @@ def alerts(user: User = Depends(get_current_user), db: Session = Depends(get_db)
 
 
 @router.get("/{recall_id}")
-def retrieve(recall_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def retrieve(recall_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db),
+             organization_id: int | None = Query(None, ge=1), location_id: int | None = Query(None, ge=1),
+             unknown_location: bool = False, batch_status: Literal["ACTIVE", "SPLIT", "MERGED", "CONSUMED"] | None = None):
     require_recall_database(db)
     begin_read_snapshot(db)
-    return recall.detail(db, recall.get_recall(db, recall_id), user)
+    if location_id is not None and unknown_location:
+        raise HTTPException(422, "Chỉ chọn một bộ lọc vị trí.")
+    return recall.detail(db, recall.get_recall(db, recall_id), user, filters={
+        "organization_id": organization_id, "location_id": location_id,
+        "unknown_location": unknown_location, "batch_status": batch_status,
+    })
 
 
 @router.post("/{recall_id}/acknowledge")

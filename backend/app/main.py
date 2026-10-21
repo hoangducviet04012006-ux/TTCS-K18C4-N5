@@ -35,7 +35,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app import __version__
-from app.database import get_db, init_db
+from app.database import get_db
 from app.routers import (
     audit,
     auth,
@@ -44,8 +44,12 @@ from app.routers import (
     farms,
     handovers,
     health,
+    locations,
+    imports,
     products,
     users,
+    qr,
+    public_trace,
 )
 from app.schemas import HealthResponse
 
@@ -55,10 +59,23 @@ from app.schemas import HealthResponse
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Vòng đời ứng dụng: chạy khi server khởi động và khi server tắt.
 
-    Khi khởi động: tạo bảng còn thiếu trong SQLite và tạo 2 tài khoản mặc định
-    (``admin``/``farmer``) nếu chưa có - xem ``app/database.py``.
+    Startup only validates schema. Explicit upgrades of isolated copies are
+    available through scripts.run_agritrace; no legacy migration or seed runs.
+    Khi chạy trong CI/Staging với TTCS_BOOTSTRAP_STAGING=1, cho phép khởi tạo schema
+    trên file SQLite độc lập được chỉ định.
     """
-    init_db()
+    from app.services.sprint4_schema import ensure_sprint4_schema, bootstrap_staging_database
+    # Honor the same dependency override used by requests (including isolated
+    # integration-test sessions), without bootstrapping a second global DB.
+    provider = app.dependency_overrides.get(get_db, get_db)()
+    try:
+        db = next(provider)
+        bind = db.get_bind()
+        if os.getenv("TTCS_BOOTSTRAP_STAGING") == "1":
+            bootstrap_staging_database(bind)
+        ensure_sprint4_schema(bind)
+    finally:
+        provider.close()
     yield
 
 
@@ -121,10 +138,16 @@ app.add_middleware(
 
 
 # -------------------------------------------------------- Exception Handlers ---
+
 @app.middleware("http")
 async def log_denied_requests(request: Request, call_next):
     """S-05: record denied API attempts without writing business history."""
-    response = await call_next(request)
+    from app.services.audit_metadata import clean_ip, request_ip
+    token = request_ip.set(clean_ip(request.client.host if request.client else None))
+    try:
+        response = await call_next(request)
+    finally:
+        request_ip.reset(token)
     if response.status_code == 403:
         logging.getLogger("agritrace.security").warning(
             "access_denied method=%s path=%s client=%s status=403",
@@ -182,12 +205,26 @@ app.include_router(auth.router)
 app.include_router(farms.router)
 app.include_router(batches.router)
 app.include_router(batches.router, prefix="/api/v1")
+app.include_router(qr.router)
+app.include_router(qr.router, prefix="/api/v1")
+app.include_router(public_trace.router)
 app.include_router(events.router)
 app.include_router(users.router)
 app.include_router(audit.router)
 app.include_router(handovers.router)
 app.include_router(products.router)
+app.include_router(locations.router)
+app.include_router(imports.router)
 
 # Recall keeps the existing root-level API convention.
 from app.routers import recalls  # noqa: E402
 app.include_router(recalls.router)
+
+# Story S-50: Traceability Integrity verification
+from app.routers import trace_integrity  # noqa: E402
+app.include_router(trace_integrity.router)
+
+# Story S-40: Cold Trips management
+from app.routers import trips  # noqa: E402
+app.include_router(trips.router)
+app.include_router(trips.router, prefix="/api/v1")

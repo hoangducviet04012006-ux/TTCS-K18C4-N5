@@ -44,25 +44,60 @@ def assert_history_access(db: Session, user: User, batch_id: int) -> None:
         raise HTTPException(403, "Bạn không có quyền xem lịch sử lô này.")
 
 
+SENSITIVE_PAYLOAD_KEYS = {
+    "phone", "phone_number", "driver_phone", "tele", "telephone",
+    "id_card", "cccd", "cmnd", "identity_card",
+    "email", "mail",
+    "bank_account", "bank_number", "bank_name", "account_number",
+    "price", "unit_price", "cost", "total_price", "revenue",
+    "password", "secret", "token", "private_key",
+}
+
+
+def _sanitize_sensitive_keys(val: Any) -> Any:
+    if isinstance(val, dict):
+        return {k: _sanitize_sensitive_keys(v) for k, v in val.items() if str(k).lower() not in SENSITIVE_PAYLOAD_KEYS}
+    if isinstance(val, list):
+        return [_sanitize_sensitive_keys(item) for item in val]
+    return val
+
+
 def redact_event(event: BatchEventOut, user: User) -> BatchEventOut:
-    if event.organization_id != user.organization_id:
-        public = {"batch_code", "product_id", "plot_id", "quantity", "initial_quantity",
-                  "remaining_quantity", "from_org_id", "to_org_id", "parent_batch_id",
-                  "parent_batch_ids", "child_batch_ids", "child_codes", "merged_batch_id",
-                  "product_name", "total_quantity", "unit", "quantity_taken", "total_split_quantity",
-                  "merged_batch_code", "parent_batch_code", "is_overdue"}
-        safe_payload = {k: v for k, v in event.payload.items() if k in public}
-        if event.event_type == "MERGE":
-            safe_payload["parent_batches"] = [
-                {k: v for k, v in item.items() if k in {"id", "code", "quantity_taken"}}
-                for item in event.payload.get("parent_batches", []) if isinstance(item, dict)
-            ]
+    # 1. Cùng tổ chức: Được xem đầy đủ dữ liệu nội bộ
+    if user.organization_id is not None and event.organization_id == user.organization_id:
+        return event
+
+    # 2. Thanh tra & Quản trị hệ thống: Đầy đủ dữ liệu phục vụ thanh tra, ẩn PII/payload nhạy cảm và ID người dùng nội bộ
+    if user.role in (ROLE_INSPECTOR, ROLE_SYSTEM_ADMIN, ROLE_ADMIN):
+        cleaned_payload = _sanitize_sensitive_keys(event.payload or {})
         return event.model_copy(update={
-            "payload": safe_payload,
-            "event_data": "Thông tin truy xuất liên tổ chức", "username": None,
-            "created_by_user_id": None, "user_id": None, "notes": None,
+            "payload": cleaned_payload,
+            "created_by_user_id": None,
+            "user_id": None,
         })
-    return event
+
+    # 3. Tổ chức khác (liên tổ chức): Ẩn dữ liệu nhạy cảm theo whitelist tối thiểu
+    public = {"batch_code", "product_id", "plot_id", "quantity", "initial_quantity",
+              "remaining_quantity", "from_org_id", "to_org_id", "parent_batch_id",
+              "parent_batch_ids", "child_batch_ids", "child_codes", "merged_batch_id",
+              "product_name", "total_quantity", "unit", "quantity_taken", "total_split_quantity",
+              "merged_batch_code", "parent_batch_code", "is_overdue",
+              # S-45: Thông tin vi phạm nhiệt độ chuỗi lạnh
+              "violation_id", "trip_id", "trip_code", "container_code",
+              "start_time", "end_time", "duration_minutes", "peak_temperature",
+              "threshold_temperature", "min_threshold", "max_threshold",
+              "violation_type", "severity", "description"}
+    safe_payload = {k: v for k, v in event.payload.items() if k in public}
+    if event.event_type == "MERGE":
+        safe_payload["parent_batches"] = [
+            {k: v for k, v in item.items() if k in {"id", "code", "quantity_taken"}}
+            for item in event.payload.get("parent_batches", []) if isinstance(item, dict)
+        ]
+    return event.model_copy(update={
+        "payload": safe_payload,
+        "event_data": "Thông tin truy xuất liên tổ chức", "username": None,
+        "created_by_user_id": None, "user_id": None, "notes": None,
+    })
 
 
 @router.post(
@@ -110,7 +145,8 @@ def create_batch_event(
     # Chuẩn bị payload có cấu trúc (T-23)
     reserved = {"HARVEST", "HANDOVER_INIT", "HANDOVER_ACCEPT", "HANDOVER_REJECT",
                 "SPLIT", "GENESIS_SPLIT", "MERGE", "EXPORT_MERGE", "BATCH_UPDATED", "CONSUMED",
-                "RECALL_INIT", "RECALL_AFFECTED", "RECALL_ACKNOWLEDGED", "RECALL_COMPLETED"}
+                "RECALL_INIT", "RECALL_AFFECTED", "RECALL_ACKNOWLEDGED", "RECALL_COMPLETED",
+                "TRIP_DISPATCH", "TRIP_DELIVER", "TEMPERATURE_VIOLATION"}
     if not payload.event_type.strip():
         raise HTTPException(400, "Loại sự kiện không được để trống.")
     if payload.event_type.strip().upper() in reserved:
@@ -284,8 +320,12 @@ def list_all_events(
     """Lấy danh sách sự kiện."""
     if batch_id is not None:
         assert_history_access(db, current_user, batch_id)
-    accessible = [bid for bid in db.scalars(select(Batch.id)).all()
-                  if can_view_batch(db, current_user.organization_id, bid)]
+    accessible = [
+        bid for bid in db.scalars(select(Batch.id)).all()
+        if can_view_batch(db, current_user.organization_id, bid, user_role=current_user.role)
+    ]
+    if not accessible:
+        return []
     stmt = select(BatchEvent).where(BatchEvent.batch_id.in_(accessible)).order_by(BatchEvent.id.asc()).limit(limit)
     if batch_id is not None:
         stmt = stmt.where(BatchEvent.batch_id == batch_id)
