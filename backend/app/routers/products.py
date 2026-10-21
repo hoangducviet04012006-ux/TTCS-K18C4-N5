@@ -13,7 +13,9 @@ from app.database import get_db
 from app.audit import record_action
 from app.models import Product, User
 from app.schemas import ProductCreate, ProductResponse
-from app.security import require_admin
+from app.security import require_admin, get_current_user
+from app.schemas_trips import ProductTemperaturePolicy
+from app.trip_models import ProductTemperatureSetting
 from app.services.rbac import check_action_permission
 
 router = APIRouter(
@@ -82,3 +84,32 @@ def create_product(
     db.commit()
     db.refresh(product)
     return product
+
+
+@router.get("/{product_id}/temperature-policy")
+def get_temperature_policy(product_id: int, user: User = Depends(get_current_user),
+                           db: Session = Depends(get_db)):
+    if db.get(Product, product_id) is None:
+        raise HTTPException(404, "Không tìm thấy sản phẩm")
+    policy = db.get(ProductTemperatureSetting, product_id)
+    return {"product_id": product_id, "configured": policy is not None,
+            "policy": ProductTemperaturePolicy.model_validate(policy).model_dump() if policy else None,
+            "message": "Đã cấu hình" if policy else "Chưa cấu hình — Không thể đánh giá"}
+
+
+@router.put("/{product_id}/temperature-policy")
+def update_temperature_policy(product_id: int, payload: ProductTemperaturePolicy,
+                              user: User = Depends(require_admin), db: Session = Depends(get_db)):
+    check_action_permission(user, "PRODUCT_CREATE")
+    if db.get(Product, product_id) is None:
+        raise HTTPException(404, "Không tìm thấy sản phẩm")
+    policy = db.get(ProductTemperatureSetting, product_id)
+    if policy is None:
+        policy = ProductTemperatureSetting(product_id=product_id, **payload.model_dump())
+        db.add(policy)
+    else:
+        for key, value in payload.model_dump().items():
+            setattr(policy, key, value)
+    record_action(db, user, "update", "product", product_id, operation="TEMPERATURE_POLICY")
+    db.commit()
+    return {"product_id": product_id, "configured": True, "policy": payload.model_dump()}

@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import select, or_, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
@@ -45,6 +45,7 @@ from app.trip_models import (
     ColdTripBatch,
     TemperatureLog,
     TemperatureViolation,
+    ProductTemperatureSetting,
     _naive_utcnow,
 )
 
@@ -445,6 +446,8 @@ def record_temperature_reading(
     - Lưu theo chuyến đang chạy (IN_TRANSIT) của container_code.
     - Số đo có mốc thời gian cũ hơn số đã lưu hoặc trùng thì bỏ qua và trả về đã nhận.
     """
+    if db.get_bind().dialect.name == "sqlite":
+        db.execute(text("UPDATE cold_trips SET status=status WHERE 0"))
     clean_code = container_code.strip().upper()
     trip = db.scalar(
         select(ColdTrip).where(
@@ -487,9 +490,76 @@ def record_temperature_reading(
         created_at=_naive_utcnow(),
     )
     db.add(log)
-    db.commit()
-    db.refresh(log)
-    return log
+    try:
+        db.flush()
+        evaluate_trip_readings(db, trip, user)
+        db.commit()
+        db.refresh(log)
+        return log
+    except Exception:
+        db.rollback()
+        raise
+
+
+def evaluate_trip_readings(db: Session, trip: ColdTrip, user: User | None) -> None:
+    """Evaluate each batch independently; strictly beyond its configured delay."""
+    readings = list(db.scalars(select(TemperatureLog).where(
+        TemperatureLog.trip_id == trip.id).order_by(TemperatureLog.recorded_at)))
+    for attached in trip.trip_batches:
+        if attached.detached_at is not None or attached.batch is None:
+            continue
+        batch = attached.batch
+        policy = db.get(ProductTemperatureSetting, batch.product_id)
+        if policy is None:
+            continue
+        burst, direction = [], None
+        for reading in readings:
+            # New/edited policies apply from their save time, never retroactively
+            # judge samples that arrived while the product was unconfigured.
+            if reading.created_at < policy.updated_at:
+                continue
+            side = "HEAT" if reading.temperature > policy.max_temperature else (
+                "COLD" if reading.temperature < policy.min_temperature else None)
+            if side is None:
+                burst, direction = [], None
+                continue
+            if side != direction:
+                burst, direction = [], side
+            burst.append(reading)
+            duration = (reading.recorded_at - burst[0].recorded_at).total_seconds() / 60
+            if duration <= policy.delay_minutes:
+                continue
+            start = burst[0].recorded_at
+            existing = db.scalar(select(TemperatureViolation.id).where(
+                TemperatureViolation.batch_id == batch.id,
+                TemperatureViolation.start_time == start))
+            if existing is not None:
+                continue
+            peak = (max if side == "HEAT" else min)(r.temperature for r in burst)
+            threshold = policy.max_temperature if side == "HEAT" else policy.min_temperature
+            violation = TemperatureViolation(
+                batch_id=batch.id, source_trip_id=trip.id, container_code=trip.container_code,
+                start_time=start, end_time=None, duration_minutes=duration,
+                peak_temperature=peak, threshold_temperature=threshold,
+                min_threshold=policy.min_temperature, max_threshold=policy.max_temperature,
+                violation_type="PROLONGED_HEAT" if side == "HEAT" else "FREEZING_RISK",
+                severity="CRITICAL", status="ACTIVE", affected_batch_ids=[batch.id],
+            )
+            db.add(violation)
+            db.flush()
+            _propagate_violation_to_batches(db, violation, trip, [batch], user=user)
+
+
+def trip_evaluation_status(db: Session, trip: ColdTrip) -> list[dict]:
+    result = []
+    for attached in trip.trip_batches:
+        batch = attached.batch
+        policy = db.get(ProductTemperatureSetting, batch.product_id)
+        result.append({"batch_id": batch.id, "batch_code": batch.code,
+                       "product_id": batch.product_id, "configured": policy is not None,
+                       "message": "Đã cấu hình — Xem số đo và vi phạm" if policy else
+                       "Chưa cấu hình — Không thể đánh giá"})
+    return result
 
 
 def detect_violations_from_readings(
@@ -595,7 +665,7 @@ def list_trip_violations(
     return list(
         db.scalars(
             select(TemperatureViolation)
-            .where(TemperatureViolation.trip_id == trip_id)
+            .where(or_(TemperatureViolation.trip_id == trip_id, TemperatureViolation.source_trip_id == trip_id))
             .order_by(TemperatureViolation.start_time.asc())
         ).all()
     )

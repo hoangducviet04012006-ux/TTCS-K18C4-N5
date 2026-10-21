@@ -35,7 +35,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app import __version__
-from app.database import get_db, init_db
+from app.database import get_db
 from app.routers import (
     audit,
     auth,
@@ -59,10 +59,18 @@ from app.schemas import HealthResponse
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Vòng đời ứng dụng: chạy khi server khởi động và khi server tắt.
 
-    Khi khởi động: tạo bảng còn thiếu trong SQLite và tạo 2 tài khoản mặc định
-    (``admin``/``farmer``) nếu chưa có - xem ``app/database.py``.
+    Startup only validates schema. Explicit upgrades of isolated copies are
+    available through scripts.run_agritrace; no legacy migration or seed runs.
     """
-    init_db()
+    from app.services.sprint4_schema import ensure_sprint4_schema
+    # Honor the same dependency override used by requests (including isolated
+    # integration-test sessions), without bootstrapping a second global DB.
+    provider = app.dependency_overrides.get(get_db, get_db)()
+    try:
+        db = next(provider)
+        ensure_sprint4_schema(db.get_bind())
+    finally:
+        provider.close()
     yield
 
 

@@ -154,6 +154,9 @@ function formatBatchStatus(status) {
   if (upper === "MERGED") return "Đã gộp";
   if (upper === "CONSUMED") return "Đã tiêu thụ";
   if (upper === "PENDING") return "Chờ duyệt";
+  if (upper === "RECALLED") return "Đã thu hồi";
+  if (upper === "QUARANTINED") return "Đang cách ly";
+  if (upper === "IN_TRANSIT") return "Đang vận chuyển";
   return status;
 }
 window.formatBatchStatus = formatBatchStatus;
@@ -181,6 +184,8 @@ function formatEventType(type) {
     RECALL_COMPLETED: "Hoàn tất xác nhận",
     TRIP_DISPATCH: "Khởi hành chuyến lạnh (lên xe)",
     TRIP_DELIVER: "Hoàn thành chuyến lạnh (xuống xe)",
+    TEMPERATURE_VIOLATION: "Cảnh báo vi phạm nhiệt độ",
+    TEMP_CHECK: "Kiểm tra nhiệt độ",
   };
   return map[String(type || "").toUpperCase()] || "Sự kiện nghiệp vụ";
 }
@@ -424,6 +429,9 @@ function restoreSession() {
 /** Xoá phiên đăng nhập khỏi bộ nhớ và sessionStorage. */
 function clearSession() {
   session = null;
+  $("temperature-policy-dialog")?.close();
+  $("trip-telemetry")?.replaceChildren();
+  currentDetailTripId = null;
   for (const id of ["org-badge", "user-badge", "user-dropdown-meta"]) if ($(id)) $(id).textContent = "";
   setHidden("user-dropdown-menu", true);
   $("user-menu-btn")?.setAttribute("aria-expanded", "false");
@@ -1082,7 +1090,7 @@ function renderProducts() {
       (p) => `
     <tr>
       <td class="id-cell">#${escapeHtml(p.id)}</td>
-      <td><strong>${escapeHtml(p.name)}</strong></td>
+      <td><strong>${escapeHtml(p.name)}</strong> <button class="btn btn--light btn--sm" type="button" data-temperature-product="${p.id}">Ngưỡng nhiệt độ</button></td>
       <td><span class="badge badge--ok">${escapeHtml(p.unit)}</span></td>
       <td>${escapeHtml(formatDateTime(p.created_at))}</td>
     </tr>`
@@ -1820,7 +1828,7 @@ function renderBatches() {
         <td class="is-right"><strong>${formatNumber(remainingQty)} ${escapeHtml(batch.unit || "kg")}</strong><span class="quantity-original">Ban đầu: ${formatNumber(initialQty)}</span></td>
         <td>${escapeHtml(holdingOrg)}</td>
         <td>${escapeHtml([batch.current_location_name,batch.current_location].filter(Boolean).join(" · ") || "Chưa ghi nhận")}</td>
-        <td>${statusBadge}</td>
+        <td>${statusBadge}${batch.has_temperature_violation ? '<br><span class="badge badge--danger">⚠ Vi phạm nhiệt độ</span>' : ""}</td>
         <td>
           <div class="batch-actions-cell">
             <button class="btn btn--light btn--sm" type="button" data-action="view-details" data-id="${escapeHtml(batch.id)}">Chi tiết</button>
@@ -2298,6 +2306,7 @@ function formatDashboardEventType(type) {
     RECALL_AFFECTED: "Ảnh hưởng thu hồi",
     RECALL_COMPLETE: "Hoàn tất thu hồi",
     TEMP_CHECK: "Kiểm tra nhiệt độ",
+    TEMPERATURE_VIOLATION: "Cảnh báo vi phạm nhiệt độ",
     INSPECTION: "Kiểm định chất lượng",
     STATUS_UPDATE: "Cập nhật trạng thái",
     TRIP_DISPATCH: "Khởi hành chuyến lạnh (lên xe)",
@@ -3321,7 +3330,23 @@ const TIMELINE_PAYLOAD_LABELS = {
   product_name: " Sản phẩm",
   quantity: "⚖ Khối lượng",
   initial_quantity: "⚖ Khối lượng ban đầu",
+  remaining_quantity: "⚖ Khối lượng còn lại",
   temperature: " Nhiệt độ (°C)",
+  peak_temperature: " Nhiệt độ đỉnh (°C)",
+  threshold_temperature: " Ngưỡng nhiệt độ (°C)",
+  min_threshold: " Ngưỡng tối thiểu (°C)",
+  max_threshold: " Ngưỡng tối đa (°C)",
+  violation_type: " Loại vi phạm",
+  duration_minutes: " Thời gian vi phạm (phút)",
+  severity: " Mức độ nghiêm trọng",
+  status: " Trạng thái",
+  start_time: " Thời gian bắt đầu",
+  end_time: " Thời gian kết thúc",
+  trip_code: " Mã chuyến xe",
+  trip_id: " Mã chuyến",
+  container_code: " Thùng lạnh",
+  vehicle_plate: " Biển số xe",
+  driver_name: " Tài xế",
   note: " Ghi chú",
   description: " Mô tả",
   message: " Thông điệp",
@@ -3335,11 +3360,25 @@ const TIMELINE_PAYLOAD_LABELS = {
   harvest_date: " Ngày thu hoạch",
   parent_batch_code: " Mã lô nguồn",
   merged_batch_code: " Mã lô gộp",
-  trip_code: " Mã chuyến xe",
-  container_code: " Thùng lạnh",
-  vehicle_plate: " Biển số xe",
-  driver_name: " Tài xế",
+  violation_id: " Mã sự cố vi phạm",
 };
+
+/** Bí danh toàn cục TL_PAYLOAD_LABELS đồng bộ với TIMELINE_PAYLOAD_LABELS (S-45 fix). */
+const TL_PAYLOAD_LABELS = TIMELINE_PAYLOAD_LABELS;
+
+/** Định dạng tên phân loại vi phạm nhiệt độ sang tiếng Việt chuyên nghiệp. */
+function formatViolationType(type) {
+  if (!type) return "Vi phạm nhiệt độ";
+  const t = String(type).toUpperCase().trim();
+  const map = {
+    PROLONGED_HEAT: "Nhiệt độ vượt ngưỡng kéo dài",
+    FREEZING_RISK: "Nguy cơ đông lạnh",
+    TEMPERATURE_EXCEEDED: "Vượt ngưỡng nhiệt độ",
+    HEAT: "Nhiệt độ quá cao",
+    COLD: "Nhiệt độ quá thấp",
+  };
+  return map[t] || t;
+}
 
 /**
  * Dựng phần thân thẻ sự kiện theo nghiệp vụ:
@@ -3494,10 +3533,63 @@ function renderTimelineBody(evt, p) {
       </div>`;
   }
 
+  if (type === "TEMPERATURE_VIOLATION") {
+    const vType = formatViolationType(p.violation_type);
+    const peak = p.peak_temperature != null
+      ? `${formatNumber(p.peak_temperature)}°C`
+      : (p.temperature != null ? `${formatNumber(p.temperature)}°C` : "—");
+
+    let threshold = "—";
+    if (p.min_threshold != null && p.max_threshold != null) {
+      threshold = `${formatNumber(p.min_threshold)}°C – ${formatNumber(p.max_threshold)}°C`;
+      if (p.threshold_temperature != null && (p.threshold_temperature !== p.min_threshold && p.threshold_temperature !== p.max_threshold)) {
+        threshold += ` (vượt ${formatNumber(p.threshold_temperature)}°C)`;
+      }
+    } else if (p.threshold_temperature != null) {
+      threshold = `${formatNumber(p.threshold_temperature)}°C`;
+    }
+
+    const duration = p.duration_minutes != null ? `${formatNumber(p.duration_minutes)} phút` : "—";
+    const tripCode = p.trip_code || (p.trip_id != null ? `#${p.trip_id}` : "");
+    const container = p.container_code || "";
+    const note = p.description || p.message || fallbackDesc || "";
+
+    return `
+      <div class="tl-summary tl-summary--violation" style="border-left: 3px solid #dc2626; background: #fff5f5;">
+        <div class="tl-metric">
+          <span class="tl-metric__label"> Loại vi phạm</span>
+          <strong style="color: #dc2626;">${escapeHtml(vType)}</strong>
+        </div>
+        <div class="tl-metric">
+          <span class="tl-metric__label"> Nhiệt độ đỉnh</span>
+          <strong style="color: #dc2626; font-size: 1.15rem;">${escapeHtml(peak)}</strong>
+        </div>
+        <div class="tl-metric">
+          <span class="tl-metric__label"> Ngưỡng quy định</span>
+          <strong>${escapeHtml(threshold)}</strong>
+        </div>
+        <div class="tl-metric">
+          <span class="tl-metric__label"> Thời gian vi phạm</span>
+          <strong>${escapeHtml(duration)}</strong>
+        </div>
+        ${tripCode ? `
+        <div class="tl-metric">
+          <span class="tl-metric__label"> Chuyến xe</span>
+          <strong>${escapeHtml(tripCode)}</strong>
+        </div>` : ""}
+        ${container ? `
+        <div class="tl-metric">
+          <span class="tl-metric__label"> Thùng lạnh</span>
+          <code>${escapeHtml(container)}</code>
+        </div>` : ""}
+      </div>
+      ${note ? `<div class="tl-note" style="border-left-color: #dc2626; background: #fef2f2; color: #991b1b; margin-top: 6px;">${escapeHtml(note)}</div>` : ""}`;
+  }
+
   // Mặc định: hiển thị mô tả + bảng khóa/giá trị thân thiện (không bao giờ in JSON thô).
   const rows = [];
   Object.keys(p || {}).forEach((key) => {
-    if (key === "event_type" || !Object.hasOwn(TL_PAYLOAD_LABELS,key)) return;
+    if (key === "event_type" || key === "_record" || key === "action" || !Object.hasOwn(TIMELINE_PAYLOAD_LABELS, key)) return;
     const val = p[key];
     if (val === null || val === undefined || typeof val === "object") return;
     const display = typeof val === "number" ? formatNumber(val) : String(val);
@@ -3758,7 +3850,7 @@ async function loadDetailOverview(batchId) {
           <div><strong>Vị trí hiện tại:</strong> ${escapeHtml(b.current_location ? [b.current_location_name, b.current_location].filter(Boolean).join(" · ") : "Chưa có dữ liệu")}</div>
           <div><strong>Đơn vị nắm giữ:</strong> <span class="badge badge--org"> ${escapeHtml(b.current_org_name || 'Tổ chức #' + b.current_org_id)}</span></div>
           <div><strong>Khối lượng ban đầu:</strong> ${formatNumber(b.initial_quantity)} ${escapeHtml(b.unit || "kg")}</div>
-          <div><strong>Khối lượng còn lại:</strong> <strong style="color:var(--color-primary);">${formatNumber(b.remaining_quantity)} ${escapeHtml(b.unit || "kg")}</strong></div>
+          <div><strong>Khối lượng còn lại:</strong> <strong style="color:var(--color-primary);">${formatNumber(b.quantity)} ${escapeHtml(b.unit || "kg")}</strong></div>
           <div><strong>Trạng thái:</strong> <span class="badge ${isPending ? 'badge--warning' : 'badge--ok'}">${escapeHtml(isPending ? 'Chờ duyệt bàn giao' : formatBatchStatus(b.status))}</span></div>
         </div>
       `;
@@ -4687,7 +4779,7 @@ function renderPendingHandovers() {
         <td class="is-right">${formatNumber(h.batch_quantity)} ${escapeHtml(h.batch_unit || "kg")}</td>
         <td><span class="badge badge--org"> ${escapeHtml(fromOrg)}</span></td>
         <td>${escapeHtml(formatDateTime(h.created_at))}</td>
-        <td>${overdueBadge}</td>
+        <td>${overdueBadge}${h.has_temperature_violation ? '<br><span class="badge badge--danger">⚠ Vi phạm nhiệt độ</span>' : ""}</td>
         <td>${escapeHtml(note)}</td>
         <td class="is-center">
           <div class="table__actions" style="justify-content: center;">
@@ -4802,7 +4894,7 @@ function renderFarmerHandoverPanels() {
           <td class="is-right">${qtyStr}</td>
           <td><span class="badge badge--org"> ${escapeHtml(toOrgName)}</span></td>
           <td>${escapeHtml(formatDateTime(createdAt))}</td>
-          <td>${overdueBadge}</td>
+          <td>${overdueBadge}${h.has_temperature_violation ? '<br><span class="badge badge--danger">⚠ Vi phạm nhiệt độ</span>' : ""}</td>
           <td class="is-center">
             <div class="table__actions" style="justify-content: center; gap: 4px;">
               <button class="btn btn--light btn--sm" type="button" data-action="farmer-view-detail" data-id="${escapeHtml(b.id)}" title="Xem chi tiết lô">
@@ -5294,7 +5386,7 @@ function renderColdTripsTable() {
       ? '<span class="badge badge--warning" style="background:#e0f2fe; color:#0369a1; border-color:#bae6fd;">Đang vận chuyển</span>'
       : trip.status === "COMPLETED"
       ? '<span class="badge badge--ok">Hoàn thành</span>'
-      : `<span class="badge">${escapeHtml(trip.status)}</span>`;
+      : `<span class="badge">${escapeHtml(trip.status === "CANCELLED" ? "Đã hủy" : trip.status)}</span>`;
 
     const canComplete = isTransiting && canCreateTrip() && (isSystemAdmin() || trip.transporter_org_id === session?.organization_id);
 
@@ -5312,10 +5404,11 @@ function renderColdTripsTable() {
         </td>
         <td class="is-center"><span class="badge">${trip.batch_count || 0}</span></td>
         <td>${escapeHtml(formatDateTime(trip.start_time))}</td>
-        <td>${statusBadge}</td>
+        <td>${statusBadge}${trip.violation_count ? `<br><span class="badge badge--danger">⚠ ${trip.violation_count} vi phạm nhiệt độ</span>` : ""}</td>
         <td class="is-right">
           <div class="table__actions" style="justify-content: flex-end; gap: 4px;">
             <button class="btn btn--light btn--sm btn-view-trip" type="button" data-trip-id="${trip.id}">Xem</button>
+            ${canComplete ? `<button class="btn btn--danger btn--sm" type="button" data-cancel-trip="${trip.id}">Hủy chuyến</button>` : ""}
             ${canComplete ? `<button class="btn btn--success btn--sm btn-complete-trip" type="button" data-trip-id="${trip.id}">Xuống xe</button>` : ""}
           </div>
         </td>
@@ -5338,9 +5431,9 @@ function openCreateTripModal() {
   const eligibleBatches = batches.filter(b => {
     const isOwner = isSystemAdmin() || b.current_org_id === session?.organization_id;
     const isActive = b.status === "ACTIVE" || b.status === "SPLIT";
-    const hasQty = (b.remaining_quantity || b.quantity || 0) > 0;
+    const hasQty = (b.remaining_quantity ?? b.quantity ?? 0) > 0;
     const notPending = !b.pending_handover;
-    const notRecalled = !b.is_recalled;
+    const notRecalled = !batchIsRecalled(b);
     return isOwner && isActive && hasQty && notPending && notRecalled;
   });
 
@@ -5434,7 +5527,7 @@ async function openTripDetailModal(tripId) {
           <div><strong>Biển số:</strong> ${escapeHtml(trip.vehicle_plate || "—")}</div>
           <div><strong>Tài xế:</strong> ${escapeHtml(trip.driver_name || "—")}</div>
           <div><strong>Lộ trình:</strong> ${escapeHtml(trip.start_location || "—")} ➔ ${escapeHtml(trip.destination_location || "—")}</div>
-          <div><strong>Trạng thái:</strong> ${trip.status === "IN_TRANSIT" ? '<span class="badge badge--warning">Đang vận chuyển</span>' : trip.status === "COMPLETED" ? '<span class="badge badge--ok">Hoàn thành</span>' : escapeHtml(trip.status)}</div>
+          <div><strong>Trạng thái:</strong> ${trip.status === "IN_TRANSIT" ? '<span class="badge badge--warning">Đang vận chuyển</span>' : trip.status === "COMPLETED" ? '<span class="badge badge--ok">Hoàn thành</span>' : trip.status === "CANCELLED" ? '<span class="badge badge--danger">Đã hủy</span>' : `<span class="badge">${escapeHtml(trip.status)}</span>`}</div>
           <div><strong>Khởi hành:</strong> ${escapeHtml(formatDateTime(trip.start_time))}</div>
           <div><strong>Kết thúc:</strong> ${trip.end_time ? escapeHtml(formatDateTime(trip.end_time)) : "—"}</div>
         </div>
@@ -5448,7 +5541,7 @@ async function openTripDetailModal(tripId) {
         <tr>
           <td class="id-cell"><strong>${escapeHtml(b.batch_code)}</strong></td>
           <td>${escapeHtml(b.product_name || "—")}</td>
-          <td class="is-right">${formatNumber(b.remaining_quantity)} ${escapeHtml(b.unit || "kg")}</td>
+          <td class="is-right">${formatNumber(b.quantity)} ${escapeHtml(b.unit || "kg")}</td>
           <td>${escapeHtml(formatDateTime(b.attached_at))}</td>
           <td>${b.detached_at ? escapeHtml(formatDateTime(b.detached_at)) : '<span class="badge badge--warning">Đang trên xe</span>'}</td>
         </tr>
@@ -5463,6 +5556,7 @@ async function openTripDetailModal(tripId) {
     }
 
     $("modal-trip-detail").hidden = false;
+    await loadTripTelemetry(tripId);
   } catch (error) {
     toast(`Không tải được chi tiết chuyến xe: ${error.message}`, "error");
   }
@@ -5560,7 +5654,7 @@ const appScreens = {
   "locations-card": ["Địa điểm phân phối", "Cửa hàng và phân bổ theo tổ chức đang giữ.", ["locations-card"]],
   "imports-card": ["Nhập CSV", "Nhập danh sách sản phẩm hoặc thửa đất từ tệp CSV.", ["imports-card"]],
   "recall-card": ["Thu hồi lô hàng", "Theo dõi sự cố và xác nhận xử lý của các tổ chức liên quan.", ["recall-card"]],
-  "cold-trips-card": ["Chuyến xe lạnh", "Khai báo và giám sát các chuyến vận chuyển chuỗi lạnh (S-40).", ["cold-trips-card"]],
+  "cold-trips-card": ["Chuyến xe lạnh", "Khai báo và giám sát các chuyến vận chuyển chuỗi lạnh.", ["cold-trips-card"]],
 };
 let activeAppScreen = "overview";
 let screenDataVersion = 0;
@@ -5774,7 +5868,7 @@ function renderAppScreen(scroll = true) {
       desc = "Xem dòng thời gian sự kiện và xác thực tính toàn vẹn chuỗi mã băm của lô hàng sơ chế & đóng gói.";
     }
   }
-  const conciseDescriptions={overview:"Các số liệu trong phạm vi tài khoản; số liệu lô tính theo trang đang xem.","batch-card":"Theo dõi lượng còn lại, tổ chức đang giữ và tình trạng lô.","farm-card":"Tra cứu vùng trồng trong phạm vi tài khoản.","pending-handovers-card":"Kiểm tra lô và xác nhận hoặc từ chối bàn giao.",traceability:"Chọn lô để xem nguồn gốc và các lô liên quan.",events:"Chọn lô để xem lịch sử và kiểm tra tính toàn vẹn.","cold-trips-card":"Khai báo và giám sát các chuyến vận chuyển chuỗi lạnh (S-40)."};
+  const conciseDescriptions={overview:"Các số liệu trong phạm vi tài khoản; số liệu lô tính theo trang đang xem.","batch-card":"Theo dõi lượng còn lại, tổ chức đang giữ và tình trạng lô.","farm-card":"Tra cứu vùng trồng trong phạm vi tài khoản.","pending-handovers-card":"Kiểm tra lô và xác nhận hoặc từ chối bàn giao.",traceability:"Chọn lô để xem nguồn gốc và các lô liên quan.",events:"Chọn lô để xem lịch sử và kiểm tra tính toàn vẹn.","cold-trips-card":"Khai báo và giám sát các chuyến vận chuyển chuỗi lạnh."};
   $("screen-description").textContent = conciseDescriptions[key] || appScreens[key][1];
   if (key === "cold-trips-card") {
     loadColdTrips();
@@ -5915,3 +6009,15 @@ async function init() {
 }
 
 document.addEventListener("DOMContentLoaded", init);
+
+// Xuất các hàm render và biến nhãn cho regression test tự động (Node.js test runner)
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = {
+    renderTimelineBody,
+    renderTimelineItemHtml,
+    formatEventType,
+    formatViolationType,
+    TIMELINE_PAYLOAD_LABELS,
+    TL_PAYLOAD_LABELS,
+  };
+}

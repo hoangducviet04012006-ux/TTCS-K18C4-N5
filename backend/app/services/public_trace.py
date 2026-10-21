@@ -22,6 +22,7 @@ from app.schemas_public import (
     get_public_organization_type,
 )
 from app.services.traceability import trace_backwards
+from app.services.recall import ensure_not_recalled
 
 
 def _format_public_status(raw_status: str | None) -> str:
@@ -40,7 +41,40 @@ def _format_public_status(raw_status: str | None) -> str:
     return raw_status
 
 
-def _build_public_milestones(batch: Batch, db: Session) -> list[PublicMilestoneInfo]:
+def _resolve_milestone_stage_and_org(evt: BatchEvent) -> tuple[str, str]:
+    """Xác định công đoạn và loại tổ chức chung (không lộ tên riêng đối tác theo S-48)."""
+    evt_type = evt.event_type.upper() if evt.event_type else ""
+    if evt_type in ("HARVEST", "BATCH_CREATED"):
+        return "Thu hoạch tại vùng trồng", "Hợp tác xã nông nghiệp"
+    if evt_type in ("SPLIT", "MERGE"):
+        org_name = evt.organization.name if evt.organization else None
+        role = evt.user.role if evt.user else None
+        return "Sơ chế & Phân loại", get_public_organization_type(org_name, role)
+    if evt_type in ("TRIP_DISPATCH", "TRIP_DELIVER"):
+        return "Vận chuyển chuỗi lạnh", "Đơn vị vận chuyển"
+    if evt_type in ("HANDOVER_ACCEPT", "HANDOVER_INIT", "HANDOVER_REJECT"):
+        to_name = evt.to_org.name if evt.to_org else None
+        return "Bàn giao chuỗi cung ứng", get_public_organization_type(to_name)
+    if evt_type == "CONSUMED":
+        return "Phân phối đến người tiêu dùng", "Điểm bán lẻ"
+    if evt_type == "TEMPERATURE_VIOLATION":
+        return "Cảnh báo vi phạm nhiệt độ", "Đơn vị vận chuyển / bảo quản"
+    if evt_type == "RECALL_INIT":
+        return "Khởi tạo lệnh thu hồi (lô gốc)", "Đơn vị quản lý chuỗi cung ứng"
+    if evt_type == "RECALL_AFFECTED":
+        return "Áp dụng thu hồi lan truyền (lô thành phẩm phái sinh)", "Đơn vị quản lý chuỗi cung ứng"
+    if evt_type == "RECALL_ACKNOWLEDGED":
+        return "Xác nhận cách ly sản phẩm", "Đơn vị quản lý chuỗi cung ứng"
+    if evt_type == "RECALL_COMPLETED":
+        return "Hoàn tất xử lý thu hồi", "Đơn vị quản lý chuỗi cung ứng"
+    if evt_type.startswith("RECALL_"):
+        return "Thu hồi / cách ly sản phẩm", "Đơn vị quản lý chuỗi cung ứng"
+
+    org_name = evt.organization.name if evt.organization else (evt.from_org.name if evt.from_org else None)
+    return "Ghi nhận mốc sự kiện", get_public_organization_type(org_name)
+
+
+def _build_public_milestones(batch: Batch, db: Session, ancestor_ids=()) -> list[PublicMilestoneInfo]:
     """Tổng hợp các mốc công đoạn chuỗi cung ứng công khai theo chuẩn S-48."""
     events = (
         db.query(BatchEvent)
@@ -48,9 +82,10 @@ def _build_public_milestones(batch: Batch, db: Session) -> list[PublicMilestoneI
             joinedload(BatchEvent.from_org),
             joinedload(BatchEvent.to_org),
             joinedload(BatchEvent.organization),
+            joinedload(BatchEvent.user),
         )
-        .filter(BatchEvent.batch_id == batch.id)
-        .order_by(BatchEvent.id.asc())
+        .filter(BatchEvent.batch_id.in_({batch.id, *ancestor_ids}))
+        .order_by(BatchEvent.timestamp.asc(), BatchEvent.id.asc())
         .all()
     )
 
@@ -59,31 +94,7 @@ def _build_public_milestones(batch: Batch, db: Session) -> list[PublicMilestoneI
 
     for evt in events:
         evt_type = evt.event_type.upper() if evt.event_type else ""
-
-        # Xác định công đoạn và loại tổ chức chung (không lộ tên riêng đối tác)
-        if evt_type in ("HARVEST", "BATCH_CREATED"):
-            stage = "Thu hoạch tại vùng trồng"
-            org_type = "Hợp tác xã nông nghiệp"
-        elif evt_type in ("SPLIT", "MERGE"):
-            stage = "Sơ chế & Phân loại"
-            org_type = "Cơ sở sơ chế / chế biến"
-        elif evt_type in ("TRIP_DISPATCH", "TRIP_DELIVER"):
-            stage = "Vận chuyển chuỗi lạnh"
-            org_type = "Đơn vị vận chuyển"
-        elif evt_type in ("HANDOVER_ACCEPT", "HANDOVER_INIT"):
-            stage = "Bàn giao chuỗi cung ứng"
-            org_type = "Nhà phân phối"
-        elif evt_type == "CONSUMED":
-            stage = "Phân phối đến người tiêu dùng"
-            org_type = "Điểm bán lẻ"
-        else:
-            org_name = None
-            if evt.organization:
-                org_name = evt.organization.name
-            elif evt.from_org:
-                org_name = evt.from_org.name
-            stage = "Ghi nhận mốc sự kiện"
-            org_type = get_public_organization_type(org_name)
+        stage, org_type = _resolve_milestone_stage_and_org(evt)
 
         # Thời gian
         ts = None
@@ -98,7 +109,9 @@ def _build_public_milestones(batch: Batch, db: Session) -> list[PublicMilestoneI
                 stage=stage,
                 organization_type=org_type,
                 timestamp=ts,
-                status="Đã hoàn thành",
+                status=("Chờ xác nhận" if evt_type == "HANDOVER_INIT" else
+                        "Đã từ chối" if evt_type == "HANDOVER_REJECT" else
+                        "Đang vận chuyển" if evt_type == "TRIP_DISPATCH" else "Đã ghi nhận"),
             )
         )
         step += 1
@@ -195,7 +208,15 @@ def get_public_batch_trace(batch_code: str, db: Session) -> dict[str, Any]:
         )
 
     # 3. Hành trình các mốc chuỗi cung ứng (đã ẩn tên riêng đối tác)
-    milestones = _build_public_milestones(batch, db)
+    ancestor_ids = [node["batch_id"] for level in lineage.get("ancestors_by_level", {}).values() for node in level]
+    milestones = _build_public_milestones(batch, db, ancestor_ids)
+    recall_warning = (batch.status or "").upper() in {"RECALLED", "QUARANTINED", "RECALL"}
+    try:
+        ensure_not_recalled(db, batch.id)
+    except HTTPException as exc:
+        if exc.status_code != 409:
+            raise
+        recall_warning = True
 
     # 4. Đóng gói và xác thực qua PublicBatchTraceResponse (chặn mọi trường nội bộ)
     prod_name = batch.product_name or (batch.product.name if batch.product else "Nông sản")
@@ -203,7 +224,10 @@ def get_public_batch_trace(batch_code: str, db: Session) -> dict[str, Any]:
         batch_code=batch.code,
         product_name=prod_name,
         harvest_date=str(batch.harvest_date) if batch.harvest_date else None,
-        status=_format_public_status(batch.status),
+        status="Thu hồi / cách ly — Không sử dụng" if recall_warning else _format_public_status(batch.status),
+        recall_warning=recall_warning,
+        recall_message="CẢNH BÁO: Lô hàng bị thu hồi hoặc cách ly. Không sử dụng sản phẩm." if recall_warning
+        else "Không ghi nhận cảnh báo thu hồi",
         origin=origin_info,
         root_batches=roots,
         milestones=milestones,

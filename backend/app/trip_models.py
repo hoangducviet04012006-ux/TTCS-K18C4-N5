@@ -8,6 +8,7 @@ Gồm 2 bảng:
 from datetime import datetime, timezone
 
 from sqlalchemy import (
+    CheckConstraint,
     DateTime,
     Float,
     ForeignKey,
@@ -122,6 +123,7 @@ class ColdTrip(Base):
     )
     violations: Mapped[list["TemperatureViolation"]] = relationship(
         back_populates="trip",
+        foreign_keys="TemperatureViolation.trip_id",
         cascade="all, delete-orphan",
         order_by="TemperatureViolation.start_time.asc()",
     )
@@ -132,7 +134,11 @@ class ColdTrip(Base):
 
     @property
     def violation_count(self) -> int:
-        return len(self.violations)
+        return len(self.violations) + len(self.detected_violations)
+
+    detected_violations: Mapped[list["TemperatureViolation"]] = relationship(
+        foreign_keys="TemperatureViolation.source_trip_id", viewonly=True,
+    )
 
     def __repr__(self) -> str:  # pragma: no cover
         return f"<ColdTrip id={self.id} code={self.trip_code!r} container={self.container_code!r} status={self.status}>"
@@ -249,6 +255,7 @@ class TemperatureViolation(Base):
         nullable=True,
         index=True,
     )
+    source_trip_id: Mapped[int | None] = mapped_column(ForeignKey("cold_trips.id"), nullable=True)
     container_code: Mapped[str | None] = mapped_column(String(50), nullable=True, index=True)
     start_time: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     end_time: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
@@ -291,7 +298,7 @@ class TemperatureViolation(Base):
     )
 
     # Relationships
-    trip: Mapped["ColdTrip | None"] = relationship(back_populates="violations")
+    trip: Mapped["ColdTrip | None"] = relationship(back_populates="violations", foreign_keys=[trip_id])
     batch: Mapped["Batch | None"] = relationship(foreign_keys=[batch_id])  # noqa: F821
 
     def __repr__(self) -> str:  # pragma: no cover
@@ -299,3 +306,20 @@ class TemperatureViolation(Base):
             f"<TemperatureViolation id={self.id} trip_id={self.trip_id} peak={self.peak_temperature}°C "
             f"duration={self.duration_minutes}m status={self.status}>"
         )
+
+
+class ProductTemperatureSetting(Base):
+    """Explicit product policy; absence means measurements cannot be evaluated."""
+
+    __tablename__ = "product_temperature_settings"
+    __table_args__ = (
+        CheckConstraint("min_temperature < max_temperature", name="ck_temperature_range"),
+        CheckConstraint("delay_minutes >= 30", name="ck_temperature_delay"),
+    )
+
+    product_id: Mapped[int] = mapped_column(ForeignKey("products.id"), primary_key=True)
+    min_temperature: Mapped[float] = mapped_column(Float, nullable=False)
+    max_temperature: Mapped[float] = mapped_column(Float, nullable=False)
+    delay_minutes: Mapped[float] = mapped_column(Float, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=_naive_utcnow, onupdate=_naive_utcnow)

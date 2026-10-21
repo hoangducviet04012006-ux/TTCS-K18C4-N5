@@ -32,6 +32,7 @@ from app.services.cold_chain import (
     record_temperature_reading,
     record_temperature_violation_for_batch,
     record_temperature_violation_for_trip,
+    trip_evaluation_status,
 )
 from app.services.trips import (
     build_trip_detail_response,
@@ -278,6 +279,15 @@ def get_trip_readings(
     """Lấy danh sách số đo nhiệt độ của chuyến xe."""
     readings = list_trip_readings(db, trip_id, limit=limit, user=current_user)
     return [TemperatureLogResponse.model_validate(r) for r in readings]
+
+
+@router.get("/{trip_id}/evaluation")
+def get_trip_evaluation(trip_id: int, current_user: User = Depends(get_current_user),
+                        db: Session = Depends(get_db)):
+    trip = get_cold_trip_detail(db, current_user, trip_id)
+    from app.services.permissions import can_view_batch
+    return [row for row in trip_evaluation_status(db, trip)
+            if can_view_batch(db, current_user.organization_id, row["batch_id"], user_role=current_user.role)]
 
 
 @router.post(

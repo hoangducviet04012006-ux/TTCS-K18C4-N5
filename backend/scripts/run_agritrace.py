@@ -59,6 +59,7 @@ def main():
     parser.add_argument("--db", type=str, default=str(DEFAULT_DB), help="Path to unified SQLite database")
     parser.add_argument("--host", type=str, default="127.0.0.1", help="Host interface")
     parser.add_argument("--port", type=int, default=8765, help="Port to listen on")
+    parser.add_argument("--upgrade-schema", action="store_true", help="Upgrade an isolated SQLite copy only")
     args = parser.parse_args()
 
     db_path = validate_database(Path(args.db))
@@ -69,6 +70,21 @@ def main():
     os.environ["TTCS_SEED_DEFAULTS"] = "0"
 
     from app.main import app
+    from app.database import engine
+    from app.services.sprint4_schema import ensure_sprint4_schema
+    schema = ensure_sprint4_schema(engine, upgrade=args.upgrade_schema)
+    # This runner serves trace.html on the selected port; deployments may override.
+    if "PUBLIC_TRACE_BASE_URL" not in os.environ:
+        trace_host = args.host
+        if trace_host == "0.0.0.0":
+            try:
+                import socket
+                with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+                    s.connect(("8.8.8.8", 80))
+                    trace_host = s.getsockname()[0]
+            except Exception:
+                trace_host = "127.0.0.1"
+        os.environ["PUBLIC_TRACE_BASE_URL"] = f"http://{trace_host}:{args.port}/trace.html"
     from fastapi.responses import HTMLResponse, FileResponse
     from fastapi.staticfiles import StaticFiles
     import uvicorn
@@ -83,6 +99,7 @@ def main():
             "database_path": str(db_path),
             "code_root": str(ROOT),
             "multi_dataset": True,
+            "schema": schema,
         }
 
     @app.get("/", include_in_schema=False)
@@ -108,6 +125,14 @@ def main():
     app.mount("/js", StaticFiles(directory=frontend_dir / "js"), name="agritrace-js")
     app.mount("/css", StaticFiles(directory=frontend_dir / "css"), name="agritrace-css")
     app.mount("/assets", StaticFiles(directory=frontend_dir / "assets"), name="agritrace-assets")
+
+    @app.get("/trace.html", include_in_schema=False)
+    def public_trace_page():
+        return FileResponse(frontend_dir / "trace.html")
+
+    @app.get("/config.json", include_in_schema=False)
+    def frontend_configuration():
+        return {"apiBase": ""}
 
     docs_dir = ROOT / "docs"
     guide_path = docs_dir / "practice-guide.html"

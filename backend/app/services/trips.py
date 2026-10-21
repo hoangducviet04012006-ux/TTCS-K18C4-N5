@@ -519,7 +519,7 @@ def build_trip_response(trip: ColdTrip) -> TripResponse:
         end_time=trip.end_time,
         notes=trip.notes,
         batch_count=len(trip.trip_batches),
-        violation_count=len(trip.violations) if hasattr(trip, "violations") else 0,
+        violation_count=trip.violation_count,
         created_at=trip.created_at,
     )
 
