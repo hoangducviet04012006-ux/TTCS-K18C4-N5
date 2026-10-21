@@ -1,0 +1,21 @@
+#modal-trip-detail .modal {
+  max-height: calc(100dvh - 32px);
+  display: flex;
+  flex-direction: column;
+}
+#modal-trip-detail .modal__body { overflow-y: auto; min-height: 0; }
+#trip-telemetry { margin-top: 20px; }
+#trip-telemetry table { width: 100%; border-collapse: collapse; }
+#trip-telemetry td, #trip-telemetry th { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
+#trip-telemetry .error { color: #b42318; font-weight: 700; }
+#temperature-policy-dialog {
+  width: min(520px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  padding: 24px;
+}
+#temperature-policy-dialog::backdrop { background: #102a4380; }
+#temperature-policy-dialog label { display: grid; gap: 6px; margin: 12px 0; }
+#temperature-policy-dialog input { padding: 10px; border: 1px solid #94a3b8; border-radius: 6px; }

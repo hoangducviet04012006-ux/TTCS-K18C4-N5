@@ -29,6 +29,8 @@ PUBLIC_BATCH_FIELDS: frozenset[str] = frozenset({
     "origin",
     "root_batches",
     "milestones",
+    "recall_warning",
+    "recall_message",
 })
 
 # Danh sách trường công khai của thông tin xuất xứ / vùng trồng gốc
@@ -156,6 +158,8 @@ class PublicBatchTraceResponse(BaseModel):
     product_name: str = Field(..., description="Tên loại nông sản.")
     harvest_date: str | None = Field(None, description="Ngày thu hoạch nông sản.")
     status: str = Field(..., description="Trạng thái công khai của lô nông sản.")
+    recall_warning: bool = False
+    recall_message: str = "Không ghi nhận cảnh báo thu hồi"
     origin: PublicOriginInfo = Field(..., description="Thông tin xuất xứ vùng trồng.")
     root_batches: list[PublicRootBatchInfo] = Field(
         default_factory=list,

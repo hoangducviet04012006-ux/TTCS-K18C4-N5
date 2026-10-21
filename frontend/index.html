@@ -10,6 +10,7 @@
   <link rel="alternate icon" href="assets/branding/favicon.svg" />
   <link rel="stylesheet" href="css/style.css?v=20261014-phase-e-v1" />
   <link rel="stylesheet" href="css/workspace.css?v=1" />
+  <link rel="stylesheet" href="css/sprint4.css?v=1">
 </head>
 <body>
   <!-- ================================= HEADER ================================= -->
@@ -822,7 +823,7 @@
       <header class="card__header">
         <div class="card__header-flex">
           <div>
-            <h2 class="card__title">Giám sát chuỗi lạnh · Chuyến vận chuyển (S-40)</h2>
+            <h2 class="card__title">Giám sát chuỗi lạnh · Chuyến vận chuyển</h2>
             <p class="card__desc">
               Khai báo chuyến vận chuyển gắn nhiều lô và một thùng lạnh. Dữ liệu nhiệt độ hành trình được liên kết theo thời gian thực.
             </p>
@@ -1568,7 +1569,7 @@
   <div id="modal-create-trip" class="modal-backdrop" hidden>
     <div class="modal modal--lg" role="dialog" aria-modal="true" aria-labelledby="modal-create-trip-title" style="max-width: 680px;">
       <header class="modal__header">
-        <h3 id="modal-create-trip-title" class="modal__title">Mở chuyến vận chuyển chuỗi lạnh (S-40)</h3>
+        <h3 id="modal-create-trip-title" class="modal__title">Mở chuyến vận chuyển chuỗi lạnh</h3>
         <button id="btn-close-create-trip" class="modal__close" type="button" aria-label="Đóng">&times;</button>
       </header>
       <div class="modal__body">
@@ -1651,6 +1652,7 @@
             <tbody id="trip-detail-batches-body"></tbody>
           </table>
         </div>
+        <section id="trip-telemetry" aria-live="polite"></section>
         <div class="modal__actions" style="margin-top: 20px; display: flex; justify-content: space-between;">
           <button id="btn-complete-trip-action" class="btn btn--success" type="button" hidden>Hoàn thành chuyến (Xuống xe)</button>
           <button id="btn-dismiss-trip-detail" class="btn btn--ghost" type="button">Đóng</button>
@@ -1665,5 +1667,6 @@
   <script src="js/recall.js?v=5"></script>
   <script src="js/phase_c.js?v=5"></script>
   <script src="js/workspace.js?v=1"></script>
+  <script src="js/sprint4.js?v=1"></script>
 </body>
 </html>

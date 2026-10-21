@@ -1,13 +1,16 @@
 param(
     [switch]$NoBrowser,
     [switch]$TestMode,
-    [int]$Port = 8765
+    [int]$Port = 8765,
+    [string]$DatabasePath,
+    [switch]$UpgradeSchema,
+    [string]$HostAddress = '127.0.0.1'
 )
 
 $ErrorActionPreference = 'Stop'
 $projectRoot = (Split-Path -Parent $PSScriptRoot).TrimEnd('\/')
 $backendRoot = Join-Path $projectRoot 'backend'
-$databasePath = Join-Path $projectRoot 'data\agritrace.db'
+$databasePath = if ($DatabasePath) { [IO.Path]::GetFullPath($DatabasePath) } else { Join-Path $projectRoot 'data\agritrace.db' }
 $pythonExe = Join-Path $backendRoot '.venv\Scripts\python.exe'
 $logDir = Join-Path $projectRoot '.agritrace-logs'
 $started = $null
@@ -26,16 +29,18 @@ try {
 
     # 2. Check if AgriTrace is already running for this project on requested port
     try {
-        $existingInfo = Invoke-RestMethod -Uri "http://127.0.0.1:$Port/system-info" -TimeoutSec 1 -ErrorAction SilentlyContinue
-        $existingHealth = Invoke-RestMethod -Uri "http://127.0.0.1:$Port/health" -TimeoutSec 1 -ErrorAction SilentlyContinue
+        $checkHost = if ($HostAddress -eq '0.0.0.0') { '127.0.0.1' } else { $HostAddress }
+        $existingInfo = Invoke-RestMethod -Uri "http://${checkHost}:$Port/system-info" -TimeoutSec 1 -ErrorAction SilentlyContinue
+        $existingHealth = Invoke-RestMethod -Uri "http://${checkHost}:$Port/health" -TimeoutSec 1 -ErrorAction SilentlyContinue
+        $existingReady = Invoke-RestMethod -Uri "http://${checkHost}:$Port/ready" -TimeoutSec 1 -ErrorAction Stop
 
         if ($null -ne $existingInfo -and $null -ne $existingHealth) {
             $isSameDb = ($existingInfo.database_path.TrimEnd('\/') -eq $databasePath.TrimEnd('\/'))
             $isSameRoot = ($existingInfo.code_root.TrimEnd('\/') -eq $projectRoot.TrimEnd('\/'))
             $isDbConnected = ($existingHealth.database -eq 'connected')
 
-            if ($isSameDb -and $isSameRoot -and $isDbConnected) {
-                Write-Host "AgriTrace is already running on http://127.0.0.1:$Port/ for this project." -ForegroundColor Green
+            if ($isSameDb -and $isSameRoot -and $isDbConnected -and $existingReady.ready) {
+                Write-Host "AgriTrace is already running on http://${checkHost}:$Port/ for this project." -ForegroundColor Green
                 Write-Host "Database: $databasePath"
 
                 if ($TestMode) {
@@ -43,7 +48,7 @@ try {
                     exit 0
                 }
                 if (-not $NoBrowser) {
-                    Start-Process "http://127.0.0.1:$Port/"
+                    Start-Process "http://${checkHost}:$Port/"
                 }
                 exit 0
             }
@@ -53,9 +58,17 @@ try {
     }
 
     # 3. Find a free port (never kill existing foreign processes)
+    $bindIp = if ($HostAddress -eq '0.0.0.0') {
+        [System.Net.IPAddress]::Any
+    } elseif ($HostAddress -eq '127.0.0.1') {
+        [System.Net.IPAddress]::Loopback
+    } else {
+        [System.Net.IPAddress]::Parse($HostAddress)
+    }
+
     $chosenPort = $null
     for ($candidate = $Port; $candidate -le [Math]::Min(65535, $Port + 99); $candidate++) {
-        $listener = New-Object System.Net.Sockets.TcpListener([System.Net.IPAddress]::Loopback, $candidate)
+        $listener = New-Object System.Net.Sockets.TcpListener($bindIp, $candidate)
         $listener.Server.ExclusiveAddressUse = $true
         try {
             $listener.Start()
@@ -84,7 +97,8 @@ try {
     $stdoutLog = Join-Path $logDir "$runId-stdout.log"
     $stderrLog = Join-Path $logDir "$runId-stderr.log"
 
-    $arguments = @('-m', 'scripts.run_agritrace', '--port', "$chosenPort", '--db', $databasePath)
+    $arguments = @('-m', 'scripts.run_agritrace', '--host', $HostAddress, '--port', "$chosenPort", '--db', $databasePath)
+    if ($UpgradeSchema) { $arguments += '--upgrade-schema' }
     $started = Start-Process -FilePath $pythonExe -ArgumentList $arguments -WorkingDirectory $backendRoot -WindowStyle Hidden -PassThru -RedirectStandardOutput $stdoutLog -RedirectStandardError $stderrLog
 
     # 5. Wait for readiness and verify fingerprint
@@ -97,14 +111,16 @@ try {
             throw "AgriTrace server exited prematurely. Check log: $stderrLog"
         }
         try {
-            $info = Invoke-RestMethod -Uri "http://127.0.0.1:$chosenPort/system-info" -TimeoutSec 2
-            $health = Invoke-RestMethod -Uri "http://127.0.0.1:$chosenPort/health" -TimeoutSec 2
+            $checkHost = if ($HostAddress -eq '0.0.0.0') { '127.0.0.1' } else { $HostAddress }
+            $info = Invoke-RestMethod -Uri "http://${checkHost}:$chosenPort/system-info" -TimeoutSec 2
+            $health = Invoke-RestMethod -Uri "http://${checkHost}:$chosenPort/health" -TimeoutSec 2
+            $schemaReady = Invoke-RestMethod -Uri "http://${checkHost}:$chosenPort/ready" -TimeoutSec 2
 
             $isSameDb = ($info.database_path.TrimEnd('\/') -eq $databasePath.TrimEnd('\/'))
             $isSameRoot = ($info.code_root.TrimEnd('\/') -eq $projectRoot.TrimEnd('\/'))
             $isDbConnected = ($health.database -eq 'connected')
 
-            if ($isSameDb -and $isSameRoot -and $isDbConnected) {
+            if ($isSameDb -and $isSameRoot -and $isDbConnected -and $schemaReady.ready) {
                 $ready = $true
                 break
             }
@@ -117,7 +133,7 @@ try {
     }
 
     # Verify listening process ownership
-    $tcpConn = Get-NetTCPConnection -State Listen -LocalPort $chosenPort -ErrorAction SilentlyContinue | Where-Object { $_.LocalAddress -eq '127.0.0.1' } | Select-Object -First 1
+    $tcpConn = Get-NetTCPConnection -State Listen -LocalPort $chosenPort -ErrorAction SilentlyContinue | Where-Object { $_.LocalAddress -in @('127.0.0.1', '0.0.0.0', $HostAddress) } | Select-Object -First 1
     if ($null -eq $tcpConn) {
         throw "Failed to confirm TCP listener on port $chosenPort."
     }
@@ -131,10 +147,20 @@ try {
 
     Write-Host "============================================================" -ForegroundColor Cyan
     Write-Host " AgriTrace Unified System is ready!" -ForegroundColor Green
-    Write-Host " URL:      http://127.0.0.1:$chosenPort/" -ForegroundColor White
-    Write-Host " Database: $databasePath" -ForegroundColor White
-    Write-Host " PID:      $serverPid" -ForegroundColor White
-    Write-Host " Logs:     $logDir" -ForegroundColor White
+    if ($HostAddress -eq '0.0.0.0') {
+        Write-Host " Local URL:  http://127.0.0.1:$chosenPort/" -ForegroundColor White
+        try {
+            $lanIp = (Get-NetIPAddress -AddressFamily IPv4 -InterfaceAlias 'Wi-Fi' -ErrorAction SilentlyContinue | Select-Object -First 1).IPAddress
+            if ($lanIp) {
+                Write-Host " LAN URL:    http://${lanIp}:$chosenPort/" -ForegroundColor White
+            }
+        } catch { }
+    } else {
+        Write-Host " URL:        http://${checkHost}:$chosenPort/" -ForegroundColor White
+    }
+    Write-Host " Database:   $databasePath" -ForegroundColor White
+    Write-Host " PID:        $serverPid" -ForegroundColor White
+    Write-Host " Logs:       $logDir" -ForegroundColor White
     Write-Host "============================================================" -ForegroundColor Cyan
 
     # 6. TestMode execution (clean shutdown after automated check)
@@ -150,7 +176,7 @@ try {
 
     # 7. Normal browser opening
     if (-not $NoBrowser) {
-        Start-Process "http://127.0.0.1:$chosenPort/"
+        Start-Process "http://${checkHost}:$chosenPort/"
     }
 
 } catch {

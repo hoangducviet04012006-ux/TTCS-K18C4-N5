@@ -12,7 +12,10 @@ Chức năng:
 """
 
 import argparse
-from datetime import datetime
+from datetime import datetime, timezone
+import base64
+import getpass
+import os
 import json
 import random
 import sys
@@ -44,7 +47,7 @@ DEFAULT_SENSOR_ID: str = "SENSOR-TEMP-01"
 DEFAULT_INTERVAL_SECONDS: float = 5.0
 DEFAULT_MIN_TEMPERATURE: float = 20.0
 DEFAULT_MAX_TEMPERATURE: float = 40.0
-DEFAULT_SERVER_URL: str = "http://127.0.0.1:5000/api/sensor/temperature"
+DEFAULT_SERVER_URL: str = "http://127.0.0.1:8765/trips/active-container/{container_code}/readings"
 DEFAULT_HTTP_TIMEOUT: float = 3.0
 
 
@@ -94,13 +97,16 @@ def create_sensor_payload(
         dict: Bản tin dữ liệu cảm biến.
     """
     if timestamp is None:
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+    recorded = datetime.fromisoformat(timestamp)
+    recorded = recorded.astimezone(timezone.utc) if recorded.tzinfo else recorded.replace(tzinfo=timezone.utc)
 
     return {
         "sensor_id": sensor_id,
         "temperature": temperature,
         "unit": unit,
-        "timestamp": timestamp
+        "timestamp": timestamp,
+        "recorded_at": recorded.isoformat()
     }
 
 
@@ -122,7 +128,8 @@ def serialize_payload_to_json(payload: Dict[str, Any]) -> str:
 def send_payload_http(
     payload: Dict[str, Any],
     server_url: str,
-    timeout: float = DEFAULT_HTTP_TIMEOUT
+    timeout: float = DEFAULT_HTTP_TIMEOUT,
+    authorization: Optional[str] = None,
 ) -> Tuple[bool, Optional[int], str]:
     """Gửi bản tin JSON đến máy chủ qua giao thức HTTP POST.
 
@@ -146,6 +153,8 @@ def send_payload_http(
     if HAS_REQUESTS:
         try:
             headers = {"Content-Type": "application/json; charset=utf-8"}
+            if authorization:
+                headers["Authorization"] = authorization
             response = requests.post(server_url, data=json_data.encode("utf-8"), headers=headers, timeout=timeout)
             if 200 <= response.status_code < 300:
                 return True, response.status_code, "Gửi thành công đến API máy chủ"
@@ -160,6 +169,8 @@ def send_payload_http(
     # Trường hợp 2: Sử dụng thư viện chuẩn `urllib.request` (không cần cài thêm package)
     try:
         headers = {"Content-Type": "application/json; charset=utf-8"}
+        if authorization:
+            headers["Authorization"] = authorization
         req = urllib.request.Request(
             server_url,
             data=json_data.encode("utf-8"),
@@ -275,7 +286,8 @@ def run_sensor_simulator(
     max_temp: float = DEFAULT_MAX_TEMPERATURE,
     server_url: str = DEFAULT_SERVER_URL,
     mock_mode: bool = False,
-    max_count: Optional[int] = None
+    max_count: Optional[int] = None,
+    authorization: Optional[str] = None,
 ) -> None:
     """Chạy vòng lặp giả lập cảm biến: tạo dữ liệu, gửi định kỳ, xử lý lỗi và ngắt phím.
 
@@ -325,7 +337,8 @@ def run_sensor_simulator(
                 success, status_code, message = send_payload_http(
                     payload=payload,
                     server_url=server_url,
-                    timeout=DEFAULT_HTTP_TIMEOUT
+                    timeout=DEFAULT_HTTP_TIMEOUT,
+                    authorization=authorization,
                 )
 
             # 4. Cập nhật số liệu thống kê
@@ -414,6 +427,9 @@ def parse_arguments() -> argparse.Namespace:
         default=None,
         help="Số lượng bản tin cần gửi trước khi tự dừng (mặc định: chạy vô hạn đến khi bấm Ctrl+C)"
     )
+    parser.add_argument("--container", help="Mã thùng lạnh của chuyến đang chạy")
+    parser.add_argument("--username", default=os.getenv("AGRITRACE_SENSOR_USERNAME"))
+    parser.add_argument("--replay", help="JSON list nhiệt độ/recorded_at để kiểm thử dữ liệu lịch sử")
     return parser.parse_args()
 
 
@@ -423,6 +439,26 @@ def parse_arguments() -> argparse.Namespace:
 def main() -> None:
     """Điểm vào chính của script."""
     args = parse_arguments()
+    authorization = None
+    if not args.mock:
+        if "{container_code}" in args.url and not args.container:
+            raise SystemExit("Cần --container hoặc --url đầy đủ của API readings")
+        if not args.username:
+            raise SystemExit("Cần --username hoặc AGRITRACE_SENSOR_USERNAME")
+        password = os.getenv("AGRITRACE_SENSOR_PASSWORD") or getpass.getpass("Mật khẩu cảm biến: ")
+        authorization = "Basic " + base64.b64encode(f"{args.username}:{password}".encode()).decode()
+        from urllib.parse import quote
+        args.url = args.url.replace("{container_code}", quote(args.container or "", safe=""))
+    if args.replay:
+        with open(args.replay, encoding="utf-8-sig") as stream:
+            samples = json.load(stream)
+        for sample in samples:
+            success, code, message = (simulate_mock_send(sample) if args.mock else
+                                      send_payload_http(sample, args.url, authorization=authorization))
+            print(f"HTTP {code}: {message}")
+            if not success:
+                raise SystemExit(1)
+        return
 
     run_sensor_simulator(
         sensor_id=args.id,
@@ -431,7 +467,8 @@ def main() -> None:
         max_temp=args.max_temp,
         server_url=args.url,
         mock_mode=args.mock,
-        max_count=args.count
+        max_count=args.count,
+        authorization=authorization,
     )
 
 

@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class TripBatchItemResponse(BaseModel):
@@ -16,6 +16,20 @@ class TripBatchItemResponse(BaseModel):
     attached_at: datetime = Field(..., description="Thời điểm gán vào xe.")
     detached_at: datetime | None = Field(default=None, description="Thời điểm dỡ khỏi xe.")
     notes: str | None = Field(default=None, description="Ghi chú kiện hàng.")
+
+
+class ProductTemperaturePolicy(BaseModel):
+    model_config = ConfigDict(from_attributes=True, allow_inf_nan=False)
+
+    min_temperature: float = Field(ge=-100, le=100)
+    max_temperature: float = Field(ge=-100, le=100)
+    delay_minutes: float = Field(ge=30, le=1440)
+
+    @model_validator(mode="after")
+    def valid_range(self):
+        if self.min_temperature >= self.max_temperature:
+            raise ValueError("Ngưỡng min phải nhỏ hơn max")
+        return self
 
 
 class TripCreate(BaseModel):
@@ -143,7 +157,7 @@ class TripDetailResponse(TripResponse):
 class TemperatureLogCreate(BaseModel):
     """Dữ liệu cảm biến nhiệt độ gửi lên từ thiết bị IoT (S-41)."""
 
-    model_config = ConfigDict(str_strip_whitespace=True)
+    model_config = ConfigDict(str_strip_whitespace=True, allow_inf_nan=False)
 
     temperature: float = Field(..., description="Nhiệt độ đo được (°C).")
     recorded_at: datetime | None = Field(
@@ -199,6 +213,7 @@ class TemperatureViolationResponse(BaseModel):
     id: int
     trip_id: int | None = None
     batch_id: int | None = None
+    source_trip_id: int | None = None
     container_code: str | None = None
     start_time: datetime
     end_time: datetime | None = None

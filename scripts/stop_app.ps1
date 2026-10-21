@@ -5,7 +5,7 @@ param(
 $projectRoot = (Split-Path -Parent $PSScriptRoot).TrimEnd('\/')
 $stoppedAny = $false
 
-$listeners = Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Where-Object { $_.LocalAddress -eq '127.0.0.1' }
+$listeners = Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue
 
 if ($Port -gt 0) {
     $listeners = $listeners | Where-Object { $_.LocalPort -eq $Port }
@@ -16,7 +16,8 @@ if ($Port -gt 0) {
 foreach ($tcp in $listeners) {
     $p = $tcp.LocalPort
     try {
-        $info = Invoke-RestMethod -Uri "http://127.0.0.1:$p/system-info" -TimeoutSec 1 -ErrorAction SilentlyContinue
+        $checkIp = if ($tcp.LocalAddress -eq '0.0.0.0' -or $tcp.LocalAddress -eq '::') { '127.0.0.1' } else { $tcp.LocalAddress }
+        $info = Invoke-RestMethod -Uri "http://${checkIp}:$p/system-info" -TimeoutSec 1 -ErrorAction SilentlyContinue
         if ($null -ne $info -and $info.code_root.TrimEnd('\/') -eq $projectRoot) {
             $pidToStop = $tcp.OwningProcess
             Write-Host "Stopping AgriTrace on port $p (PID: $pidToStop)..." -ForegroundColor Yellow
