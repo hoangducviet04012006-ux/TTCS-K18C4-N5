@@ -88,15 +88,17 @@ jobs:
             --name staging_backend \
             -p 8000:8000 \
             -e PYTHONUNBUFFERED=1 \
+            -e TTCS_BOOTSTRAP_STAGING=1 \
             -e DATABASE_URL=sqlite:////app/data/ttcs_staging.db \
             ttcs-backend:staging
 
       - name: Kiểm tra sức khỏe hệ thống (Health Check)
         run: |
-          echo "🔍 Kiểm tra trạng thái endpoint GET /health của Staging..."
+          echo "🔍 Kiểm tra trạng thái endpoint GET /health và /ready của Staging..."
           MAX_RETRIES=10
           RETRY_COUNT=0
           HEALTH_URL="http://localhost:8000/health"
+          READY_URL="http://localhost:8000/ready"
 
           until [ $RETRY_COUNT -ge $MAX_RETRIES ]
           do
@@ -105,12 +107,15 @@ jobs:
             HTTP_STATUS=$(echo "$RESPONSE" | grep "HTTP_STATUS:" | cut -d':' -f2)
             BODY=$(echo "$RESPONSE" | grep -v "HTTP_STATUS:")
 
-            echo "Response: $BODY (HTTP $HTTP_STATUS)"
+            echo "Health Response: $BODY (HTTP $HTTP_STATUS)"
+
+            READY_RESP=$(curl -s "$READY_URL" || true)
+            echo "Ready Response: $READY_RESP"
 
             if [ "$HTTP_STATUS" = "200" ]; then
-              # Kiểm tra JSON phản hồi có chứa status=ok và database=connected
-              if echo "$BODY" | grep -q '"status"' && echo "$BODY" | grep -q '"database":\s*"connected"\|"database":"connected"'; then
-                echo "✅ Health check thành công! Dịch vụ Staging đang hoạt động và database đã kết nối."
+              # Kiểm tra JSON phản hồi có chứa status=ok, database=connected và ready=true
+              if echo "$BODY" | grep -q '"database":\s*"connected"\|"database":"connected"' && echo "$READY_RESP" | grep -q '"ready":\s*true\|"ready":true'; then
+                echo "✅ Health check và Schema check thành công! Dịch vụ Staging đang hoạt động và database đã kết nối."
                 exit 0
               fi
             fi

@@ -207,3 +207,47 @@ def _verify_preserved(conn, original_tables, columns, before, old_objects):
             raise RuntimeError(f"Protected schema object changed: {name}")
     if conn.execute("PRAGMA foreign_key_check").fetchall():
         raise RuntimeError("Post-upgrade foreign key check failed")
+
+
+def bootstrap_staging_database(engine):
+    """Khởi tạo cấu trúc schema hoàn chỉnh cho môi trường CI/Staging độc lập.
+
+    Tuyệt đối từ chối chạy trên cơ sở dữ liệu chính hoặc các file được bảo vệ.
+    """
+    if engine.dialect.name != "sqlite":
+        raise RuntimeError("Staging bootstrap chỉ hỗ trợ SQLite")
+    if not engine.url.database or engine.url.database == ":memory:":
+        return {"ready": True, "target_version": VERSION, "missing": []}
+
+    target = Path(engine.url.database).resolve()
+    root = Path(__file__).resolve().parents[3]
+    forbidden_targets = {
+        (root / "data/agritrace.db").resolve(),
+        (root / "backend/ttcs.db").resolve(),
+    }
+    for forbidden in forbidden_targets:
+        if target == forbidden or (target.exists() and forbidden.exists() and target.samefile(forbidden)):
+            raise RuntimeError("Từ chối bootstrap trên database chính được bảo vệ")
+
+    from app.database import Base, create_event_immutability_triggers
+    from app import models, trip_models  # noqa: F401 - đảm bảo nạp toàn bộ ORM models
+
+    Base.metadata.create_all(bind=engine)
+    create_event_immutability_triggers(engine)
+
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+    raw = engine.raw_connection()
+    conn = raw.driver_connection
+    try:
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS sprint4_schema_versions (version TEXT PRIMARY KEY, applied_at TEXT NOT NULL)"
+        )
+        conn.execute("INSERT OR IGNORE INTO sprint4_schema_versions VALUES (?, ?)", (VERSION, stamp))
+        conn.commit()
+    finally:
+        raw.close()
+
+    result = schema_status(engine)
+    if not result["ready"]:
+        raise RuntimeError(f"Staging bootstrap validation failed: {result['missing']}")
+    return result
